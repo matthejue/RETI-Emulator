@@ -103,21 +103,21 @@ void check_opd(OperandType opd_expected, char *opd) {
   case REG:
     if (!isalpha(opd[0])) {
       display_error_message(
-          "SyntaxError", "Invalid syntax for instruction at \"%s\"", opd, Pntr);
+          "SyntaxError", "Invalid syntax for instruction, expected register, got \"%s\"", opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
   case IM:
     if (!(isdigit(opd[0]) || opd[0] == '-')) {
       display_error_message(
-          "SyntaxError", "Invalid syntax for instruction at \"%s\"", opd, Pntr);
+          "SyntaxError", "Invalid syntax for instruction, expected immediate, got \"%s\"", opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
   case EMPTY:
     if (!(strcmp(opd, "") == 0)) {
       display_error_message(
-          "SyntaxError", "Invalid syntax for instruction at \"%s\"", opd, Pntr);
+          "SyntaxError", "Invalid syntax for instruction, expected no more operands, got \"%s\"", opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;

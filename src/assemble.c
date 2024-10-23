@@ -38,7 +38,7 @@ uint8_t get_register_code(char *reg) {
     }
   }
 
-  display_error_message("SyntaxError", "Invalid register: \"%s\"", reg, Pntr);
+  display_error_message("SyntaxError", "Invalid register \"%s\"", reg, Pntr);
   exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
@@ -56,7 +56,7 @@ uint8_t get_mnemonic(char *mnemonic) {
     }
   }
 
-  display_error_message("SyntaxError", "Invalid mnemonic: \"%s\"", mnemonic, Pntr);
+  display_error_message("SyntaxError", "Invalid mnemonic \"%s\"", mnemonic, Pntr);
   exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 

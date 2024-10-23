@@ -1,0 +1,3 @@
+# output: SyntaxError
+INT# 0
+JUMP 0
