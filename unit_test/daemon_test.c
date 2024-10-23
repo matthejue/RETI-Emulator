@@ -1,5 +1,5 @@
 #include "../include/assemble.h"
-#include "../include/daemon.h"
+#include "../include/debug.h"
 #include "../include/utils.h"
 #include <assert.h>
 #include <stdint.h>

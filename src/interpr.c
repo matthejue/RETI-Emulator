@@ -5,7 +5,7 @@
 #include "../include/utils.h"
 #include "../include/uart.h"
 #include "../include/error.h"
-#include "../include/daemon.h"
+#include "../include/debug.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -336,7 +336,7 @@ void interpr_prgrm() {
     uint32_t machine_instr = read_storage(read_array(regs, PC, false));
     Instruction *assembly_instr = machine_to_assembly(machine_instr);
 
-    if (daemon_mode) {
+    if (debug_mode) {
       draw_tui();
       get_user_input();
     }

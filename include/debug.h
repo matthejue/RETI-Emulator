@@ -1,8 +1,8 @@
 #include "../include/assemble.h"
 #include <stdio.h>
 
-#ifndef DAEMON_H
-#define DAEMON_H
+#ifndef DEBUG_H
+#define DEBUG_H
 
 typedef struct {
   Unique_Opcode value;
@@ -35,4 +35,4 @@ char **split_string(const char *str, uint8_t *count);
 void draw_tui(void);
 void get_user_input(void);
 
-#endif // DAEMON_H
+#endif // DEBUG_H

@@ -1,6 +1,6 @@
 #include "../include/error.h"
 #include "../include/assemble.h"
-#include "../include/daemon.h"
+#include "../include/debug.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"

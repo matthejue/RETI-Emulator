@@ -1,4 +1,4 @@
-#include "../include/daemon.h"
+#include "../include/debug.h"
 #include "../include/assemble.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"

@@ -11,7 +11,7 @@
 uint32_t sram_size = 4294967295;
 uint16_t page_size = 4096;
 uint32_t hdd_size = 4294967295;
-bool daemon_mode = false;
+bool debug_mode = false;
 bool test_mode = false;
 bool read_metadata = false;
 uint8_t radius = 2;
@@ -78,7 +78,7 @@ void parse_args(uint8_t argc, char *argv[]) {
       hdd_size = tmp_val;
       break;
     case 'd':
-      daemon_mode = true;
+      debug_mode = true;
       break;
     case 'r':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -145,7 +145,7 @@ void print_args() {
   printf("Page Size: %u\n", page_size);
   printf("HDD Size: %u\n", hdd_size);
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
-  printf("Daemon Mode: %s\n", daemon_mode ? "true" : "false");
+  printf("Daemon Mode: %s\n", debug_mode ? "true" : "false");
   printf("Read Metadata: %s\n", read_metadata ? "true" : "false");
   printf("Test Mode: %s\n", test_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");

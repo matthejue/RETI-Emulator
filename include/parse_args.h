@@ -7,7 +7,7 @@
 extern uint32_t sram_size;
 extern uint16_t page_size;
 extern uint32_t hdd_size;
-extern bool daemon_mode;
+extern bool debug_mode;
 extern bool test_mode;
 extern bool read_metadata;
 extern uint8_t radius;
