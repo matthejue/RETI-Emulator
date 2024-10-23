@@ -175,3 +175,42 @@ int count_lines(const char *current, const char *begin) {
 
   return line_count;
 }
+
+char *create_heading(char insert_chr, const char* text, int linewidth) {
+    int text_len = strlen(text);
+    int total_length = text_len + 4; // 4 = 2 spaces + 2 insert_chr
+
+    if (total_length > linewidth) {
+        // If the total length exceeds linewidth, truncate the text
+        int max_text_len = linewidth - 4;
+        char* truncated_text = (char*)malloc((max_text_len + 1) * sizeof(char));
+        strncpy(truncated_text, text, max_text_len);
+        truncated_text[max_text_len] = '\0';
+        text = truncated_text;
+        text_len = max_text_len;
+        total_length = text_len + 4;
+    }
+
+    int remaining_length = linewidth - total_length;
+    int left_insert_chr = remaining_length / 2;
+    int right_insert_chr = remaining_length - left_insert_chr;
+
+    // Allocate memory for the result string
+    char* result = (char*)malloc(linewidth + 1);
+
+    // Construct the result string
+    int pos = 0;
+    for (int i = 0; i < left_insert_chr; i++) {
+        result[pos++] = insert_chr;
+    }
+    result[pos++] = ' ';
+    strcpy(result + pos, text);
+    pos += text_len;
+    result[pos++] = ' ';
+    for (int i = 0; i < right_insert_chr; i++) {
+        result[pos++] = insert_chr;
+    }
+    result[pos] = '\0';
+
+    return result;
+}

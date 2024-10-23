@@ -13,6 +13,8 @@
 
 bool breakpoint_encountered = true;
 
+const uint8_t LINEWIDTH = 54;
+
 Mnemonic_to_String opcode_to_mnemonic[] = {
     {ADDI, "ADDI"},     {SUBI, "SUBI"},       {MULTI, "MULTI"},
     {DIVI, "DIVI"},     {MODI, "MODI"},       {OPLUSI, "OPLUSI"},
@@ -329,23 +331,20 @@ void cont(void) {
     return;
   }
 
-  printf("\n\n");
-  printf("All Registers:\n");
+  printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
-  printf("\n");
 
+  printf("%s\n", create_heading('-', "EPROM", LINEWIDTH));
   uint64_t eprom_watchpoint_int = determine_watchpoint_value(eprom_watchpoint);
   printf("EPROM Watchpoint: %s (%lu)\n", eprom_watchpoint,
          eprom_watchpoint_int);
   print_array_with_idcs_from_to(
       EPROM, max(0, eprom_watchpoint_int - radius),
       min(eprom_watchpoint_int + radius, num_instrs_start_prgrm - 1), true);
-  printf("\n");
 
-  printf("All UART addresses:\n");
+  printf("%s\n", create_heading('-', "UART", LINEWIDTH));
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
-  printf("\n");
 
   uint64_t sram_watchpoint_cs_int =
       determine_watchpoint_value(sram_watchpoint_cs);
@@ -354,6 +353,7 @@ void cont(void) {
   uint64_t sram_watchpoint_stack_int =
       determine_watchpoint_value(sram_watchpoint_stack);
 
+  printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
   printf("SRAM Watchpoint Codesegment: %s (%lu)\n", sram_watchpoint_cs,
          sram_watchpoint_cs_int);
   print_sram_watchpoint(sram_watchpoint_cs_int);
@@ -364,10 +364,8 @@ void cont(void) {
          sram_watchpoint_stack_int);
   print_sram_watchpoint(sram_watchpoint_stack_int);
 
-  printf("\n");
-  printf("(n)ext line, (q)uit,\n");
-  printf("(c)ontinue to breakpoint\n");
-  printf("========================\n");
+  printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
+  printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
 
   // print_file_idcs(hdd, max(0, hdd_view_pos - radius),
   //                 min(hdd_view_pos + radius, hdd_size-1), false);
