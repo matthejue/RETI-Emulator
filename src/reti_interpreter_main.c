@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
   interpr_prgrm();
 
   fin_reti();
+
   if (test_mode) {
     close_out_and_err_file();
   }

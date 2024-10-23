@@ -326,7 +326,7 @@ void print_uart_meta_data() {
   }
 }
 
-void cont(void) {
+void draw_tui(void) {
   if (!breakpoint_encountered) {
     return;
   }
@@ -369,7 +369,9 @@ void cont(void) {
 
   // print_file_idcs(hdd, max(0, hdd_view_pos - radius),
   //                 min(hdd_view_pos + radius, hdd_size-1), false);
+}
 
+void get_user_input(void) {
   uint8_t count;
   char buffer[26];
   while (true) {

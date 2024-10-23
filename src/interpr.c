@@ -337,7 +337,8 @@ void interpr_prgrm() {
     Instruction *assembly_instr = machine_to_assembly(machine_instr);
 
     if (daemon_mode) {
-      cont();
+      draw_tui();
+      get_user_input();
     }
 
     if (assembly_instr->op == JUMP && assembly_instr->opd1 == 0) {
