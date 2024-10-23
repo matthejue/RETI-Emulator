@@ -138,7 +138,7 @@ char *allocate_and_copy_string(const char *original) {
 char *extract_line(const char *current, const char *begin) {
   // Find the start of the line
   const char *start = current;
-  while (start >= begin && *(start - 1) != '\n') {
+  while (start > begin && *(start - 1) != '\n') {
     start--;
   }
 
