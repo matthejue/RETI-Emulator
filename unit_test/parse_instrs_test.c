@@ -2,7 +2,6 @@
 #include "../include/parse_instrs.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
-#include "../include/globals.h"
 #include "../include/utils.h"
 #include "assert.h"
 #include "string.h"

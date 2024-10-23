@@ -7,7 +7,7 @@ not_running_through=();
 not_passed=();
 
 if [[ $2 == "all" ]]; then
-  paths=(./syt_test/*.reti)
+  paths=(./sys_test/*.reti)
 elif [[ -n "$2" ]]; then
   paths=(./sys_test/*$2*.reti)
 else

@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-FILE *output_file = NULL;
+FILE *out_file = NULL;
+FILE *err_file = NULL;
 
 int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
   const char *prefix;
@@ -37,7 +38,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
     if (isdigit((unsigned char)*ptr)) {
       int64_t num = strtol(ptr, (char **)&ptr, 10);
       if (num < INT8_MIN || num > INT8_MAX) {
-        perror("Error: Number must be between -128 and 127");
+        fprintf(stderr, "Error: Number must be between -128 and 127");
         exit(EXIT_FAILURE);
       }
       ar[count++] = (int8_t)num;
@@ -53,7 +54,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
 int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {
-    perror("Error: Couldn't open file");
+    fprintf(stderr, "Error: Couldn't open file");
     exit(EXIT_FAILURE);
   }
 
@@ -80,35 +81,44 @@ int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   return result;
 }
 
-void create_output_file() {
-  char *filename = strdup(sram_prgrm_path);
-  char *ext = strrchr(filename, '.');
+void create_out_and_err_file() {
+  char *file_path = strdup(sram_prgrm_path);
+  char *ext = strrchr(file_path, '.');
   if (ext != NULL) {
     *ext = '\0';
   }
-  filename = proper_str_cat(filename, ".output");
-  output_file = fopen(filename, "w");
-  if (output_file == NULL) {
-    perror("Error: Can't open file.\n");
-    close_output_file();
+
+  char *out_file_path = proper_str_cat(file_path, ".output");
+  out_file = fopen(out_file_path, "w");
+  if (out_file == NULL) {
+    fprintf(stderr, "Error: Can't open file.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  char *err_file_path = proper_str_cat(file_path, ".error");
+  err_file = fopen(err_file_path, "w");
+  if (err_file == NULL) {
+    fprintf(stderr, "Error: Can't open file.\n");
     exit(EXIT_FAILURE);
   }
 }
 
-void adjust_print(bool is_stdout, const char *format, const char *format_no_newline, ...) {
+void adjust_print(bool is_stdout, const char *format,
+                  const char *format_no_newline, ...) {
   va_list args;
   va_start(args, format_no_newline);
 
   if (test_mode) {
-    if (output_file != NULL) {
-      vfprintf(output_file, format_no_newline, args);
+    if (is_stdout) {
+      vfprintf(out_file, format_no_newline, args);
     } else {
-      perror("Error: File not opened for output\n");
-      exit(EXIT_FAILURE);
+      vfprintf(err_file, format, args);
     }
   } else {
-    if (is_stdout) {
-      vfprintf(stdout, format, args);
+    if (is_stdout) { // because of display_error_message in case test_mode is false
+      if (format != NULL) {
+        vfprintf(stdout, format, args);
+      }
     } else {
       vfprintf(stderr, format, args);
     }
@@ -117,9 +127,7 @@ void adjust_print(bool is_stdout, const char *format, const char *format_no_newl
   va_end(args);
 }
 
-void close_output_file() {
-  if (output_file != NULL) {
-    fclose(output_file);
-    output_file = NULL;
-  }
+void close_out_and_err_file() {
+  fclose(out_file);
+  fclose(err_file);
 }

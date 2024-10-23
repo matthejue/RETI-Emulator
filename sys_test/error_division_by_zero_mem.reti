@@ -1,0 +1,4 @@
+# output: DivisionByZeroError
+LOADI ACC 0
+STORE ACC 42
+DIV ACC 42

@@ -32,7 +32,7 @@ char *read_stdin_content() {
 //   // Copy the input string to avoid modifying the original
 //   char *str_copy = strdup(str);
 //   if (str_copy == NULL) {
-//     perror("strdup was not successful");
+//     fprintf(stderr, "strdup was not successful");
 //     exit(EXIT_FAILURE);
 //   }
 //
@@ -47,7 +47,7 @@ char *read_stdin_content() {
 //   // Allocate memory for the array of words
 //   char **result = malloc((words + 1) * sizeof(void *));
 //   if (result == NULL) {
-//     perror("malloc was not successful");
+//     fprintf(stderr, "malloc was not successful");
 //     exit(EXIT_FAILURE);
 //   }
 //
@@ -60,7 +60,7 @@ char *read_stdin_content() {
 //   while (token != NULL) {
 //     result[idx] = strdup(token);
 //     if (result[idx] == NULL) {
-//       perror("strdup was not successful");
+//       fprintf(stderr, "strdup was not successful");
 //       exit(EXIT_FAILURE);
 //     }
 //     idx++;

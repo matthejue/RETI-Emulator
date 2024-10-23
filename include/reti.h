@@ -6,6 +6,11 @@
 #ifndef RETI_H
 #define RETI_H
 
+extern uint32_t ivt_max_idx;
+extern uint32_t num_instrs_prgrm;
+extern uint32_t num_instrs_start_prgrm;
+extern uint32_t num_instrs_isrs;
+
 extern uint32_t *regs;
 extern uint32_t *eprom;
 extern uint8_t *uart;
@@ -22,6 +27,10 @@ extern char *sram_watchpoint_stack;
 #define NUM_REGISTERS 8
 #define NUM_UART_ADDRESSES 3
 #define SRAM_MAX_IDX 2147483647
+
+#define EPROM_CONST 0b00
+#define UART_CONST 0b01
+#define SRAM_CONST 0b10
 
 void load_adjusted_eprom_prgrm();
 

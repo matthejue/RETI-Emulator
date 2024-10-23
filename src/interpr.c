@@ -1,10 +1,11 @@
 #include "../include/interpr.h"
-#include "../include/daemon.h"
-#include "../include/globals.h"
 #include "../include/parse_args.h"
+#include "../include/assemble.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include "../include/uart.h"
+#include "../include/error.h"
+#include "../include/daemon.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -42,6 +43,10 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case DIVI:
+    if (assembly_instr->opd2 == 0) {
+        display_error_message("DivisionByZeroError", "Dividing by Immediate 0", NULL, Idx);
+        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
                     (int32_t)assembly_instr->opd2, false);
@@ -106,6 +111,10 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case DIVR:
+    if (read_array(regs, assembly_instr->opd2, false) == 0) {
+        display_error_message("DivisionByZeroError", "Dividing by content of Register %s which is 0", register_name_to_code[assembly_instr->opd2], Idx);
+        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
                     (int32_t)read_array(regs, assembly_instr->opd2, false), false);
@@ -170,6 +179,12 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case DIVM:
+    if (read_storage_ds_fill(assembly_instr->opd2) == 0) {
+        char *addr_str = malloc(MAX_DIGITS_ADDR_DEC);
+        sprintf(addr_str, "%d", assembly_instr->opd2);
+        display_error_message("DivisionByZeroError", "Dividing by memory content at address %s which is 0", (const char *)addr_str, Idx);
+        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
                     (int32_t)read_storage_ds_fill(assembly_instr->opd2), false);
@@ -309,7 +324,7 @@ void interpr_instr(Instruction *assembly_instr) {
     write_array(regs, PC, read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
     goto no_pc_increase;
   default:
-    perror("Error: A instruction with this opcode doesn't exist yet");
+    fprintf(stderr, "Error: A instruction with this opcode doesn't exist yet");
     exit(EXIT_FAILURE);
   }
   write_array(regs, PC, read_array(regs, PC, false) + 1, false);

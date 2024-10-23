@@ -1,7 +1,6 @@
 #include "../include/reti.h"
 #include "../include/assemble.h"
 #include "../include/daemon.h"
-#include "../include/globals.h"
 #include "../include/parse_args.h"
 #include "../include/utils.h"
 #include <stdint.h>
@@ -14,6 +13,7 @@ uint8_t *uart;
 
 FILE *sram, *hdd;
 
+uint32_t ivt_max_idx = -1;
 uint32_t num_instrs_prgrm = 0;
 uint32_t num_instrs_start_prgrm = 0;
 uint32_t num_instrs_isrs = 0;
@@ -47,7 +47,7 @@ void init_reti() {
   hdd = fopen(file_path, "w+b");
 
   if (!sram || !hdd) {
-    perror("Failed to open storage files");
+    fprintf(stderr, "Failed to open storage files");
     exit(EXIT_FAILURE);
   }
 
@@ -123,9 +123,9 @@ void load_adjusted_eprom_prgrm() {
 uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
   if (is_uart) {
     if (!(uart[2] & 0b00000010) && addr == 1) {
-      perror("Warning: No new data in the receive register");
+      fprintf(stderr, "Warning: No new data in the receive register");
     } else if (addr == 0) {
-      perror("Warning: Reading from the send register of the UART makes no sense");
+      fprintf(stderr, "Warning: Reading from the send register of the UART makes no sense");
     }
     // uart[2] = uart[2] & 0b11111101; has to be done by the programmer
     return ((uint8_t *)stor)[addr];
@@ -138,13 +138,13 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
   if (is_uart) {
     if (!(uart[2] & 0b00000001) && addr == 0) {
       // TODO: Tobias fragen, ob er damit agreed
-      perror("Warning: UART does not accept any further data");
+      fprintf(stderr, "Warning: UART does not accept any further data");
     } else if (!(uart[2] & 0b00000001) && addr == 2 && (buffer & 0b00000001)) {
-      perror("Warning: Only the UART should allow sending again");
+      fprintf(stderr, "Warning: Only the UART should allow sending again");
     } else if (!(uart[2] & 0b00000010) && addr == 2 && (buffer & 0b00000010)) {
-      perror("Warning: Only the UART itself should tell that it received something");
+      fprintf(stderr, "Warning: Only the UART itself should tell that it received something");
     } else if (addr == 1) {
-      perror("Warning: Writing to the receive register of the UART makes no sense");
+      fprintf(stderr, "Warning: Writing to the receive register of the UART makes no sense");
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
   } else {
@@ -179,15 +179,15 @@ uint32_t read_storage_sram_constant_fill(uint32_t addr) {
 uint32_t read_storage(uint32_t addr) {
   uint8_t stor_mode = addr >> 30;
   switch (stor_mode) {
-  case 0b00:
-    addr = addr & 0x3FFFFFFF;
+  case EPROM_CONST:
+    // addr = addr & 0x3FFFFFFF; makes no sense because it already is 0b00
     return read_array(eprom, addr, false);
     break;
-  case 0b01:
+  case UART_CONST:
     addr = addr & 0x3FFFFFFF;
     return read_array(uart, addr, true);
     break;
-  default:
+  default: // SRAM_CONST
     addr = addr & 0x7FFFFFFF;
     return read_file(sram, addr);
     break;
@@ -202,15 +202,15 @@ void write_storage_ds_fill(uint64_t addr, uint32_t buffer) {
 void write_storage(uint32_t addr, uint32_t buffer) {
   uint8_t stor_mode = addr >> 30;
   switch (stor_mode) {
-  case 0b00:
-    addr = addr & 0x3FFFFFFF;
+  case EPROM_CONST:
+    // addr = addr & 0x3FFFFFFF; makes no sense because it already is 0b00
     write_array(eprom, addr, buffer, false);
     break;
-  case 0b01:
+  case UART_CONST:
     addr = addr & 0x3FFFFFFF;
     write_array(uart, addr, buffer, true);
     break;
-  default:
+  default: // SRAM_CONST
     addr = addr & 0x7FFFFFFF;
     write_file(sram, addr, buffer);
     break;

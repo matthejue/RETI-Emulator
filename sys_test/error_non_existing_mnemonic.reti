@@ -1,3 +1,3 @@
-# expected: 1
+# output: SyntaxError
 LOODIN ACC IN1 2
 JUMP 0

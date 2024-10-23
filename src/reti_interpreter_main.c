@@ -1,5 +1,4 @@
 #include "../include/error.h"
-#include "../include/globals.h"
 #include "../include/interpr.h"
 #include "../include/parse_args.h"
 #include "../include/parse_instrs.h"
@@ -18,7 +17,7 @@ int main(int argc, char *argv[]) {
     uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
   }
   if (test_mode) {
-    create_output_file();
+    create_out_and_err_file();
   }
 
   init_reti();
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
 
   fin_reti();
   if (test_mode) {
-    close_output_file();
+    close_out_and_err_file();
   }
   return 0;
 }

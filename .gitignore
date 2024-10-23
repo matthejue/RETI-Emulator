@@ -7,4 +7,5 @@ hdd.bin
 sram.bin
 *.expected_output
 *.output
+*.error
 test_results

@@ -1,2 +1,3 @@
 # input: 127 a 128
+# output: InputError
 JUMP 0;

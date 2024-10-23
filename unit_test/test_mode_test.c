@@ -8,7 +8,7 @@ void test_extract_comment_metadata() {
   char *filename = "/tmp/extract_comment_metadata.reti";
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
-    perror("Error: File could not be opened");
+    fprintf(stderr, "Error: File could not be opened");
     exit(EXIT_FAILURE);
   }
   fprintf(file, "# input: 72 e l l o 32 W o 114 l d\n");

@@ -9,7 +9,7 @@
 void test_read_stdin() {
   FILE *input_file = fopen("input.txt", "w");
   if (input_file == NULL) {
-    perror("Failed to create input file");
+    fprintf(stderr, "Failed to create input file");
     exit(EXIT_FAILURE);
   }
   fprintf(input_file, "Simulated user input\n");
@@ -23,7 +23,7 @@ void test_read_stdin() {
   freopen("/dev/tty", "r", stdin);
 
   if (remove("input.txt") != 0) {
-    perror("Failed to remove input file");
+    fprintf(stderr, "Failed to remove input file");
     exit(EXIT_FAILURE);
   }
 }

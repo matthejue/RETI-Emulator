@@ -1,5 +1,4 @@
 #include "../include/parse_instrs.h"
-#include "../include/globals.h"
 #include "../include/interpr.h"
 #include "../include/reti.h"
 #include "../include/error.h"
@@ -10,8 +9,6 @@
 
 // TODO: Irgendwie durch untere Funktionen dafür sorgen, dass immer nur ein
 // TODO: nen check machen, ob Zahl nicht zu lang, später in ner anderen
-
-uint32_t ivt_max_idx = -1;
 
 String_Instruction *parse_instr(const char **original_prgrm_pntr) {
   const char *prgrm_pntr = *original_prgrm_pntr;
@@ -73,7 +70,7 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
         (str_instr->opd3)[rel_idx] = *prgrm_pntr;
         break;
       default:
-        perror("Error: Too many operands");
+        fprintf(stderr, "Error: Too many operands");
         exit(EXIT_FAILURE);
       }
       rel_idx++;
@@ -121,7 +118,7 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
         write_array(eprom, i++, machine_instr, false);
         break;
       default:
-        perror("Error: Invalid memory type");
+        fprintf(stderr, "Error: Invalid memory type");
       }
     }
   }
@@ -136,7 +133,7 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
     num_instrs_start_prgrm = i;
     break;
   default:
-    perror("Error: Invalid memory type");
+    fprintf(stderr, "Error: Invalid memory type");
   }
   free(prgrm);
 }

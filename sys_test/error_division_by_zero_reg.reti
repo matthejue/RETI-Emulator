@@ -1,0 +1,3 @@
+# output: DivisionByZeroError
+LOADI IN1 0
+DIV ACC IN1

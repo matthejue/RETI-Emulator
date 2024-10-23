@@ -5,7 +5,6 @@
 #include "../include/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
-#include "../include/globals.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,7 +19,7 @@ void test_interpr_prgrm() {
 
   FILE *input_stream = fmemopen((void *)test_input, input_size, "r");
   if (input_stream == NULL) {
-    perror("fmemopen failed");
+    fprintf(stderr, "Error: fmemopen failed");
     exit(EXIT_FAILURE);
   }
 

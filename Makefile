@@ -14,7 +14,7 @@ SRC := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c))
 OBJ_SRC := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
-CFLAGS   := -Wall # -g -O2
+CFLAGS   := -Wall -g # -O2
 LDFLAGS  := -L$(LIB_DIR) # -static
 LDLIBS   := -lm
 
@@ -60,9 +60,9 @@ clean-directories:
 	find . -type d -wholename ".cache" -delete
 
 clean-files:
-	find . -type f -wholename "./sys_test/*.expected" -delete
-	find . -type f -wholename "./sys_test/*.input" -delete
 	find . -type f -wholename "./sys_test/*.output" -delete
+	find . -type f -wholename "./sys_test/*.expected_output" -delete
+	find . -type f -wholename "./sys_test/*.error" -delete
 	find . -type f -name "sram.bin" -delete
 	find . -type f -name "hdd.bin" -delete
 	find . -type f -name "test_results" -delete
