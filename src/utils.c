@@ -214,3 +214,16 @@ char *create_heading(char insert_chr, const char* text, int linewidth) {
 
     return result;
 }
+
+char* int_to_bin_str(int num, int bits) {
+    char* bin_str = (char*)malloc(bits + 1);
+
+    bin_str[bits] = '\0';
+
+    for (int i = bits - 1; i >= 0; i--) {
+        bin_str[i] = (num & 1) ? '1' : '0';
+        num >>= 1;
+    }
+
+    return bin_str;
+}

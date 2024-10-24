@@ -13,6 +13,7 @@ uint16_t page_size = 4096;
 uint32_t hdd_size = 4294967295;
 bool debug_mode = false;
 bool test_mode = false;
+bool binary_mode = false;
 bool read_metadata = false;
 uint8_t radius = 2;
 uint8_t max_waiting_instrs = 10;
@@ -28,7 +29,7 @@ void print_help(char *bin_name) {
           "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-          "(verbose) -h (help page) "
+          "(verbose) -b (binary mode) -h (help page) "
           "prgrm_path\n",
           bin_name);
 }
@@ -36,7 +37,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtm")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmb")) != -1) {
     char *endptr;
     long tmp_val;
 
@@ -48,7 +49,8 @@ void parse_args(uint8_t argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT32_MAX) {
-        fprintf(stderr, "Error: SRAM max index must be between 0 and 4294967295");
+        fprintf(stderr,
+                "Error: SRAM max index must be between 0 and 4294967295");
         exit(EXIT_FAILURE);
       }
       sram_size = tmp_val;
@@ -72,7 +74,8 @@ void parse_args(uint8_t argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT32_MAX) {
-        fprintf(stderr, "Error: HDD max index must be between 0 and 4294967295");
+        fprintf(stderr,
+                "Error: HDD max index must be between 0 and 4294967295");
         exit(EXIT_FAILURE);
       }
       hdd_size = tmp_val;
@@ -108,7 +111,8 @@ void parse_args(uint8_t argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT8_MAX) {
-        fprintf(stderr, "Error: Max waiting instructions must be between 0 and 255");
+        fprintf(stderr,
+                "Error: Max waiting instructions must be between 0 and 255");
         exit(EXIT_FAILURE);
       }
       max_waiting_instrs = tmp_val;
@@ -121,6 +125,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       break;
     case 'm':
       read_metadata = true;
+      break;
+    case 'b':
+      binary_mode = true;
       break;
     case 'h':
       print_help(argv[0]);
@@ -148,6 +155,7 @@ void print_args() {
   printf("Daemon Mode: %s\n", debug_mode ? "true" : "false");
   printf("Read Metadata: %s\n", read_metadata ? "true" : "false");
   printf("Test Mode: %s\n", test_mode ? "true" : "false");
+  printf("Binary Mode: %s\n", binary_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");
   printf("Radius: %u\n", radius);
   printf("Peripheral File Directory: %s\n", peripherals_dir);

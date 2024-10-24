@@ -1,11 +1,11 @@
 #include "../include/interpr.h"
-#include "../include/parse_args.h"
 #include "../include/assemble.h"
-#include "../include/reti.h"
-#include "../include/utils.h"
-#include "../include/uart.h"
-#include "../include/error.h"
 #include "../include/debug.h"
+#include "../include/error.h"
+#include "../include/parse_args.h"
+#include "../include/reti.h"
+#include "../include/uart.h"
+#include "../include/utils.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -21,7 +21,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ADDI:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) +
-                    (int32_t)assembly_instr->opd2, false);
+                    (int32_t)assembly_instr->opd2,
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -29,7 +30,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case SUBI:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) -
-                    (int32_t)assembly_instr->opd2, false);
+                    (int32_t)assembly_instr->opd2,
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -37,19 +39,22 @@ void interpr_instr(Instruction *assembly_instr) {
   case MULTI:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) *
-                    (int32_t)assembly_instr->opd2, false);
+                    (int32_t)assembly_instr->opd2,
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
     break;
   case DIVI:
     if (assembly_instr->opd2 == 0) {
-        display_error_message("DivisionByZeroError", "Dividing by Immediate 0", NULL, Idx);
-        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+      display_error_message("DivisionByZeroError", "Dividing by Immediate 0",
+                            NULL, Idx);
+      exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
-                    (int32_t)assembly_instr->opd2, false);
+                    (int32_t)assembly_instr->opd2,
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -57,7 +62,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case MODI:
     write_array(regs, assembly_instr->opd1,
                 mod((int32_t)read_array(regs, assembly_instr->opd1, false),
-                    (int32_t)assembly_instr->opd2), false);
+                    (int32_t)assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -65,7 +71,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case OPLUSI:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) ^
-                    (assembly_instr->opd2 & IMMEDIATE_MASK), false);
+                    (assembly_instr->opd2 & IMMEDIATE_MASK),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -73,7 +80,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ORI:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) |
-                    (assembly_instr->opd2 & IMMEDIATE_MASK), false);
+                    (assembly_instr->opd2 & IMMEDIATE_MASK),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -81,7 +89,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ANDI:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) &
-                    (assembly_instr->opd2 & IMMEDIATE_MASK), false);
+                    (assembly_instr->opd2 & IMMEDIATE_MASK),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -89,7 +98,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ADDR:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) +
-                    (int32_t)read_array(regs, assembly_instr->opd2, false), false);
+                    (int32_t)read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -97,7 +107,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case SUBR:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) -
-                    (int32_t)read_array(regs, assembly_instr->opd2, false), false);
+                    (int32_t)read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -105,19 +116,23 @@ void interpr_instr(Instruction *assembly_instr) {
   case MULTR:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) *
-                    (int32_t)read_array(regs, assembly_instr->opd2, false), false);
+                    (int32_t)read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
     break;
   case DIVR:
     if (read_array(regs, assembly_instr->opd2, false) == 0) {
-        display_error_message("DivisionByZeroError", "Dividing by content of Register %s which is 0", register_name_to_code[assembly_instr->opd2], Idx);
-        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+      display_error_message("DivisionByZeroError",
+                            "Dividing by content of Register %s which is 0",
+                            register_name_to_code[assembly_instr->opd2], Idx);
+      exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
-                    (int32_t)read_array(regs, assembly_instr->opd2, false), false);
+                    (int32_t)read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -125,7 +140,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case MODR:
     write_array(regs, assembly_instr->opd1,
                 mod((int32_t)read_array(regs, assembly_instr->opd1, false),
-                    (int32_t)read_array(regs, assembly_instr->opd2, false)), false);
+                    (int32_t)read_array(regs, assembly_instr->opd2, false)),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -133,7 +149,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case OPLUSR:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) ^
-                    read_array(regs, assembly_instr->opd2, false), false);
+                    read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -141,7 +158,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ORR:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) |
-                    read_array(regs, assembly_instr->opd2, false), false);
+                    read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -149,7 +167,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ANDR:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) &
-                    read_array(regs, assembly_instr->opd2, false), false);
+                    read_array(regs, assembly_instr->opd2, false),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -157,7 +176,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ADDM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) +
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2), false);
+                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -165,7 +185,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case SUBM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) -
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2), false);
+                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -173,21 +194,26 @@ void interpr_instr(Instruction *assembly_instr) {
   case MULTM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) *
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2), false);
+                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
     break;
   case DIVM:
     if (read_storage_ds_fill(assembly_instr->opd2) == 0) {
-        char *addr_str = malloc(MAX_DIGITS_ADDR_DEC);
-        sprintf(addr_str, "%d", assembly_instr->opd2);
-        display_error_message("DivisionByZeroError", "Dividing by memory content at address %s which is 0", (const char *)addr_str, Idx);
-        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+      char *addr_str = malloc(MAX_DIGITS_ADDR_DEC);
+      sprintf(addr_str, "%d", assembly_instr->opd2);
+      display_error_message(
+          "DivisionByZeroError",
+          "Dividing by memory content at address %s which is 0",
+          (const char *)addr_str, Idx);
+      exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2), false);
+                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -195,7 +221,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case MODM:
     write_array(regs, assembly_instr->opd1,
                 mod((int32_t)read_array(regs, assembly_instr->opd1, false),
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2)), false);
+                    (int32_t)read_storage_ds_fill(assembly_instr->opd2)),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -203,7 +230,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case OPLUSM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) ^
-                    read_storage_ds_fill(assembly_instr->opd2), false);
+                    read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -211,7 +239,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ORM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) |
-                    read_storage_ds_fill(assembly_instr->opd2), false);
+                    read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -219,7 +248,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case ANDM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) &
-                    read_storage_ds_fill(assembly_instr->opd2), false);
+                    read_storage_ds_fill(assembly_instr->opd2),
+                false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -234,7 +264,8 @@ void interpr_instr(Instruction *assembly_instr) {
   case LOADIN:
     write_array(regs, assembly_instr->opd2,
                 read_storage(read_array(regs, assembly_instr->opd1, false) +
-                             (int32_t)assembly_instr->opd3), false);
+                             (int32_t)assembly_instr->opd3),
+                false);
     if (assembly_instr->opd2 == PC) {
       // TODO: Testcases für genau das
       goto no_pc_increase;
@@ -271,7 +302,8 @@ void interpr_instr(Instruction *assembly_instr) {
     write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
     // TODO: Tobias, wird mit DS ausgefüllt?
     // write_array(regs, PC, read_storage_ds_fill(assembly_instr->opd1), false);
-    write_array(regs, PC, read_storage_sram_constant_fill(assembly_instr->opd1), false);
+    write_array(regs, PC, read_storage_sram_constant_fill(assembly_instr->opd1),
+                false);
     goto no_pc_increase;
     break;
   case RTI:
@@ -281,47 +313,55 @@ void interpr_instr(Instruction *assembly_instr) {
   case JUMPGT:
     if (read_array(regs, ACC, false) > 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMPEQ:
     if (read_array(regs, ACC, false) == 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMPGE:
     if (read_array(regs, ACC, false) >= 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMPLT:
     if (read_array(regs, ACC, false) < 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMPNE:
     if (read_array(regs, ACC, false) != 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMPLE:
     if (read_array(regs, ACC, false) <= 0) {
       write_array(regs, PC,
-                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+                  read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                  false);
       goto no_pc_increase;
     }
     break;
   case JUMP:
-    write_array(regs, PC, read_array(regs, PC, false) + (int32_t)assembly_instr->opd1, false);
+    write_array(regs, PC,
+                read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
+                false);
     goto no_pc_increase;
   default:
     fprintf(stderr, "Error: A instruction with this opcode doesn't exist yet");
@@ -336,7 +376,7 @@ void interpr_prgrm() {
     uint32_t machine_instr = read_storage(read_array(regs, PC, false));
     Instruction *assembly_instr = machine_to_assembly(machine_instr);
 
-    if (debug_mode) {
+    if (debug_mode && breakpoint_encountered) {
       draw_tui();
       get_user_input();
     }

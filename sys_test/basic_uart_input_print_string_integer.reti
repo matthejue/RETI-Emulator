@@ -49,5 +49,4 @@ ADDI SP 1
 MOVE DS ACC
 # Print over uart
 INT 1
-# == Print several integers over UART ==
 JUMP 0

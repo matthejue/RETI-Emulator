@@ -46,12 +46,21 @@ char *copy_reg_into_str(char *dest, const uint8_t reg) {
 
 char *copy_im_into_str(char *dest, const uint32_t im) {
   strcpy(dest, " ");
-  sprintf(dest + 1, "%d", im);
+  if (binary_mode) {
+    sprintf(dest + 1, "%s", int_to_bin_str(im, 22));
+  } else {
+    sprintf(dest + 1, "%d", im);
+  }
   return dest + strlen(dest);
 }
 
 char *assembly_to_str(Instruction *instr) {
-  char *instr_str = malloc(25); // STOREIN ACC IN2 -2097152\0
+  char *instr_str;
+  if (binary_mode) {
+    instr_str = malloc(39); // STOREIN ACC IN2 22bit\0
+  } else {
+    instr_str = malloc(25); // STOREIN ACC IN2 -2097152\0
+  }
   instr_str[0] = '\0';
   char *dest = instr_str;
   for (size_t i = 0;
@@ -87,6 +96,7 @@ char *assembly_to_str(Instruction *instr) {
   }
   return instr_str;
 }
+
 char *mem_value_to_str(uint32_t mem_content, bool is_unsigned) {
   char *instr_str = malloc(12); // -2147483649
   if (is_unsigned) {
@@ -95,6 +105,10 @@ char *mem_value_to_str(uint32_t mem_content, bool is_unsigned) {
     sprintf(instr_str, "%d", mem_content);
   }
   return instr_str;
+}
+
+char *mem_value_to_bin_str(uint32_t mem_content) {
+  return int_to_bin_str(mem_content, 32);
 }
 
 char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
@@ -171,7 +185,11 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   if (are_instrs) {
     mem_content_str = assembly_to_str(machine_to_assembly(mem_content));
   } else {
-    mem_content_str = mem_value_to_str(mem_content, are_unsigned);
+    if (binary_mode) {
+      mem_content_str = mem_value_to_bin_str(mem_content);
+    } else {
+      mem_content_str = mem_value_to_str(mem_content, are_unsigned);
+    }
   }
   printf("%s: %s%s\n", idx_str, mem_content_str,
          reg_to_mem_pntr(idx, mem_type));
@@ -180,7 +198,12 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
 void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
   char reg_str[4];
   snprintf(reg_str, sizeof(reg_str), "%3s", register_name_to_code[idx]);
-  const char *mem_content_str = mem_value_to_str(mem_content, true);
+  const char *mem_content_str;
+  if (binary_mode) {
+    mem_content_str = mem_value_to_bin_str(mem_content);
+  } else {
+    mem_content_str = mem_value_to_str(mem_content, true);
+  }
   printf("%s: %s\n", reg_str, mem_content_str);
 }
 
@@ -327,10 +350,6 @@ void print_uart_meta_data() {
 }
 
 void draw_tui(void) {
-  if (!breakpoint_encountered) {
-    return;
-  }
-
   printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 

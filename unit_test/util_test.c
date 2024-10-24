@@ -21,9 +21,15 @@ void test_count_lines() {
   assert(lines == 3);
 }
 
+
+void test_int_to_bin_str() {
+  assert(strcmp(int_to_bin_str(6, 3), "110") == 0);
+}
+
 int main() {
   test_extract_line();
   test_count_lines();
+  test_int_to_bin_str();
 
   return 0;
 }

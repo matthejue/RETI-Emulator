@@ -16,8 +16,9 @@ char *read_stdin_content();
 char *read_file_content(const char *file_path);
 char *get_prgrm_content(const char *prgrm_path);
 char *allocate_and_copy_string(const char *original);
-char *extract_line(const char *current, const char *begin) ;
-int count_lines(const char *current, const char *begin) ;
-char *create_heading(char insert_chr, const char* text, int linewidth) ;
+char *extract_line(const char *current, const char *begin);
+int count_lines(const char *current, const char *begin);
+char *create_heading(char insert_chr, const char *text, int linewidth);
+char *int_to_bin_str(int num, int bits);
 
 #endif // UTILS_H
