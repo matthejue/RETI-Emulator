@@ -52,7 +52,7 @@ void interpr_instr(Instruction *assembly_instr) {
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     write_array(regs, assembly_instr->opd1,
-                (int32_t)read_array(regs, assembly_instr->opd1, false) /
+                (int32_t)(read_array(regs, assembly_instr->opd1, false)) /
                     (int32_t)assembly_instr->opd2,
                 false);
     if (assembly_instr->opd1 == PC) {
@@ -374,13 +374,13 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    uint32_t machine_instr = read_storage(read_array(regs, PC, false));
-    Instruction *assembly_instr = machine_to_assembly(machine_instr);
-
     if (debug_mode && breakpoint_encountered) {
       draw_tui();
       get_user_input();
     }
+
+    uint32_t machine_instr = read_storage(read_array(regs, PC, false));
+    Instruction *assembly_instr = machine_to_assembly(machine_instr);
 
     if (assembly_instr->op == JUMP && assembly_instr->opd1 == 0) {
       free(assembly_instr);
