@@ -53,7 +53,7 @@ void display_error_message(const char *error_type, const char *error_message,
     }
     break;
   default:
-    fprintf(stderr, "Error: Invalid error context type");
+    fprintf(stderr, "Error: Invalid error context type\n");
     exit(EXIT_FAILURE);
   }
 
@@ -93,7 +93,7 @@ void display_error_message(const char *error_type, const char *error_message,
     }
     break;
   default:
-    fprintf(stderr, "Error: Invalid error context type");
+    fprintf(stderr, "Error: Invalid error context type\n");
     exit(EXIT_FAILURE);
   }
 }
@@ -122,7 +122,7 @@ void check_opd(OperandType opd_expected, char *opd) {
     }
     break;
   default:
-    fprintf(stderr, "Error: Invalid operand type");
+    fprintf(stderr, "Error: Invalid operand type\n");
     exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
   }
 }
@@ -169,7 +169,7 @@ void check_instr(uint8_t op, String_Instruction *str_instr) {
     check_opd(EMPTY, str_instr->opd2);
     check_opd(EMPTY, str_instr->opd3);
   } else {
-    fprintf(stderr, "Error: Invalid opcode");
+    fprintf(stderr, "Error: Invalid opcode\n");
     exit(EXIT_FAILURE);
   }
 }

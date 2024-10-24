@@ -47,7 +47,7 @@ void init_reti() {
   hdd = fopen(file_path, "w+b");
 
   if (!sram || !hdd) {
-    fprintf(stderr, "Failed to open storage files");
+    fprintf(stderr, "Failed to open storage files\n");
     exit(EXIT_FAILURE);
   }
 
@@ -123,9 +123,9 @@ void load_adjusted_eprom_prgrm() {
 uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
   if (is_uart) {
     if (!(uart[2] & 0b00000010) && addr == 1) {
-      fprintf(stderr, "Warning: No new data in the receive register");
+      fprintf(stderr, "Warning: No new data in the receive register\n");
     } else if (addr == 0) {
-      fprintf(stderr, "Warning: Reading from the send register of the UART makes no sense");
+      fprintf(stderr, "Warning: Reading from the send register of the UART makes no sense\n");
     }
     // uart[2] = uart[2] & 0b11111101; has to be done by the programmer
     return ((uint8_t *)stor)[addr];
@@ -138,13 +138,13 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
   if (is_uart) {
     if (!(uart[2] & 0b00000001) && addr == 0) {
       // TODO: Tobias fragen, ob er damit agreed
-      fprintf(stderr, "Warning: UART does not accept any further data");
+      fprintf(stderr, "Warning: UART does not accept any further data\n");
     } else if (!(uart[2] & 0b00000001) && addr == 2 && (buffer & 0b00000001)) {
-      fprintf(stderr, "Warning: Only the UART should allow sending again");
+      fprintf(stderr, "Warning: Only the UART should allow sending again\n");
     } else if (!(uart[2] & 0b00000010) && addr == 2 && (buffer & 0b00000010)) {
-      fprintf(stderr, "Warning: Only the UART itself should tell that it received something");
+      fprintf(stderr, "Warning: Only the UART itself should tell that it received something\n");
     } else if (addr == 1) {
-      fprintf(stderr, "Warning: Writing to the receive register of the UART makes no sense");
+      fprintf(stderr, "Warning: Writing to the receive register of the UART makes no sense\n");
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
   } else {

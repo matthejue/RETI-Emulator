@@ -47,7 +47,7 @@ void uart_send() {
         memset(send_data, 0, remaining_bytes);
         break;
       default:
-        fprintf(stderr, "Error: Invalid datatype.\n");
+        fprintf(stderr, "Error: Invalid datatype\n");
         exit(EXIT_FAILURE);
       }
       init_finished = true;
@@ -71,7 +71,7 @@ void uart_send() {
         init_finished = false;
       }
     } else {
-      fprintf(stderr, "Error: Invalid datatype.\n");
+      fprintf(stderr, "Error: Invalid datatype\n");
       exit(EXIT_FAILURE);
     }
 
@@ -97,19 +97,19 @@ void ask_for_user_input() {
   while (true) {
     printf("Please enter a number or a character: ");
     if (fgets((char *)input, sizeof(input), stdin) == NULL) {
-      fprintf(stderr, "Error: Couldn't read input.\n");
+      fprintf(stderr, "Error: Couldn't read input\n");
     }
     uint8_t idx_of_newline = strcspn((char *)input, "\n");
     if (idx_of_newline > 3) {
       fprintf(stderr, "Error: Input with more than 3 characters not possible, the "
-             "resuliting number would definitely by out of range.\n");
+             "resuliting number would definitely by out of range\n");
       exit(EXIT_FAILURE);
     }
     input[idx_of_newline] = '\0';
 
     if (isalpha(input[0]) && !receiving_finished) {
       if (strlen((char *)input) > 1) {
-        fprintf(stderr, "Error: Only one character allowed.\n");
+        fprintf(stderr, "Error: Only one character allowed\n");
       } else {
         received_num = input[0];
         break;
@@ -123,12 +123,12 @@ void ask_for_user_input() {
         const char *str3 = proper_str_cat(str2, ".\n");
         fprintf(stderr, str3);
       } else if (received_num < INT8_MIN && received_num > INT8_MAX) {
-        fprintf(stderr, "Error: Number out of range, must be between -128 and 127.\n");
+        fprintf(stderr, "Error: Number out of range, must be between -128 and 127\n");
       } else {
         break;
       }
     } else {
-      fprintf(stderr, "Error: Invalid input.\n");
+      fprintf(stderr, "Error: Invalid input\n");
     }
   }
 }

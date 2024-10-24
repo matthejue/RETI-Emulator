@@ -38,7 +38,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
     if (isdigit((unsigned char)*ptr)) {
       int64_t num = strtol(ptr, (char **)&ptr, 10);
       if (num < INT8_MIN || num > INT8_MAX) {
-        fprintf(stderr, "Error: Number must be between -128 and 127");
+        fprintf(stderr, "Error: Number must be between -128 and 127\n");
         exit(EXIT_FAILURE);
       }
       ar[count++] = (int8_t)num;
@@ -54,7 +54,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
 int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {
-    fprintf(stderr, "Error: Couldn't open file");
+    fprintf(stderr, "Error: Couldn't open file\n");
     exit(EXIT_FAILURE);
   }
 
@@ -91,14 +91,14 @@ void create_out_and_err_file() {
   char *out_file_path = proper_str_cat(file_path, ".output");
   out_file = fopen(out_file_path, "w");
   if (out_file == NULL) {
-    fprintf(stderr, "Error: Can't open file.\n");
+    fprintf(stderr, "Error: Can't open file\n");
     exit(EXIT_FAILURE);
   }
 
   char *err_file_path = proper_str_cat(file_path, ".error");
   err_file = fopen(err_file_path, "w");
   if (err_file == NULL) {
-    fprintf(stderr, "Error: Can't open file.\n");
+    fprintf(stderr, "Error: Can't open file\n");
     exit(EXIT_FAILURE);
   }
 }

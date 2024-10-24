@@ -364,7 +364,8 @@ void interpr_instr(Instruction *assembly_instr) {
                 false);
     goto no_pc_increase;
   default:
-    fprintf(stderr, "Error: A instruction with this opcode doesn't exist yet");
+    fprintf(stderr,
+            "Error: A instruction with this opcode doesn't exist yet\n");
     exit(EXIT_FAILURE);
   }
   write_array(regs, PC, read_array(regs, PC, false) + 1, false);

@@ -70,7 +70,7 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
         (str_instr->opd3)[rel_idx] = *prgrm_pntr;
         break;
       default:
-        fprintf(stderr, "Error: Too many operands");
+        fprintf(stderr, "Error: Too many operands\n");
         exit(EXIT_FAILURE);
       }
       rel_idx++;
@@ -118,7 +118,7 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
         write_array(eprom, i++, machine_instr, false);
         break;
       default:
-        fprintf(stderr, "Error: Invalid memory type");
+        fprintf(stderr, "Error: Invalid memory type\n");
       }
     }
   }
@@ -133,7 +133,7 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
     num_instrs_start_prgrm = i;
     break;
   default:
-    fprintf(stderr, "Error: Invalid memory type");
+    fprintf(stderr, "Error: Invalid memory type\n");
   }
   free(prgrm);
 }

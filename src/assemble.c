@@ -1,7 +1,7 @@
-#include "../include/parse_instrs.h"
-#include "../include/utils.h"
 #include "../include/error.h"
 #include "../include/parse_args.h"
+#include "../include/parse_instrs.h"
+#include "../include/utils.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@ String_to_Mnemonic mnemonic_to_opcode[] = {
     {"NOP", NOP}};
 
 String_to_Directive mnemonic_to_directive[] = {
-    {"IVTE", IVTE},    
+    {"IVTE", IVTE},
 };
 
 uint8_t get_register_code(char *reg) {
@@ -50,13 +50,15 @@ uint8_t get_mnemonic(char *mnemonic) {
     }
   }
   for (uint8_t i = 0;
-       i < sizeof(mnemonic_to_directive) / sizeof(mnemonic_to_directive[0]); ++i) {
+       i < sizeof(mnemonic_to_directive) / sizeof(mnemonic_to_directive[0]);
+       ++i) {
     if (strcmp(mnemonic, mnemonic_to_directive[i].name) == 0) {
       return (uint8_t)mnemonic_to_directive[i].value;
     }
   }
 
-  display_error_message("SyntaxError", "Invalid mnemonic \"%s\"", mnemonic, Pntr);
+  display_error_message("SyntaxError", "Invalid mnemonic \"%s\"", mnemonic,
+                        Pntr);
   exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
@@ -125,7 +127,7 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
   } else if (op == IVTE) {
     machine_instr = 0b10 << 30 | opd1;
   } else {
-    fprintf(stderr, "Error: Invalid opcode");
+    fprintf(stderr, "Error: Invalid opcode\n");
     exit(EXIT_FAILURE);
   }
 
@@ -158,7 +160,8 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
       instr->opd1 = (uint32_t)d;
       instr->opd2 = (uint32_t)s;
     } else {
-      fprintf(stderr, "Error a instruction with this opcode doesn't exist yet");
+      fprintf(stderr,
+              "Error: A instruction with this opcode doesn't exist yet\n");
       exit(EXIT_FAILURE);
     }
   } else if (mode == 1 || mode == 2) {
@@ -206,7 +209,8 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
       instr->opd2 = d;
       break;
     default:
-      fprintf(stderr, "Error a instruction with this opcode doesn't exist yet");
+      fprintf(stderr,
+              "Error: A instruction with this opcode doesn't exist yet\n");
       exit(EXIT_FAILURE);
     }
   } else { // mode == 3
@@ -225,7 +229,8 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
       instr->opd1 = i;
     } else if (jump_mode == RTI || jump_mode == NOP) {
     } else {
-      fprintf(stderr, "Error a instruction with this opcode doesn't exist yet");
+      fprintf(stderr,
+              "Error: A instruction with this opcode doesn't exist yet\n");
       exit(EXIT_FAILURE);
     }
   }

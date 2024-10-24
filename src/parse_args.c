@@ -45,12 +45,12 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 's':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid sram size");
+        fprintf(stderr, "Error: Invalid sram size\n");
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT32_MAX) {
         fprintf(stderr,
-                "Error: SRAM max index must be between 0 and 4294967295");
+                "Error: SRAM max index must be between 0 and 4294967295\n");
         exit(EXIT_FAILURE);
       }
       sram_size = tmp_val;
@@ -58,11 +58,11 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'p':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid page size");
+        fprintf(stderr, "Error: Invalid page size\n");
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT16_MAX) {
-        fprintf(stderr, "Error: Page size must be between 0 and 65535");
+        fprintf(stderr, "Error: Page size must be between 0 and 65535\n");
         exit(EXIT_FAILURE);
       }
       page_size = tmp_val;
@@ -70,12 +70,12 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'H':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid hdd size");
+        fprintf(stderr, "Error: Invalid hdd size\n");
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT32_MAX) {
         fprintf(stderr,
-                "Error: HDD max index must be between 0 and 4294967295");
+                "Error: HDD max index must be between 0 and 4294967295\n");
         exit(EXIT_FAILURE);
       }
       hdd_size = tmp_val;
@@ -86,11 +86,11 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'r':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid radius size");
+        fprintf(stderr, "Error: Invalid radius size\n");
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT8_MAX) {
-        fprintf(stderr, "Error: Radius must be between 0 and 255");
+        fprintf(stderr, "Error: Radius must be between 0 and 255\n");
         exit(EXIT_FAILURE);
       }
       radius = tmp_val;
@@ -107,12 +107,12 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'w':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid max waiting instructions");
+        fprintf(stderr, "Error: Invalid max waiting instructions\n");
         exit(EXIT_FAILURE);
       }
       if (tmp_val < 0 || tmp_val > UINT8_MAX) {
         fprintf(stderr,
-                "Error: Max waiting instructions must be between 0 and 255");
+                "Error: Max waiting instructions must be between 0 and 255\n");
         exit(EXIT_FAILURE);
       }
       max_waiting_instrs = tmp_val;

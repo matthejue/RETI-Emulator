@@ -19,7 +19,7 @@ void test_interpr_prgrm() {
 
   FILE *input_stream = fmemopen((void *)test_input, input_size, "r");
   if (input_stream == NULL) {
-    fprintf(stderr, "Error: fmemopen failed");
+    fprintf(stderr, "Error: fmemopen failed\n");
     exit(EXIT_FAILURE);
   }
 

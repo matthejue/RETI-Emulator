@@ -83,7 +83,7 @@ char *read_stdin_content() {
 char *read_file_content(const char *file_path) {
   FILE *file = fopen(file_path, "r");
   if (!file) {
-    fprintf(stderr, "Error opening file");
+    fprintf(stderr, "Error opening file\n");
     exit(EXIT_FAILURE);
   }
 
@@ -93,7 +93,7 @@ char *read_file_content(const char *file_path) {
 
   char *content = malloc(file_size + 1);
   if (!content) {
-    fprintf(stderr, "Error allocating memory");
+    fprintf(stderr, "Error allocating memory\n");
     exit(EXIT_FAILURE);
   }
 
