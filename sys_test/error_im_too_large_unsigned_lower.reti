@@ -1,0 +1,4 @@
+# output: SyntaxError
+STORE ACC 0
+STORE ACC -1
+JUMP 0

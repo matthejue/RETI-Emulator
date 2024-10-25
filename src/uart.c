@@ -107,21 +107,21 @@ void ask_for_user_input() {
     }
     input[idx_of_newline] = '\0';
 
-    if (isalpha(input[0]) && !receiving_finished) {
+    if (isalpha(input[0])) {
       if (strlen((char *)input) > 1) {
         fprintf(stderr, "Error: Only one character allowed\n");
       } else {
         received_num = input[0];
         break;
       }
-    } else if (isdigit(input[0])) {
+    } else if (isdigit(input[0]) || input[0] == '-') {
       char *endptr;
       received_num = strtol((char *)input, &endptr, 10);
       if (*endptr != '\0') {
         const char *str = "Error: Further characters after number: ";
         const char *str2 = proper_str_cat(str, endptr);
         const char *str3 = proper_str_cat(str2, ".\n");
-        fprintf(stderr, str3);
+        fprintf(stderr, "%s", str3);
       } else if (received_num < INT8_MIN && received_num > INT8_MAX) {
         fprintf(stderr, "Error: Number out of range, must be between -128 and 127\n");
       } else {

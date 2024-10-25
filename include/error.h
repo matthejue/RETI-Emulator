@@ -12,7 +12,7 @@ struct ErrorContext {
 
 extern struct ErrorContext error_context;
 
-typedef enum {Pntr, Idx} ErrorContextType;
+typedef enum { Pntr, Idx } ErrorContextType;
 
 typedef enum {
   REG,
@@ -20,7 +20,10 @@ typedef enum {
   EMPTY,
 } OperandType;
 
-void display_error_message(const char *error_type, const char *error_message, const char *to_insert, ErrorContextType error_context_type) ;
+void display_error_message(const char *error_type, const char *error_message,
+                           const char *to_insert,
+                           ErrorContextType error_context_type);
 void check_instr(uint8_t op, String_Instruction *str_instr);
+void check_im(uint8_t op, uint64_t im, char *str);
 
 #endif // ERROR_H

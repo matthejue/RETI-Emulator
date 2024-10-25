@@ -57,6 +57,8 @@ typedef enum {
   IVTE = 0b10000000
 } Directive;
 
+typedef enum { COMPUTE_M, LOAD_M, STORE_M, JUMP_M} mode;
+
 extern const char *register_name_to_code[];
 
 typedef struct {

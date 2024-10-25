@@ -80,15 +80,18 @@ void display_error_message(const char *error_type, const char *error_message,
     switch (memory_map_const) {
     case EPROM_CONST:
       adjust_print(false, "%s\n", NULL,
-                   assembly_to_str(machine_to_assembly(read_array(eprom, rel_addr, false))));
+                   assembly_to_str(machine_to_assembly(
+                       read_array(eprom, rel_addr, false))));
       break;
     case UART_CONST:
       adjust_print(false, "%s\n", NULL,
-                   assembly_to_str(machine_to_assembly(read_array(uart, rel_addr, true))));
+                   assembly_to_str(
+                       machine_to_assembly(read_array(uart, rel_addr, true))));
       break;
     default: // SRAM_CONST
-      adjust_print(false, "%s\n", NULL,
-                   assembly_to_str(machine_to_assembly(read_file(sram, rel_addr))));
+      adjust_print(
+          false, "%s\n", NULL,
+          assembly_to_str(machine_to_assembly(read_file(sram, rel_addr))));
       break;
     }
     break;
@@ -103,21 +106,27 @@ void check_opd(OperandType opd_expected, char *opd) {
   case REG:
     if (!isalpha(opd[0])) {
       display_error_message(
-          "SyntaxError", "Invalid syntax for instruction, expected register, got \"%s\"", opd, Pntr);
+          "SyntaxError",
+          "Invalid syntax for instruction, expected register, got \"%s\"",
+          opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
   case IM:
     if (!(isdigit(opd[0]) || opd[0] == '-')) {
       display_error_message(
-          "SyntaxError", "Invalid syntax for instruction, expected immediate, got \"%s\"", opd, Pntr);
+          "SyntaxError",
+          "Invalid syntax for instruction, expected immediate, got \"%s\"",
+          opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
   case EMPTY:
     if (!(strcmp(opd, "") == 0)) {
-      display_error_message(
-          "SyntaxError", "Invalid syntax for instruction, expected no more operands, got \"%s\"", opd, Pntr);
+      display_error_message("SyntaxError",
+                            "Invalid syntax for instruction, expected no more "
+                            "operands, got \"%s\"",
+                            opd, Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
@@ -171,5 +180,27 @@ void check_instr(uint8_t op, String_Instruction *str_instr) {
   } else {
     fprintf(stderr, "Error: Invalid opcode\n");
     exit(EXIT_FAILURE);
+  }
+}
+
+void check_im(uint8_t op, uint64_t im, char * str) {
+  if (op == STORE || op == LOAD || (ADDM <= op && op <= ANDM)) {
+    if (0 <= im && im <= 4194303) {
+      return;
+    }
+    display_error_message(
+        "SyntaxError",
+        "In this context Immediate is expected to be between 0 and 4194303, got \"%s\"", str,
+        Pntr);
+    exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+  } else {
+    if (-2097152 <= (int64_t)im && (int64_t)im <= 2097151) {
+      return;
+    }
+    display_error_message(
+        "SyntaxError",
+        "In this context Immediate is expected to be between -2097152 and 2097151, got \"%s\"", str,
+        Pntr);
+    exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
   }
 }

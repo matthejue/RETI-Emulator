@@ -35,7 +35,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
     }
 
     ar = realloc(ar, (count + 1) * sizeof(int8_t));
-    if (isdigit((unsigned char)*ptr)) {
+    if (isdigit((char)*ptr) || *ptr == '-') {
       int64_t num = strtol(ptr, (char **)&ptr, 10);
       if (num < INT8_MIN || num > INT8_MAX) {
         fprintf(stderr, "Error: Number must be between -128 and 127\n");

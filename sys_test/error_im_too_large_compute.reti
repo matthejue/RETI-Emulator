@@ -1,0 +1,5 @@
+# output: SyntaxError
+INT 3
+MULT ACC 4194303
+MULT ACC 4194304
+JUMP 0
