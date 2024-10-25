@@ -411,7 +411,9 @@ void get_user_input(void) {
     } else if (strcmp(stdin[0], "s") == 0) {
       ;
     } else if (strcmp(stdin[0], "D") == 0) {
+#ifdef __linux__
       __asm__("int3"); // ../.gdbinit
+#endif
     } else if (strcmp(stdin[0], "q") == 0) {
       exit(EXIT_SUCCESS);
     }
