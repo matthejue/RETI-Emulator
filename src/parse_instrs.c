@@ -1,7 +1,7 @@
 #include "../include/parse_instrs.h"
+#include "../include/error.h"
 #include "../include/interpr.h"
 #include "../include/reti.h"
-#include "../include/error.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,9 +106,9 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
         }
         write_file(sram, i++, machine_instr);
         break;
-      case EPROM_START_PRGRM:
-        uint32_t *temp =
-            realloc(eprom, sizeof(uint32_t) * i + sizeof(uint32_t));
+      case EPROM_START_PRGRM: {
+        uint32_t *temp;
+        temp = realloc(eprom, sizeof(uint32_t) * i + sizeof(uint32_t));
         if (temp == NULL) {
           fprintf(stderr, "Realloc failed\n");
           free(eprom);
@@ -116,7 +116,7 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
         }
         eprom = temp;
         write_array(eprom, i++, machine_instr, false);
-        break;
+      } break;
       default:
         fprintf(stderr, "Error: Invalid memory type\n");
       }

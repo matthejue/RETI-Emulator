@@ -25,7 +25,7 @@ void display_error_message(const char *error_type, const char *error_message,
         false, "%d: ", NULL,
         count_lines(error_context.code_current, error_context.code_begin));
     break;
-  case Idx:
+  case Idx: {
     uint32_t addr = read_array(regs, PC, false);
     memory_map_const = addr >> 30;
     switch (memory_map_const) {
@@ -40,7 +40,7 @@ void display_error_message(const char *error_type, const char *error_message,
                    "UART content of register %s interpreted as instruction: ",
                    NULL, rel_addr);
       break;
-    default: // SRAM_CONSt
+    default: // SRAM_CONST
       rel_addr = addr & 0x7FFFFFFF;
       if (rel_addr < num_instrs_isrs) {
         adjust_print(false, "%s:", NULL, isrs_prgrm_path);
@@ -51,7 +51,7 @@ void display_error_message(const char *error_type, const char *error_message,
       }
       break;
     }
-    break;
+  } break;
   default:
     fprintf(stderr, "Error: Invalid error context type\n");
     exit(EXIT_FAILURE);
@@ -107,8 +107,8 @@ void check_opd(OperandType opd_expected, char *opd) {
     if (!isalpha(opd[0])) {
       display_error_message(
           "SyntaxError",
-          "Invalid syntax for instruction, expected register, got \"%s\"",
-          opd, Pntr);
+          "Invalid syntax for instruction, expected register, got \"%s\"", opd,
+          Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
@@ -116,8 +116,8 @@ void check_opd(OperandType opd_expected, char *opd) {
     if (!(isdigit(opd[0]) || opd[0] == '-')) {
       display_error_message(
           "SyntaxError",
-          "Invalid syntax for instruction, expected immediate, got \"%s\"",
-          opd, Pntr);
+          "Invalid syntax for instruction, expected immediate, got \"%s\"", opd,
+          Pntr);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     break;
@@ -183,24 +183,24 @@ void check_instr(uint8_t op, String_Instruction *str_instr) {
   }
 }
 
-void check_im(uint8_t op, uint64_t im, char * str) {
+void check_im(uint8_t op, uint64_t im, char *str) {
   if (op == STORE || op == LOAD || (ADDM <= op && op <= ANDM)) {
     if (0 <= im && im <= 4194303) {
       return;
     }
-    display_error_message(
-        "SyntaxError",
-        "In this context Immediate is expected to be between 0 and 4194303, got \"%s\"", str,
-        Pntr);
+    display_error_message("SyntaxError",
+                          "In this context Immediate is expected to be between "
+                          "0 and 4194303, got \"%s\"",
+                          str, Pntr);
     exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
   } else {
     if (-2097152 <= (int64_t)im && (int64_t)im <= 2097151) {
       return;
     }
-    display_error_message(
-        "SyntaxError",
-        "In this context Immediate is expected to be between -2097152 and 2097151, got \"%s\"", str,
-        Pntr);
+    display_error_message("SyntaxError",
+                          "In this context Immediate is expected to be between "
+                          "-2097152 and 2097151, got \"%s\"",
+                          str, Pntr);
     exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
   }
 }
