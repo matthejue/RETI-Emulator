@@ -35,7 +35,7 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
       break;
     }
 
-    ar = realloc(ar, (count + 1) * sizeof(int8_t));
+    ar = realloc(ar, (count + 1) * sizeof(uint32_t));
     if (isdigit((char)*ptr) || *ptr == '-') {
       uint8_t *original_ptr = (uint8_t *)ptr;
       uint64_t num = strtol(ptr, (char **)&ptr, 10);
