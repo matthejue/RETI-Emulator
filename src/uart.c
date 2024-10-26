@@ -1,8 +1,8 @@
 #include "../include/uart.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
-#include "../include/utils.h"
 #include "../include/special_opts.h"
+#include "../include/utils.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
@@ -15,11 +15,13 @@ uint8_t num_bytes = 0;
 uint16_t send_idx = 0;
 uint8_t *send_data;
 
-int8_t *uart_input = NULL;
+uint32_t *uart_input = NULL;
 uint8_t input_len = 0;
 uint8_t input_idx = 0;
 
-int8_t received_num = '\0';
+uint32_t received_num;
+uint8_t received_num_part = '\0';
+uint8_t received_num_idx = 0;
 
 uint8_t sending_waiting_time = 0;
 uint8_t receiving_waiting_time = 0;
@@ -55,7 +57,8 @@ void uart_send() {
       send_data[num_bytes - remaining_bytes] = uart[0];
       remaining_bytes--;
       if (remaining_bytes == 0) {
-        adjust_print(true, "%d\n", "%d ", swap_endian_32(*((uint32_t *)send_data)));
+        adjust_print(true, "%d\n", "%d ",
+                     swap_endian_32(*((uint32_t *)send_data)));
 
         init_finished = false;
       }
@@ -91,41 +94,50 @@ void uart_send() {
   }
 }
 
-void ask_for_user_input() {
-  int8_t input[4];
+uint32_t ask_for_user_input() {
+  uint8_t input[11];
 
   while (true) {
-    printf("Please enter a number or a character: ");
+    printf("Unsigned number smaller 4294967296 or a up to 4 characters: ");
     if (fgets((char *)input, sizeof(input), stdin) == NULL) {
       fprintf(stderr, "Error: Couldn't read input\n");
+    } else {
+      // Find the position of the newline character
+      uint8_t idx_of_newline = strcspn((char *)input, "\n");
+      // If the newline character is not found, it means the input was too
+      // long
+      if (input[idx_of_newline] != '\n') {
+        // Clear the input buffer
+        uint32_t c;
+        while ((c = getchar()) != '\n' && c != EOF)
+          ;
+        fprintf(stderr, "Error: Input too long\n");
+        continue;
+      } else {
+        // Replace the newline character with a null terminator
+        input[idx_of_newline] = '\0';
+      }
     }
-    uint8_t idx_of_newline = strcspn((char *)input, "\n");
-    if (idx_of_newline > 3) {
-      fprintf(stderr, "Error: Input with more than 3 characters not possible, the "
-             "resuliting number would definitely by out of range\n");
-      exit(EXIT_FAILURE);
-    }
-    input[idx_of_newline] = '\0';
 
     if (isalpha(input[0])) {
-      if (strlen((char *)input) > 1) {
-        fprintf(stderr, "Error: Only one character allowed\n");
+      if (strlen((char *)input) > 4) {
+        fprintf(stderr, "Error: Only up to 4 characters allowed\n");
       } else {
-        received_num = input[0];
-        break;
+        return *(uint32_t *)input;
       }
     } else if (isdigit(input[0]) || input[0] == '-') {
       char *endptr;
-      received_num = strtol((char *)input, &endptr, 10);
+      uint64_t tmp_num = strtol((char *)input, &endptr, 10);
       if (*endptr != '\0') {
         const char *str = "Error: Further characters after number: ";
         const char *str2 = proper_str_cat(str, endptr);
         const char *str3 = proper_str_cat(str2, ".\n");
         fprintf(stderr, "%s", str3);
-      } else if (received_num < INT8_MIN && received_num > INT8_MAX) {
-        fprintf(stderr, "Error: Number out of range, must be between -128 and 127\n");
+      } else if ((int64_t)tmp_num < INT32_MIN && (int64_t)tmp_num > INT32_MAX) {
+        fprintf(stderr, "Error: Number out of range, must be between "
+                        "-2147483648 and 2147483647\n");
       } else {
-        break;
+        return tmp_num;
       }
     } else {
       fprintf(stderr, "Error: Invalid input\n");
@@ -135,11 +147,22 @@ void ask_for_user_input() {
 
 void uart_receive() {
   if (!(read_array(uart, 2, true) & 0b00000010) && !receiving_finished) {
-    if (read_metadata && input_idx < input_len) {
-      received_num = uart_input[input_idx];
-      input_idx++;
-    } else {
-      ask_for_user_input();
+    if (received_num_idx == 0) {
+      if (read_metadata && input_idx < input_len) {
+        received_num = uart_input[input_idx];
+        input_idx++;
+      } else {
+        received_num = ask_for_user_input();
+      }
+      received_num_idx = 4;
+    }
+    received_num_part = (received_num & (0xFF << (received_num_idx * 8))) >>
+                        (received_num_idx * 8);
+    received_num_idx--;
+
+    if (received_num_part == received_num) {
+      // no need to receive 0 numbers it the whole number is already send
+      received_num_idx = 0;
     }
 
     if (max_waiting_instrs == 0) {
@@ -152,7 +175,7 @@ void uart_receive() {
   receiving_finished:
     receiving_waiting_time--;
     if (receiving_waiting_time == 0) {
-      uart[1] = received_num; // & 0xFF; not necessary
+      uart[1] = received_num_part; // & 0xFF; not necessary
       uart[2] = uart[2] | 0b00000010;
       receiving_finished = false;
     }

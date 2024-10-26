@@ -8,7 +8,7 @@ extern uint8_t num_bytes;
 extern uint16_t send_idx;
 extern uint8_t *send_data;
 
-extern int8_t *uart_input;
+extern uint32_t *uart_input;
 extern uint8_t input_len;
 extern uint8_t input_idx;
 

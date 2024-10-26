@@ -11,12 +11,12 @@ void test_extract_comment_metadata() {
     fprintf(stderr, "Error: File could not be opened\n");
     exit(EXIT_FAILURE);
   }
-  fprintf(file, "# input: 72 e l l o 32 W o 114 l d\n");
+  fprintf(file, "# input: 72 ello 32 Wo 114 ld\n");
   fprintf(file, "JUMP 0\n");
   fclose(file);
   uint8_t len = 0;
-  int8_t *comment_metadata = extract_comment_metadata(filename, &len);
-  int8_t expected[] = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
+  uint32_t *comment_metadata = extract_comment_metadata(filename, &len);
+  uint32_t expected[] = {'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'};
   for (uint8_t i = 0; i < len; i++) {
     assert(comment_metadata[i] == expected[i]);
   }

@@ -11,7 +11,7 @@
 FILE *out_file = NULL;
 FILE *err_file = NULL;
 
-int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
+uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
   const char *prefix;
   if (strncmp(line, "# input:", strlen("# input:")) == 0) {
     prefix = "# input:";
@@ -22,7 +22,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
   }
 
   const char *ptr = line + strlen(prefix);
-  int8_t *ar = NULL;
+  uint32_t *ar = NULL;
   size_t count = 0;
 
   while (*ptr) {
@@ -37,13 +37,14 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
     ar = realloc(ar, (count + 1) * sizeof(int8_t));
     if (isdigit((char)*ptr) || *ptr == '-') {
       int64_t num = strtol(ptr, (char **)&ptr, 10);
-      if (num < INT8_MIN || num > INT8_MAX) {
-        fprintf(stderr, "Error: Number must be between -128 and 127\n");
+      if ((int64_t)num < INT32_MIN || (int64_t)num > INT32_MAX) {
+        fprintf(stderr,
+                "Error: Number must be between -2147483648 and 2147483647\n");
         exit(EXIT_FAILURE);
       }
-      ar[count++] = (int8_t)num;
+      ar[count++] = (uint32_t)num;
     } else {
-      ar[count++] = (int8_t)*ptr++;
+      ar[count++] = (uint8_t)*ptr++;
     }
   }
 
@@ -51,7 +52,7 @@ int8_t *extract_input_from_comment(const char *line, uint8_t *len) {
   return ar;
 }
 
-int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
+uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {
     fprintf(stderr, "Error: Couldn't open file\n");
@@ -59,7 +60,7 @@ int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   }
 
   char line[256];
-  int8_t *result = NULL;
+  uint32_t *result = NULL;
   *len = 0;
 
   while (fgets(line, sizeof(line), file)) {
@@ -68,7 +69,7 @@ int8_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
     }
 
     if (line[0] == '#') {
-      int8_t *parsed_line = extract_input_from_comment(line, len);
+      uint32_t *parsed_line = extract_input_from_comment(line, len);
       if (parsed_line) {
         result = parsed_line;
       }
@@ -115,7 +116,8 @@ void adjust_print(bool is_stdout, const char *format,
       vfprintf(err_file, format, args);
     }
   } else {
-    if (is_stdout) { // because of display_error_message in case test_mode is false
+    if (is_stdout) { // because of display_error_message in case test_mode is
+                     // false
       if (format != NULL) {
         vfprintf(stdout, format, args);
       }

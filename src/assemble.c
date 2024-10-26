@@ -69,6 +69,7 @@ uint32_t get_im(char *str, uint8_t op) {
   errno = 0;
   uint64_t tmp_val = strtol(str, &endptr, 10);
 
+  // TODO: not sure this is correct
   if (errno == ERANGE) {
     fprintf(stderr, "Error: Immediate is way too large, it is not even between -9223372036854775808 and 9223372036854775807\n");
     exit(EXIT_FAILURE);
