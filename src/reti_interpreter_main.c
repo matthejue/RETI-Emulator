@@ -13,11 +13,11 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     print_args();
   }
-  if (read_metadata) {
-    uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
-  }
   if (test_mode) {
     create_out_and_err_file();
+  }
+  if (read_metadata) {
+    uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
   }
 
   init_reti();

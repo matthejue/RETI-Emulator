@@ -1,4 +1,5 @@
 #include "../include/special_opts.h"
+#include "../include/error.h"
 #include "../include/parse_args.h"
 #include "../include/utils.h"
 #include <ctype.h>
@@ -23,7 +24,7 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
 
   const char *ptr = line + strlen(prefix);
   uint32_t *ar = NULL;
-  size_t count = 0;
+  uint8_t count = 0;
 
   while (*ptr) {
     while (isspace((unsigned char)*ptr)) {
@@ -36,11 +37,15 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
 
     ar = realloc(ar, (count + 1) * sizeof(int8_t));
     if (isdigit((char)*ptr) || *ptr == '-') {
-      int64_t num = strtol(ptr, (char **)&ptr, 10);
+      uint8_t *original_ptr = (uint8_t *)ptr;
+      uint64_t num = strtol(ptr, (char **)&ptr, 10);
       if ((int64_t)num < INT32_MIN || (int64_t)num > INT32_MAX) {
-        fprintf(stderr,
-                "Error: Number must be between -2147483648 and 2147483647\n");
-        exit(EXIT_FAILURE);
+        display_error_message(
+            "InputError",
+            "Number must be between -2147483648 and 2147483647, got \"%s\"",
+            (char *)original_ptr, Pntr);
+
+        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
       }
       ar[count++] = (uint32_t)num;
     } else {
@@ -52,7 +57,10 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
   return ar;
 }
 
+bool first_line_over = false;
+
 uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
+  error_context.filename = prgrm_path;
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {
     fprintf(stderr, "Error: Couldn't open file\n");
@@ -67,11 +75,18 @@ uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
     if (line[0] == '\n') {
       continue;
     }
+    if (first_line_over) {
+      error_context.code_current = line;
+    } else {
+      error_context.code_begin = line;
+      error_context.code_current = line;
+      first_line_over = true;
+    }
 
     if (line[0] == '#') {
-      uint32_t *parsed_line = extract_input_from_comment(line, len);
-      if (parsed_line) {
-        result = parsed_line;
+      uint32_t *extract_ar = extract_input_from_comment(line, len);
+      if (extract_ar) {
+        result = extract_ar;
       }
     } else {
       break;

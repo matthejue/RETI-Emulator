@@ -14,8 +14,8 @@ SRC := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c))
 OBJ_SRC := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
-CFLAGS   := -Wall # -g # -O2
-LDFLAGS  := -L$(LIB_DIR) -static
+CFLAGS   := -Wall -g # -O2
+LDFLAGS  := -L$(LIB_DIR) #-static
 LDLIBS   := -lm
 
 .PRECIOUS: $(OBJ_DIR)/%.o $(OBJ_TEST_DIR)/%.o
@@ -46,7 +46,7 @@ $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR):
 	mkdir -p $@
 
 TEST_CLASS := all
-sys-test:
+sys-test: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
 	./run_sys_tests.sh $${COLUMNS} $(TEST_CLASS) $(EXTRA_ARGS);
 

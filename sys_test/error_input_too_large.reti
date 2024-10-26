@@ -1,3 +1,3 @@
-# input: 127 a 128
+# input: 2147483647 a 2147483648
 # output: InputError
 JUMP 0;
