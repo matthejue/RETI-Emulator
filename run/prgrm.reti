@@ -1,1 +1,7 @@
-DIV asdlasdj flaj asdlfj 
+# input: -2147483648 a
+# output: InputError
+INT 3
+INT 2
+INT 3
+INT 0
+JUMP 0

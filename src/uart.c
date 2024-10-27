@@ -95,10 +95,10 @@ void uart_send() {
 }
 
 uint32_t ask_for_user_input() {
-  uint8_t input[11];
+  uint8_t input[13];
 
   while (true) {
-    printf("Unsigned number smaller 4294967296 or a up to 4 characters: ");
+    printf("Number between -2147483648 and 2147483647 or a character: ");
     if (fgets((char *)input, sizeof(input), stdin) == NULL) {
       fprintf(stderr, "Error: Couldn't read input\n");
     } else {
@@ -120,8 +120,8 @@ uint32_t ask_for_user_input() {
     }
 
     if (isalpha(input[0])) {
-      if (strlen((char *)input) > 4) {
-        fprintf(stderr, "Error: Only up to 4 characters allowed\n");
+      if (strlen((char *)input) > 1) {
+        fprintf(stderr, "Error: Only one character allowed\n");
       } else {
         return *(uint32_t *)input;
       }
@@ -133,7 +133,7 @@ uint32_t ask_for_user_input() {
         const char *str2 = proper_str_cat(str, endptr);
         const char *str3 = proper_str_cat(str2, ".\n");
         fprintf(stderr, "%s", str3);
-      } else if ((int64_t)tmp_num < INT32_MIN && (int64_t)tmp_num > INT32_MAX) {
+      } else if ((int64_t)tmp_num < INT32_MIN || (int64_t)tmp_num > INT32_MAX) {
         fprintf(stderr, "Error: Number out of range, must be between "
                         "-2147483648 and 2147483647\n");
       } else {
