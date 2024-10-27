@@ -272,9 +272,11 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case LOADI:
-    // TODO: Das mit der Maske entfernen, falls i auch signed sein darf
+    // In case i is not allowed to be signed need mask
+    // write_array(regs, assembly_instr->opd1,
+    //             assembly_instr->opd2 & IMMEDIATE_MASK, false);
     write_array(regs, assembly_instr->opd1,
-                assembly_instr->opd2 & IMMEDIATE_MASK, false);
+                assembly_instr->opd2, false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -311,7 +313,7 @@ void interpr_instr(Instruction *assembly_instr) {
     write_array(regs, SP, read_array(regs, SP, false) + 1, false);
     break;
   case JUMPGT:
-    if (read_array(regs, ACC, false) > 0) {
+    if ((int32_t)read_array(regs, ACC, false) > 0) {
       write_array(regs, PC,
                   read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
                   false);
@@ -327,7 +329,7 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case JUMPGE:
-    if (read_array(regs, ACC, false) >= 0) {
+    if ((int32_t)read_array(regs, ACC, false) >= 0) {
       write_array(regs, PC,
                   read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
                   false);
@@ -335,7 +337,7 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case JUMPLT:
-    if (read_array(regs, ACC, false) < 0) {
+    if ((int32_t)read_array(regs, ACC, false) < 0) {
       write_array(regs, PC,
                   read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
                   false);
@@ -351,7 +353,7 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     break;
   case JUMPLE:
-    if (read_array(regs, ACC, false) <= 0) {
+    if ((int32_t)read_array(regs, ACC, false) <= 0) {
       write_array(regs, PC,
                   read_array(regs, PC, false) + (int32_t)assembly_instr->opd1,
                   false);

@@ -51,7 +51,7 @@ sys-test: $(BIN_SRC)
 	./run_sys_tests.sh $${COLUMNS} $(TEST_CLASS) $(EXTRA_ARGS);
 
 RUN_PRGRM := ./run/prgrm.reti
-run:
+run: $(BIN_SRC)
 	./bin/reti_interpreter_main $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
 
 clean: clean-files clean-directories

@@ -1,0 +1,9 @@
+# input: 1361351240 -1
+# output: 1361351240 -1
+INT 2
+INT 3
+INT 0
+INT 2
+INT 3
+INT 0
+JUMP 0

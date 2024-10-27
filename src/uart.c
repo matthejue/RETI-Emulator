@@ -21,7 +21,7 @@ uint8_t input_idx = 0;
 
 uint32_t received_num;
 uint8_t received_num_part = '\0';
-uint8_t received_num_idx = 0;
+uint8_t received_num_idx = -1;
 
 uint8_t sending_waiting_time = 0;
 uint8_t receiving_waiting_time = 0;
@@ -85,8 +85,8 @@ void uart_send() {
     }
     sending_finished = true;
   } else if (sending_finished) {
-  sending_finished:
     sending_waiting_time--;
+  sending_finished:
     if (sending_waiting_time == 0) {
       uart[2] = uart[2] | 0b00000001;
       sending_finished = false;
@@ -147,23 +147,23 @@ uint32_t ask_for_user_input() {
 
 void uart_receive() {
   if (!(read_array(uart, 2, true) & 0b00000010) && !receiving_finished) {
-    if (received_num_idx == 0) {
+    if ((int8_t)received_num_idx == -1) {
       if (read_metadata && input_idx < input_len) {
         received_num = uart_input[input_idx];
         input_idx++;
       } else {
         received_num = ask_for_user_input();
       }
-      received_num_idx = 4;
+      received_num_idx = 3;
     }
     received_num_part = (received_num & (0xFF << (received_num_idx * 8))) >>
                         (received_num_idx * 8);
     received_num_idx--;
 
-    if (received_num_part == received_num) {
-      // no need to receive 0 numbers it the whole number is already send
-      received_num_idx = 0;
-    }
+    // if (received_num_part == received_num) {
+    //   // no need to receive 0 numbers if the whole number is already send
+    //   received_num_idx = 0;
+    // }
 
     if (max_waiting_instrs == 0) {
       goto receiving_finished;
@@ -172,8 +172,8 @@ void uart_receive() {
     }
     receiving_finished = true;
   } else if (receiving_finished) {
-  receiving_finished:
     receiving_waiting_time--;
+  receiving_finished:
     if (receiving_waiting_time == 0) {
       uart[1] = received_num_part; // & 0xFF; not necessary
       uart[2] = uart[2] | 0b00000010;

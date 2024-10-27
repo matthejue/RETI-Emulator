@@ -1,5 +1,5 @@
 # input: 1 0 0 -1 0 -1 -1 0 1 0 0 1
-# output: -2130640637
+# output: -2147483645
 INT 3
 # Compute Immediate
 ADDI IN1 -42
@@ -38,6 +38,7 @@ STOREIN IN2 IN1 0
 MOVE BAF ACC
 # Jump
 NOP
+INT 3
 INT 0
 # INT 3
 # INT 2
