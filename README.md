@@ -2,7 +2,7 @@
 ```bash
 ssh <pool_login>@login.informatik.uni-freiburg.de
 mkdir -p ~/.local/bin
-wget https://github.com/matthejue/RETI-Interpreter/releases/download/v1.0.0-beta/reti_interpreter -P ~/.local/bin
+wget https://github.com/matthejue/RETI-Interpreter/releases/download/v1.1.0/reti_interpreter -P ~/.local/bin
 chmod 755 ~/.local/bin/reti_interpreter
 echo 'export PATH="~/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc # to apply it directly without re-login
