@@ -12,7 +12,7 @@ vim test.reti
 
 # Installation on systems where compilation is possible via compilation
 ```bash
-git clone https://github.com/matthejue/RETI-Interpreter.git --depth 1
+git clone -b main https://github.com/matthejue/RETI-Interpreter.git --depth 1
 cd RETI-Interpreter
 make
 sudo make install-linux # only under Linux
