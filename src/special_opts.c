@@ -40,6 +40,8 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
       uint8_t *original_ptr = (uint8_t *)ptr;
       uint64_t num = strtol(ptr, (char **)&ptr, 10);
       if ((int64_t)num < INT32_MIN || (int64_t)num > INT32_MAX) {
+        uint8_t idx_of_newline = strcspn((char *)original_ptr, "\n");
+        original_ptr[idx_of_newline] = '\0';
         display_error_message(
             "InputError",
             "Number must be between -2147483648 and 2147483647, got \"%s\"",
