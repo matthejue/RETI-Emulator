@@ -43,12 +43,14 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
           prgrm_pntr++;
         }
         break;
-      } else if (*prgrm_pntr == ';' || *prgrm_pntr == '\n') {
+      } else if (*prgrm_pntr == ';' || *prgrm_pntr == '\n' ||
+                 *prgrm_pntr == '\r') {
         prgrm_pntr++;
         *original_prgrm_pntr = prgrm_pntr;
         return str_instr;
       } else if (*prgrm_pntr == '#') {
-        while (*prgrm_pntr != '\n' && *prgrm_pntr != '\0') {
+        while (*prgrm_pntr != '\n' && *prgrm_pntr != '\0' &&
+               *prgrm_pntr != '\r') {
           prgrm_pntr++;
         }
         continue;
@@ -70,6 +72,7 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
         (str_instr->opd3)[rel_idx] = *prgrm_pntr;
         break;
       default:
+        // TODO: also has to be a special error message
         fprintf(stderr, "Error: Too many operands\n");
         exit(EXIT_FAILURE);
       }
