@@ -1,5 +1,4 @@
-# input: -2147483648 a
-# output: InputError
+# input: -1431655766
 INT 3
 INT 2
 INT 3
