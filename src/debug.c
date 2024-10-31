@@ -4,6 +4,7 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@
 bool breakpoint_encountered = true;
 bool step_into_activated = false;
 bool isr_active = false;
+
+bool invalid_input = false;
 
 const uint8_t LINEWIDTH = 54;
 
@@ -288,11 +291,18 @@ uint64_t determine_watchpoint_value(char *watchpoint_str) {
   if (*endptr != '\0') {
     const char *str = "Error: Invalid register or number: ";
     const char *str2 = proper_str_cat(str, watchpoint_str);
-    const char *str3 = proper_str_cat(str2, ".\n");
+    const char *str3 = proper_str_cat(str2, "\n");
     fprintf(stderr, "%s", str3);
+    invalid_input = true;
+    // this value will never be reached
+    return UINT64_MAX;
   } else if (watchpoint_val < 0 && watchpoint_val > UINT64_MAX) {
+    // TODO:  this makes no sense
     fprintf(stderr, "Error: Number out of range, must be between 0 and "
                     "18446744073709551615\n");
+    invalid_input = true;
+    // this value will never be reached
+    return UINT64_MAX;
   }
 
   // TODO: later also add in paging physical addresses
@@ -370,6 +380,10 @@ void get_user_input(void) {
       fprintf(stderr, "Error: Reading input not successful\n");
     }
     printf("\033[A\033[K");
+    if (invalid_input) {
+      printf("\033[A\033[K");
+      invalid_input = false;
+    }
     fflush(stdout);
 
     char **stdin = split_string(buffer, &count);
@@ -381,25 +395,42 @@ void get_user_input(void) {
       breakpoint_encountered = false;
       return;
     } else if (strcmp(stdin[0], "s") == 0 && count == 1) {
-      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op != INT) {
+      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
+          INT) {
         continue;
       }
       step_into_activated = true;
       return;
     } else if (strcmp(stdin[0], "a") == 0 && count == 3) {
       if (strcmp(stdin[1], "ew") == 0) {
+        char *eprom_watchpoint_tmp = eprom_watchpoint;
         eprom_watchpoint = stdin[2];
+        if (!draw_tui()) {
+          eprom_watchpoint = eprom_watchpoint_tmp;
+        }
       } else if (strcmp(stdin[1], "swc") == 0) {
+        char *sram_watchpoint_cs_tmp = sram_watchpoint_cs;
         sram_watchpoint_cs = stdin[2];
+        if (!draw_tui()) {
+          sram_watchpoint_cs = sram_watchpoint_cs_tmp;
+        }
       } else if (strcmp(stdin[1], "swd") == 0) {
+        char *sram_watchpoint_ds_tmp = sram_watchpoint_ds;
         sram_watchpoint_ds = stdin[2];
+        if (!draw_tui()) {
+          sram_watchpoint_ds = sram_watchpoint_ds_tmp;
+        }
       } else if (strcmp(stdin[1], "sws") == 0) {
+        char *sram_watchpoint_stack_tmp = sram_watchpoint_stack;
         sram_watchpoint_stack = stdin[2];
+        if (!draw_tui()) {
+          sram_watchpoint_stack = sram_watchpoint_stack_tmp;
+        }
       } else {
         fprintf(stderr, "Error: Invalid command\n");
+        invalid_input = true;
         continue;
       }
-      draw_tui();
       continue;
     } else if (strcmp(stdin[0], "D") == 0) {
 #ifdef __linux__
@@ -409,16 +440,31 @@ void get_user_input(void) {
       exit(EXIT_SUCCESS);
     } else {
       fprintf(stderr, "Error: Invalid command\n");
+      invalid_input = true;
+      continue;
     }
   }
 }
 
-void draw_tui(void) {
+bool draw_tui(void) {
+  uint64_t eprom_watchpoint_int = determine_watchpoint_value(eprom_watchpoint);
+  uint64_t sram_watchpoint_cs_int =
+      determine_watchpoint_value(sram_watchpoint_cs);
+  uint64_t sram_watchpoint_ds_int =
+      determine_watchpoint_value(sram_watchpoint_ds);
+  uint64_t sram_watchpoint_stack_int =
+      determine_watchpoint_value(sram_watchpoint_stack);
+  if (eprom_watchpoint_int == UINT64_MAX ||
+      sram_watchpoint_cs_int == UINT64_MAX ||
+      sram_watchpoint_ds_int == UINT64_MAX ||
+      sram_watchpoint_stack_int == UINT64_MAX) {
+    return false;
+  }
+
   printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
   printf("%s\n", create_heading('-', "EPROM", LINEWIDTH));
-  uint64_t eprom_watchpoint_int = determine_watchpoint_value(eprom_watchpoint);
   printf("EPROM Watchpoint (ew): %s (%lu)\n", eprom_watchpoint,
          eprom_watchpoint_int);
   print_array_with_idcs_from_to(
@@ -428,13 +474,6 @@ void draw_tui(void) {
   printf("%s\n", create_heading('-', "UART", LINEWIDTH));
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
-
-  uint64_t sram_watchpoint_cs_int =
-      determine_watchpoint_value(sram_watchpoint_cs);
-  uint64_t sram_watchpoint_ds_int =
-      determine_watchpoint_value(sram_watchpoint_ds);
-  uint64_t sram_watchpoint_stack_int =
-      determine_watchpoint_value(sram_watchpoint_stack);
 
   printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
   printf("SRAM Watchpoint Codesegment (swc): %s (%lu)\n", sram_watchpoint_cs,
@@ -449,7 +488,9 @@ void draw_tui(void) {
 
   printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
   printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
+  printf("(s)step into isr, (a)ssign watchpoint reg or addr\n");
 
   // print_file_idcs(hdd, max(0, hdd_view_pos - radius),
   //                 min(hdd_view_pos + radius, hdd_size-1), false);
+  return true;
 }

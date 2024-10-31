@@ -34,7 +34,7 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
 void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
 char **split_string(const char *str, uint8_t *count);
-void draw_tui(void);
+bool draw_tui(void);
 void get_user_input(void);
 
 #endif // DEBUG_H
