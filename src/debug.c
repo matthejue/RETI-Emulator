@@ -11,6 +11,8 @@
 #include <string.h>
 
 bool breakpoint_encountered = true;
+bool step_into_activated = false;
+bool isr_active = false;
 
 const uint8_t LINEWIDTH = 54;
 
@@ -39,7 +41,7 @@ char *copy_mnemonic_into_str(char *dest, const uint8_t opcode) {
 
 char *copy_reg_into_str(char *dest, const uint8_t reg) {
   strcat(dest, " ");
-  dest = strcat(dest, register_name_to_code[reg]);
+  dest = strcat(dest, register_code_to_name[reg]);
   return dest + strlen(dest);
 }
 
@@ -126,7 +128,7 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
              ? mem_type_to_constant[mem_type] == SRAM_CONST
              : addr_mem_type == mem_type_to_constant[mem_type]) &&
         addr_idx == idx) {
-      active_regs = proper_str_cat(active_regs, register_name_to_code[i]);
+      active_regs = proper_str_cat(active_regs, register_code_to_name[i]);
       active_regs = proper_str_cat(active_regs, " ");
       at_least_one_reg = true;
     }
@@ -190,7 +192,7 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
 
 void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
   char reg_str[4];
-  snprintf(reg_str, sizeof(reg_str), "%3s", register_name_to_code[idx]);
+  snprintf(reg_str, sizeof(reg_str), "%3s", register_code_to_name[idx]);
   const char *mem_content_str_unsigned;
   if (binary_mode) {
     mem_content_str_unsigned = mem_value_to_bin_str(mem_content);
@@ -276,7 +278,7 @@ char **split_string(const char *str, uint8_t *count) {
 
 uint64_t determine_watchpoint_value(char *watchpoint_str) {
   for (int i = 0; i < NUM_REGISTERS; i++) {
-    if (strcmp(watchpoint_str, register_name_to_code[i]) == 0) {
+    if (strcmp(watchpoint_str, register_code_to_name[i]) == 0) {
       return read_array(regs, i, false);
     }
   }
@@ -284,8 +286,8 @@ uint64_t determine_watchpoint_value(char *watchpoint_str) {
   char *endptr;
   uint64_t watchpoint_val = strtol(watchpoint_str, &endptr, 10);
   if (*endptr != '\0') {
-    const char *str = "Error: Further characters after number: ";
-    const char *str2 = proper_str_cat(str, endptr);
+    const char *str = "Error: Invalid register or number: ";
+    const char *str2 = proper_str_cat(str, watchpoint_str);
     const char *str3 = proper_str_cat(str2, ".\n");
     fprintf(stderr, "%s", str3);
   } else if (watchpoint_val < 0 && watchpoint_val > UINT64_MAX) {
@@ -360,13 +362,64 @@ void print_uart_meta_data() {
   printf("\n");
 }
 
+void get_user_input(void) {
+  uint8_t count;
+  char buffer[26];
+  while (true) {
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+      fprintf(stderr, "Error: Reading input not successful\n");
+    }
+    printf("\033[A\033[K");
+    fflush(stdout);
+
+    char **stdin = split_string(buffer, &count);
+    if (stdin == NULL) {
+      continue;
+    } else if (strcmp(stdin[0], "n") == 0 && count == 1) {
+      return;
+    } else if (strcmp(stdin[0], "c") == 0 && count == 1) {
+      breakpoint_encountered = false;
+      return;
+    } else if (strcmp(stdin[0], "s") == 0 && count == 1) {
+      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op != INT) {
+        continue;
+      }
+      step_into_activated = true;
+      return;
+    } else if (strcmp(stdin[0], "a") == 0 && count == 3) {
+      if (strcmp(stdin[1], "ew") == 0) {
+        eprom_watchpoint = stdin[2];
+      } else if (strcmp(stdin[1], "swc") == 0) {
+        sram_watchpoint_cs = stdin[2];
+      } else if (strcmp(stdin[1], "swd") == 0) {
+        sram_watchpoint_ds = stdin[2];
+      } else if (strcmp(stdin[1], "sws") == 0) {
+        sram_watchpoint_stack = stdin[2];
+      } else {
+        fprintf(stderr, "Error: Invalid command\n");
+        continue;
+      }
+      draw_tui();
+      continue;
+    } else if (strcmp(stdin[0], "D") == 0) {
+#ifdef __linux__
+      __asm__("int3"); // ../.gdbinit
+#endif
+    } else if (strcmp(stdin[0], "q") == 0 && count == 1) {
+      exit(EXIT_SUCCESS);
+    } else {
+      fprintf(stderr, "Error: Invalid command\n");
+    }
+  }
+}
+
 void draw_tui(void) {
   printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
   printf("%s\n", create_heading('-', "EPROM", LINEWIDTH));
   uint64_t eprom_watchpoint_int = determine_watchpoint_value(eprom_watchpoint);
-  printf("EPROM Watchpoint: %s (%lu)\n", eprom_watchpoint,
+  printf("EPROM Watchpoint (ew): %s (%lu)\n", eprom_watchpoint,
          eprom_watchpoint_int);
   print_array_with_idcs_from_to(
       EPROM, max(0, eprom_watchpoint_int - radius),
@@ -384,13 +437,13 @@ void draw_tui(void) {
       determine_watchpoint_value(sram_watchpoint_stack);
 
   printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
-  printf("SRAM Watchpoint Codesegment: %s (%lu)\n", sram_watchpoint_cs,
+  printf("SRAM Watchpoint Codesegment (swc): %s (%lu)\n", sram_watchpoint_cs,
          sram_watchpoint_cs_int);
   print_sram_watchpoint(sram_watchpoint_cs_int);
-  printf("SRAM Watchpoint Datasegment: %s (%lu)\n", sram_watchpoint_ds,
+  printf("SRAM Watchpoint Datasegment (swd): %s (%lu)\n", sram_watchpoint_ds,
          sram_watchpoint_ds_int);
   print_sram_watchpoint(sram_watchpoint_ds_int);
-  printf("SRAM Watchpoint Stack: %s (%lu)\n", sram_watchpoint_stack,
+  printf("SRAM Watchpoint Stack (sws): %s (%lu)\n", sram_watchpoint_stack,
          sram_watchpoint_stack_int);
   print_sram_watchpoint(sram_watchpoint_stack_int);
 
@@ -399,34 +452,4 @@ void draw_tui(void) {
 
   // print_file_idcs(hdd, max(0, hdd_view_pos - radius),
   //                 min(hdd_view_pos + radius, hdd_size-1), false);
-}
-
-void get_user_input(void) {
-  uint8_t count;
-  char buffer[26];
-  while (true) {
-    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-      fprintf(stderr, "Error: Reading input not successful\n");
-    }
-    printf("\033[A\033[K");
-    fflush(stdout);
-
-    char **stdin = split_string(buffer, &count);
-    if (stdin == NULL) {
-      ;
-    } else if (strcmp(stdin[0], "n") == 0) {
-      return;
-    } else if (strcmp(stdin[0], "c") == 0) {
-      breakpoint_encountered = false;
-      return;
-    } else if (strcmp(stdin[0], "s") == 0) {
-      ;
-    } else if (strcmp(stdin[0], "D") == 0) {
-#ifdef __linux__
-      __asm__("int3"); // ../.gdbinit
-#endif
-    } else if (strcmp(stdin[0], "q") == 0) {
-      exit(EXIT_SUCCESS);
-    }
-  }
 }

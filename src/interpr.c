@@ -126,7 +126,7 @@ void interpr_instr(Instruction *assembly_instr) {
     if (read_array(regs, assembly_instr->opd2, false) == 0) {
       display_error_message("DivisionByZeroError",
                             "Dividing by content of Register %s which is 0",
-                            register_name_to_code[assembly_instr->opd2], Idx);
+                            register_code_to_name[assembly_instr->opd2], Idx);
       exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
     }
     write_array(regs, assembly_instr->opd1,
@@ -306,11 +306,14 @@ void interpr_instr(Instruction *assembly_instr) {
     // write_array(regs, PC, read_storage_ds_fill(assembly_instr->opd1), false);
     write_array(regs, PC, read_storage_sram_constant_fill(assembly_instr->opd1),
                 false);
+    isr_active = true;
     goto no_pc_increase;
     break;
   case RTI:
     write_array(regs, PC, read_storage(read_array(regs, SP, false) + 1), false);
     write_array(regs, SP, read_array(regs, SP, false) + 1, false);
+    isr_active = false;
+    step_into_activated = false;
     break;
   case JUMPGT:
     if ((int32_t)read_array(regs, ACC, false) > 0) {
@@ -376,7 +379,7 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    if (debug_mode && breakpoint_encountered) {
+    if (debug_mode && breakpoint_encountered && !(isr_active && !step_into_activated)) {
       draw_tui();
       get_user_input();
     }

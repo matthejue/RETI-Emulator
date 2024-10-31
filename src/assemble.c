@@ -10,7 +10,7 @@
 #include <string.h>
 
 // TODO: wrong name
-const char *register_name_to_code[] = {"PC", "IN1", "IN2", "ACC",
+const char *register_code_to_name[] = {"PC", "IN1", "IN2", "ACC",
                                        "SP", "BAF", "CS",  "DS"};
 
 String_to_Mnemonic mnemonic_to_opcode[] = {
@@ -33,9 +33,9 @@ String_to_Directive mnemonic_to_directive[] = {
 
 uint8_t get_register_code(char *reg) {
   for (uint8_t i = 0;
-       i < sizeof(register_name_to_code) / sizeof(register_name_to_code[0]);
+       i < sizeof(register_code_to_name) / sizeof(register_code_to_name[0]);
        i++) {
-    if (strcmp(reg, register_name_to_code[i]) == 0) {
+    if (strcmp(reg, register_code_to_name[i]) == 0) {
       return i;
     }
   }

@@ -14,6 +14,8 @@ typedef enum { REGS, EPROM, UART, SRAM, HDD } MemType;
 extern const uint8_t mem_type_to_constant[];
 
 extern bool breakpoint_encountered;
+extern bool step_into_activated;
+extern bool isr_active;
 
 char *read_stdin();
 void process_and_print_array(uint32_t *array, size_t length);

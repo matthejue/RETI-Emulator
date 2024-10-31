@@ -59,7 +59,7 @@ typedef enum {
 
 typedef enum { COMPUTE_M, LOAD_M, STORE_M, JUMP_M} mode;
 
-extern const char *register_name_to_code[];
+extern const char *register_code_to_name[];
 
 typedef struct {
   const char *name;
