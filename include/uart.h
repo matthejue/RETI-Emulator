@@ -12,6 +12,10 @@ extern uint32_t *uart_input;
 extern uint8_t input_len;
 extern uint8_t input_idx;
 
+extern uint32_t received_num;
+extern uint8_t received_num_part;
+extern uint8_t received_num_idx;
+
 extern uint8_t sending_waiting_time;
 extern uint8_t receiving_waiting_time;
 

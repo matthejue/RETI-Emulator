@@ -86,8 +86,10 @@ void uart_send() {
     sending_finished = true;
   } else if (sending_finished) {
     sending_waiting_time--;
-  sending_finished:
     if (sending_waiting_time == 0) {
+    sending_finished:
+      // TODO: für send data vielleict einbauen, dass es erst hier dann
+      // angezeigt wird, wenn die waiting time abgelaufen ist
       uart[2] = uart[2] | 0b00000001;
       sending_finished = false;
     }
@@ -160,11 +162,6 @@ void uart_receive() {
                         (received_num_idx * 8);
     received_num_idx--;
 
-    // if (received_num_part == received_num) {
-    //   // no need to receive 0 numbers if the whole number is already send
-    //   received_num_idx = 0;
-    // }
-
     if (max_waiting_instrs == 0) {
       goto receiving_finished;
     } else {
@@ -173,8 +170,8 @@ void uart_receive() {
     receiving_finished = true;
   } else if (receiving_finished) {
     receiving_waiting_time--;
-  receiving_finished:
     if (receiving_waiting_time == 0) {
+    receiving_finished:
       uart[1] = received_num_part; // & 0xFF; not necessary
       uart[2] = uart[2] | 0b00000010;
       receiving_finished = false;

@@ -205,7 +205,8 @@ void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
     mem_content_str_unsigned = mem_value_to_str(mem_content, true);
   }
   const char *mem_content_str_signed = mem_value_to_str(mem_content, false);
-  printf("%s: %s (%s)\n", reg_str, mem_content_str_unsigned, mem_content_str_signed);
+  printf("%s: %s (%s)\n", reg_str, mem_content_str_unsigned,
+         mem_content_str_signed);
 }
 
 void print_array_with_idcs(MemType mem_type, uint8_t length, bool are_instrs) {
@@ -341,13 +342,40 @@ void print_uart_meta_data() {
   printf("%d\n", sending_waiting_time);
   printf("Waiting time receiving: ");
   printf("%d\n", receiving_waiting_time);
-  if (read_metadata) {
-    printf("UART input: ");
-    for (uint8_t i = input_idx; i < input_len; i++) {
-      printf("%d ", uart_input[i]);
-    }
-    printf("\n");
+  if (receiving_waiting_time > 0) {
+    printf("UART current input: %u\n", received_num_part);
+  } else {
+    printf("UART current input:\n");
   }
+  printf("UART input: ");
+  if (read_metadata && input_idx < input_len) {
+    for (uint8_t i = input_idx; i < input_len; i++) {
+      if (i == input_idx && (int8_t)received_num_idx >= 0) {
+        printf("%d(", uart_input[i]);
+        for (uint8_t j = received_num_idx; j != 0; j--) {
+          uint8_t received_num_part =
+              (received_num & (0xFF << (j * 8))) >> (j * 8);
+          printf("%u ", received_num_part);
+        }
+        uint8_t received_num_part = received_num & 0xFF;
+        printf("%u) ", received_num_part);
+      } else {
+        printf("%d ", uart_input[i]);
+      }
+    }
+  } else {
+    if ((int8_t)received_num_idx >= 0) {
+      printf("%d(", received_num);
+      for (uint8_t j = received_num_idx; j != 0; j--) {
+        uint8_t received_num_part =
+            (received_num & (0xFF << (j * 8))) >> (j * 8);
+        printf("%u ", received_num_part);
+      }
+      uint8_t received_num_part = received_num & 0xFF;
+      printf("%u)", received_num_part);
+    }
+  }
+  printf("\n");
 }
 
 void draw_tui(void) {
