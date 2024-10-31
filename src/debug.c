@@ -198,13 +198,14 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
 void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
   char reg_str[4];
   snprintf(reg_str, sizeof(reg_str), "%3s", register_name_to_code[idx]);
-  const char *mem_content_str;
+  const char *mem_content_str_unsigned;
   if (binary_mode) {
-    mem_content_str = mem_value_to_bin_str(mem_content);
+    mem_content_str_unsigned = mem_value_to_bin_str(mem_content);
   } else {
-    mem_content_str = mem_value_to_str(mem_content, true);
+    mem_content_str_unsigned = mem_value_to_str(mem_content, true);
   }
-  printf("%s: %s\n", reg_str, mem_content_str);
+  const char *mem_content_str_signed = mem_value_to_str(mem_content, false);
+  printf("%s: %s (%s)\n", reg_str, mem_content_str_unsigned, mem_content_str_signed);
 }
 
 void print_array_with_idcs(MemType mem_type, uint8_t length, bool are_instrs) {
