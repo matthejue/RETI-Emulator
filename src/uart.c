@@ -152,7 +152,6 @@ void uart_receive() {
     if ((int8_t)received_num_idx == -1) {
       if (read_metadata && input_idx < input_len) {
         received_num = uart_input[input_idx];
-        input_idx++;
       } else {
         received_num = ask_for_user_input();
       }
@@ -161,6 +160,11 @@ void uart_receive() {
     received_num_part = (received_num & (0xFF << (received_num_idx * 8))) >>
                         (received_num_idx * 8);
     received_num_idx--;
+
+    if (read_metadata && input_idx < input_len &&
+        (int8_t)received_num_idx == -1) {
+      input_idx++;
+    }
 
     if (max_waiting_instrs == 0) {
       goto receiving_finished;
