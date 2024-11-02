@@ -43,7 +43,6 @@ void uart_send() {
       switch (datatype) {
       case STRING:
         send_idx = 0;
-        current_send_data = malloc(3);
         send_data = NULL;
         break;
       case INTEGER:
@@ -81,6 +80,7 @@ void uart_send() {
       if (datatype == STRING) {
         if (!init_finished) {
           if (debug_mode) {
+            current_send_data = malloc(3);
             current_send_data[0] = '0';
             current_send_data[1] = ' ';
             current_send_data[2] = '\0';
