@@ -14,6 +14,7 @@ uint32_t hdd_size = 4294967295;
 bool debug_mode = false;
 bool test_mode = false;
 bool binary_mode = false;
+bool extended_features = false;
 bool read_metadata = false;
 uint8_t radius = 2;
 uint8_t max_waiting_instrs = 10;
@@ -37,7 +38,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmb")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmbE")) != -1) {
     char *endptr;
     long tmp_val;
 
@@ -128,6 +129,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       break;
     case 'b':
       binary_mode = true;
+      break;
+    case 'E':
+      extended_features = true;
       break;
     case 'h':
       print_help(argv[0]);

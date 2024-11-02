@@ -10,6 +10,7 @@ extern uint32_t hdd_size;
 extern bool debug_mode;
 extern bool test_mode;
 extern bool binary_mode;
+extern bool extended_features;
 extern bool read_metadata;
 extern uint8_t radius;
 extern uint8_t max_waiting_instrs;
