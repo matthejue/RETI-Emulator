@@ -1,6 +1,6 @@
 IVTE 3 # INT 0: Print an integer stored in ACC over UART
-IVTE 72 # INT 1: Print a string stored in memory over UART, ACC contains start address of string
-IVTE 107 # INT 2: Get user input over UART and save it in ACC
+IVTE 75 # INT 1: Print a string stored in memory over UART, ACC contains start address of string
+IVTE 110 # INT 2: Get user input over UART and save it in ACC
 SUBI SP 4 # == INT 0 ==
 STOREIN SP DS 1 
 STOREIN SP IN1 2 
@@ -64,6 +64,9 @@ STORE IN2 0
 LOAD ACC 2
 ANDI ACC -2
 STORE ACC 2
+LOAD ACC 2
+ANDI ACC 1
+JUMP== -2
 LOADIN SP DS 1 
 LOADIN SP IN1 2 
 LOADIN SP IN2 3 

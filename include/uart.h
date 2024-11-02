@@ -23,6 +23,9 @@ typedef enum { STRING, INTEGER = 4 } DataType;
 
 extern DataType datatype;
 
+extern char *all_send_data;
+extern char *current_send_data;
+
 void uart_send();
 void uart_receive();
 

@@ -33,13 +33,17 @@ bool init_finished = false;
 
 DataType datatype;
 
+char *all_send_data = NULL;
+char *current_send_data = NULL;
+
 void uart_send() {
   if (!(read_array(uart, 2, true) & 0b00000001) && !sending_finished) {
     if (!init_finished) {
       datatype = uart[0];
       switch (datatype) {
       case STRING:
-        remaining_bytes = 0;
+        send_idx = 0;
+        current_send_data = malloc(3);
         send_data = NULL;
         break;
       case INTEGER:
@@ -52,27 +56,13 @@ void uart_send() {
         fprintf(stderr, "Error: Invalid datatype\n");
         exit(EXIT_FAILURE);
       }
-      init_finished = true;
     } else if (datatype == INTEGER) {
       send_data[num_bytes - remaining_bytes] = uart[0];
-      remaining_bytes--;
-      if (remaining_bytes == 0) {
-        adjust_print(true, "%d\n", "%d ",
-                     swap_endian_32(*((uint32_t *)send_data)));
-
-        init_finished = false;
-      }
     } else if (datatype == STRING) {
       send_data = realloc(send_data, 1);
-      uint8_t data = uart[0];
-      send_data[send_idx] = data;
-      send_idx++;
-      if (data == 0) {
-        adjust_print(true, "%s\n", "%s ", send_data);
-
-        send_idx = 0;
-        init_finished = false;
-      }
+      send_data[send_idx] = uart[0];
+      // TODO: ist send_idx nicht unnötig, weil es eh immer die letzte Stelle
+      // ist?
     } else {
       fprintf(stderr, "Error: Invalid datatype\n");
       exit(EXIT_FAILURE);
@@ -88,6 +78,80 @@ void uart_send() {
     sending_waiting_time--;
     if (sending_waiting_time == 0) {
     sending_finished:
+      if (datatype == STRING) {
+        if (!init_finished) {
+          if (debug_mode) {
+            current_send_data[0] = '0';
+            current_send_data[1] = ' ';
+            current_send_data[2] = '\0';
+          }
+          init_finished = true;
+        } else {
+          if (debug_mode) {
+            current_send_data =
+                realloc(current_send_data, strlen(current_send_data) + 2);
+            sprintf(current_send_data + strlen(current_send_data), "%c",
+                    send_data[send_idx]);
+          }
+          send_idx++;
+          if (uart[0] == 0) {
+            adjust_print(true, "%s\n", "%s ", send_data);
+            if (debug_mode) {
+              uint8_t len_new_data = strlen((char *)send_data);
+              if (all_send_data) {
+                all_send_data = realloc(all_send_data, strlen(all_send_data) +
+                                                           len_new_data + 2);
+              } else {
+                all_send_data = realloc(all_send_data, len_new_data + 2);
+                all_send_data[0] = '\0';
+              }
+              sprintf(all_send_data + strlen(all_send_data), "%s ", send_data);
+            }
+
+            init_finished = false;
+          }
+        }
+      } else if (datatype == INTEGER) {
+        if (!init_finished) {
+          if (debug_mode) {
+            current_send_data = malloc(3);
+            current_send_data[0] = '4';
+            current_send_data[1] = ' ';
+            current_send_data[2] = '\0';
+          }
+          init_finished = true;
+        } else {
+          if (debug_mode) {
+            uint8_t num = send_data[num_bytes - remaining_bytes];
+            uint8_t len_new_data = num_digits_for_num(num);
+            current_send_data =
+                realloc(current_send_data,
+                        strlen(current_send_data) + len_new_data + 2);
+            sprintf(current_send_data + strlen(current_send_data), "%d ", num);
+          }
+          remaining_bytes--;
+          if (remaining_bytes == 0) {
+            uint32_t num = swap_endian_32(*((uint32_t *)send_data));
+            adjust_print(true, "%d\n", "%d ", num);
+            if (debug_mode) {
+              uint8_t len_new_data = num_digits_for_num(num);
+              if (all_send_data) {
+                all_send_data = realloc(all_send_data, strlen(all_send_data) +
+                                                           len_new_data + 2);
+              } else {
+                all_send_data = realloc(all_send_data, len_new_data + 2);
+                all_send_data[0] = '\0';
+              }
+              sprintf(all_send_data + strlen(all_send_data), "%d ", num);
+            }
+
+            init_finished = false;
+          }
+        }
+      } else {
+        fprintf(stderr, "Error: Invalid datatype\n");
+        exit(EXIT_FAILURE);
+      }
       // TODO: für send data vielleict einbauen, dass es erst hier dann
       // angezeigt wird, wenn die waiting time abgelaufen ist
       uart[2] = uart[2] | 0b00000001;

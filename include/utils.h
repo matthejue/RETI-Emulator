@@ -20,5 +20,7 @@ char *extract_line(const char *current, const char *begin);
 int count_lines(const char *current, const char *begin);
 char *create_heading(char insert_chr, const char *text, int linewidth);
 char *int_to_bin_str(int num, int bits);
+uint8_t num_digits_for_num(uint64_t num);
+char *num_digits_for_idx_str(uint64_t max_idx);
 
 #endif // UTILS_H

@@ -1,4 +1,5 @@
 #include "../include/special_opts.h"
+#include "../include/debug.h"
 #include "../include/error.h"
 #include "../include/parse_args.h"
 #include "../include/utils.h"

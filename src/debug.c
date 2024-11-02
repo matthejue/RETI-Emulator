@@ -4,7 +4,6 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -136,12 +135,6 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
     return proper_str_cat("<- ", active_regs);
   }
   return "";
-}
-
-char *num_digits_for_idx_str(uint64_t max_idx) {
-  char *buffer = malloc(20);
-  sprintf(buffer, "%d", (uint8_t)ceil(log10(max_idx)));
-  return buffer;
 }
 
 // TODO:: split zwischen mem content und assembly instrs
@@ -325,34 +318,22 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x) {
 }
 
 void print_uart_meta_data() {
-  printf("Send Data: ");
-  if (datatype == STRING) {
-    // print array until send_idx
-    for (uint8_t i = 0; i < send_idx; i++) {
-      printf("%c", send_data[i]);
-    }
-  } else if (datatype == INTEGER) {
-    printf("%d ", swap_endian_32(*((uint32_t *)send_data)));
-  } else {
-    fprintf(stderr, "Error: Invalid datatype\n");
-    exit(EXIT_FAILURE);
-  }
-  printf("\n");
+  printf("Current send data: %s\n", current_send_data ? current_send_data : "");
+  printf("All send data: %s\n", all_send_data ? all_send_data : "");
   printf("Waiting time sending: ");
   printf("%d\n", sending_waiting_time);
   printf("Waiting time receiving: ");
   printf("%d\n", receiving_waiting_time);
   if (receiving_waiting_time > 0) {
-    printf("UART current input: %u\n", received_num_part);
+    printf("Current input: %u\n", received_num_part);
   } else {
-    printf("UART current input:\n");
+    printf("Current input:\n");
   }
-  printf("UART input: ");
-
+  printf("Remaining Input: ");
   if (read_metadata && input_idx < input_len) {
     for (uint8_t i = input_idx; i < input_len; i++) {
       if (i == input_idx && (int8_t)received_num_idx >= 0) {
-        printf("%d(", uart_input[i]);
+        printf("%d(", received_num);
         for (uint8_t j = received_num_idx; j != 0; j--) {
           uint8_t received_num_part =
               (received_num & (0xFF << (j * 8))) >> (j * 8);
