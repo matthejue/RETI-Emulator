@@ -1,0 +1,562 @@
+# input: 0 5
+# output: -2 314
+# // Block(Name('global.9'), [])
+# // Assign(Alloc(Writeable(), ArrayDecl([Num('6')], IntType()), Name('ar')), Array([Num('314'), Num('42'), Num('4'), Num('42'), UnOp(Minus('-'), Num('2')), Num('5')]))
+# // Assign(Name('ar'), Array([Num('314'), Num('42'), Num('4'), Num('42'), UnOp(Minus('-'), Num('2')), Num('5')]))
+# Exp(Num('314'))
+SUBI SP 1
+LOADI ACC 314
+STOREIN SP ACC 1
+# Exp(Num('42'))
+SUBI SP 1
+LOADI ACC 42
+STOREIN SP ACC 1
+# Exp(Num('4'))
+SUBI SP 1
+LOADI ACC 4
+STOREIN SP ACC 1
+# Exp(Num('42'))
+SUBI SP 1
+LOADI ACC 42
+STOREIN SP ACC 1
+# Exp(Num('2'))
+SUBI SP 1
+LOADI ACC 2
+STOREIN SP ACC 1
+# Exp(UnOp(Minus('-'), Stack(Num('1'))))
+LOADI ACC 0
+LOADIN SP IN2 1
+SUB ACC IN2
+STOREIN SP ACC 1
+# Exp(Num('5'))
+SUBI SP 1
+LOADI ACC 5
+STOREIN SP ACC 1
+# Assign(Global(Num('0')), Stack(Num('6')))
+LOADIN SP ACC 1
+STOREIN DS ACC 5
+LOADIN SP ACC 2
+STOREIN DS ACC 4
+LOADIN SP ACC 3
+STOREIN DS ACC 3
+LOADIN SP ACC 4
+STOREIN DS ACC 2
+LOADIN SP ACC 5
+STOREIN DS ACC 1
+LOADIN SP ACC 6
+STOREIN DS ACC 0
+ADDI SP 6
+# // Assign(Alloc(Writeable(), StructSpec(Name('stt')), Name('st_ar')), Struct([Assign(Name('len'), Num('6')), Assign(Name('ar'), Name('ar'))]))
+# // Assign(Name('st_ar'), Struct([Assign(Name('len'), Num('6')), Assign(Name('ar'), Name('ar'))]))
+# Exp(Num('6'))
+SUBI SP 1
+LOADI ACC 6
+STOREIN SP ACC 1
+# Ref(Global(Num('0')))
+SUBI SP 1
+LOADI IN1 0
+ADD IN1 DS
+STOREIN SP IN1 1
+# Assign(Global(Num('6')), Stack(Num('2')))
+LOADIN SP ACC 1
+STOREIN DS ACC 7
+LOADIN SP ACC 2
+STOREIN DS ACC 6
+ADDI SP 2
+# // Exp(GoTo(Name('main.5')))
+# Exp(GoTo(Name('main.5')))
+# write large immediate into ACC
+LOADI ACC 0
+MULTI ACC 1024
+ORI ACC 145
+ADD PC ACC
+# // Block(Name('swap.8'), [])
+# // Exp(Alloc(Writeable(), PntrDecl(Num('1'), IntType()), Name('x')))
+# // Exp(Alloc(Writeable(), PntrDecl(Num('1'), IntType()), Name('y')))
+# // Exp(Alloc(Writeable(), IntType(), Name('h')))
+# // Assign(Alloc(Writeable(), IntType(), Name('swapped')), Num('0'))
+# // Assign(Name('swapped'), Num('0'))
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Assign(Stackframe(Num('3')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN BAF ACC -5
+ADDI SP 1
+# // If(Atom(Subscr(Name('x'), Num('0')), Gt('>'), Subscr(Name('y'), Num('0'))), [])
+# // IfElse(Atom(Subscr(Name('x'), Num('0')), Gt('>'), Subscr(Name('y'), Num('0'))), [], [])
+# Ref(Stackframe(Num('0')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 2
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Ref(Stackframe(Num('1')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 3
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Exp(Atom(Stack(Num('2')), Gt('>'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+SUB ACC IN2
+JUMP> 3
+LOADI ACC 0
+JUMP 2
+LOADI ACC 1
+STOREIN SP ACC 2
+ADDI SP 1
+# IfElse(Stack(Num('1')), [], [])
+LOADIN SP ACC 1
+ADDI SP 1
+# JUMP== GoTo(Name('if_else_after.6'))
+JUMP!= 5
+# write large immediate into ACC
+LOADI ACC 0
+MULTI ACC 1024
+ORI ACC 83
+ADD PC ACC
+# GoTo(Name('if.7'))
+# // not included Exp(GoTo(Name('if.7')))
+# // Block(Name('if.7'), [])
+# // Assign(Name('h'), Subscr(Name('x'), Num('0')))
+# Ref(Stackframe(Num('0')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 2
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Assign(Stackframe(Num('2')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN BAF ACC -4
+ADDI SP 1
+# // Assign(Subscr(Name('x'), Num('0')), Subscr(Name('y'), Num('0')))
+# Ref(Stackframe(Num('1')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 3
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Ref(Stackframe(Num('0')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 2
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Assign(Stack(Num('1')), Stack(Num('2')))
+LOADIN SP IN1 1
+LOADIN SP ACC 2
+ADDI SP 2
+STOREIN IN1 ACC 0
+# // Assign(Subscr(Name('y'), Num('0')), Name('h'))
+# Exp(Stackframe(Num('2')))
+SUBI SP 1
+LOADIN BAF ACC -4
+STOREIN SP ACC 1
+# Ref(Stackframe(Num('1')))
+SUBI SP 1
+MOVE BAF IN1
+SUBI IN1 3
+STOREIN SP IN1 1
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Assign(Stack(Num('1')), Stack(Num('2')))
+LOADIN SP IN1 1
+LOADIN SP ACC 2
+ADDI SP 2
+STOREIN IN1 ACC 0
+# // Assign(Name('swapped'), Num('1'))
+# Exp(Num('1'))
+SUBI SP 1
+LOADI ACC 1
+STOREIN SP ACC 1
+# Assign(Stackframe(Num('3')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN BAF ACC -5
+ADDI SP 1
+# // not included Exp(GoTo(Name('if_else_after.6')))
+# // Block(Name('if_else_after.6'), [])
+# // Return(Name('swapped'))
+# Exp(Stackframe(Num('3')))
+SUBI SP 1
+LOADIN BAF ACC -5
+STOREIN SP ACC 1
+# Return(Stack(Num('1')))
+LOADIN SP ACC 1
+ADDI SP 1
+LOADIN BAF PC -1
+# // Block(Name('main.5'), [])
+# // Exp(Alloc(Writeable(), IntType(), Name('swapped')))
+# // Exp(Alloc(Writeable(), IntType(), Name('i')))
+# // Assign(Alloc(Writeable(), IntType(), Name('n')), BinOp(Attr(Name('st_ar'), Name('len')), Sub('-'), Num('1')))
+# // Assign(Name('n'), BinOp(Attr(Name('st_ar'), Name('len')), Sub('-'), Num('1')))
+# Ref(Global(Num('6')))
+SUBI SP 1
+LOADI IN1 6
+ADD IN1 DS
+STOREIN SP IN1 1
+# Ref(Attr(Stack(Num('1')), Name('len')))
+LOADIN SP IN1 1
+ADDI IN1 0
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Exp(Num('1'))
+SUBI SP 1
+LOADI ACC 1
+STOREIN SP ACC 1
+# Exp(BinOp(Stack(Num('2')), Sub('-'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+SUB ACC IN2
+STOREIN SP ACC 2
+ADDI SP 1
+# Assign(Global(Num('10')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN DS ACC 10
+ADDI SP 1
+# // DoWhile(Name('swapped'), [])
+# // not included Exp(GoTo(Name('do_while_branch.4')))
+# // Block(Name('do_while_branch.4'), [])
+# // Assign(Name('i'), Num('0'))
+# Exp(Num('0'))
+SUBI SP 1
+LOADI ACC 0
+STOREIN SP ACC 1
+# Assign(Global(Num('9')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN DS ACC 9
+ADDI SP 1
+# // While(Atom(Name('i'), Lt('<'), Name('n')), [])
+# // not included Exp(GoTo(Name('condition_check.3')))
+# // Block(Name('condition_check.3'), [])
+# // IfElse(Atom(Name('i'), Lt('<'), Name('n')), [], [])
+# Exp(Global(Num('9')))
+SUBI SP 1
+LOADIN DS ACC 9
+STOREIN SP ACC 1
+# Exp(Global(Num('10')))
+SUBI SP 1
+LOADIN DS ACC 10
+STOREIN SP ACC 1
+# Exp(Atom(Stack(Num('2')), Lt('<'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+SUB ACC IN2
+JUMP< 3
+LOADI ACC 0
+JUMP 2
+LOADI ACC 1
+STOREIN SP ACC 2
+ADDI SP 1
+# IfElse(Stack(Num('1')), [], [])
+LOADIN SP ACC 1
+ADDI SP 1
+# JUMP== GoTo(Name('while_after.1'))
+JUMP!= 5
+# write large immediate into ACC
+LOADI ACC 0
+MULTI ACC 1024
+ORI ACC 82
+ADD PC ACC
+# GoTo(Name('while_branch.2'))
+# // not included Exp(GoTo(Name('while_branch.2')))
+# // Block(Name('while_branch.2'), [])
+# // Assign(Name('swapped'), Call(Name('swap'), [Ref(Subscr(Attr(Name('st_ar'), Name('ar')), Name('i'))), Ref(Subscr(Attr(Name('st_ar'), Name('ar')), BinOp(Name('i'), Add('+'), Num('1'))))]))
+# // Call(Name('swap'), [Ref(Subscr(Attr(Name('st_ar'), Name('ar')), Name('i'))), Ref(Subscr(Attr(Name('st_ar'), Name('ar')), BinOp(Name('i'), Add('+'), Num('1'))))])
+# StackMalloc(Num('2'))
+SUBI SP 2
+# Ref(Global(Num('6')))
+SUBI SP 1
+LOADI IN1 6
+ADD IN1 DS
+STOREIN SP IN1 1
+# Ref(Attr(Stack(Num('1')), Name('ar')))
+LOADIN SP IN1 1
+ADDI IN1 1
+STOREIN SP IN1 1
+# Exp(Global(Num('9')))
+SUBI SP 1
+LOADIN DS ACC 9
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Ref(Global(Num('6')))
+SUBI SP 1
+LOADI IN1 6
+ADD IN1 DS
+STOREIN SP IN1 1
+# Ref(Attr(Stack(Num('1')), Name('ar')))
+LOADIN SP IN1 1
+ADDI IN1 1
+STOREIN SP IN1 1
+# Exp(Global(Num('9')))
+SUBI SP 1
+LOADIN DS ACC 9
+STOREIN SP ACC 1
+# Exp(Num('1'))
+SUBI SP 1
+LOADI ACC 1
+STOREIN SP ACC 1
+# Exp(BinOp(Stack(Num('2')), Add('+'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+ADD ACC IN2
+STOREIN SP ACC 2
+ADDI SP 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# NewStackframe(Name('swap.8'), GoTo(Name('addr@next_instr')))
+MOVE BAF ACC
+ADDI SP 4
+MOVE SP BAF
+SUBI SP 6
+STOREIN BAF ACC 0
+# LOADI ACC GoTo(Name('addr@next_instr'))
+LOADI ACC 299
+ADD ACC CS
+STOREIN BAF ACC -1
+# Exp(GoTo(Name('swap.8')))
+# write large immediate into ACC
+LOADI ACC -1
+MULTI ACC 1024
+ORI ACC 777
+ADD PC ACC
+# RemoveStackframe()
+MOVE BAF IN1
+LOADIN IN1 BAF 0
+MOVE IN1 SP
+# Exp(ACC)
+SUBI SP 1
+STOREIN SP ACC 1
+# Assign(Global(Num('8')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN DS ACC 8
+ADDI SP 1
+# // Assign(Name('i'), BinOp(Name('i'), Add('+'), Num('1')))
+# Exp(Global(Num('9')))
+SUBI SP 1
+LOADIN DS ACC 9
+STOREIN SP ACC 1
+# Exp(Num('1'))
+SUBI SP 1
+LOADI ACC 1
+STOREIN SP ACC 1
+# Exp(BinOp(Stack(Num('2')), Add('+'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+ADD ACC IN2
+STOREIN SP ACC 2
+ADDI SP 1
+# Assign(Global(Num('9')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN DS ACC 9
+ADDI SP 1
+# Exp(GoTo(Name('condition_check.3')))
+# write large immediate into ACC
+LOADI ACC -1
+MULTI ACC 1024
+ORI ACC 922
+ADD PC ACC
+# // Block(Name('while_after.1'), [])
+# // Assign(Name('n'), BinOp(Name('n'), Sub('-'), Num('1')))
+# Exp(Global(Num('10')))
+SUBI SP 1
+LOADIN DS ACC 10
+STOREIN SP ACC 1
+# Exp(Num('1'))
+SUBI SP 1
+LOADI ACC 1
+STOREIN SP ACC 1
+# Exp(BinOp(Stack(Num('2')), Sub('-'), Stack(Num('1'))))
+LOADIN SP ACC 2
+LOADIN SP IN2 1
+SUB ACC IN2
+STOREIN SP ACC 2
+ADDI SP 1
+# Assign(Global(Num('10')), Stack(Num('1')))
+LOADIN SP ACC 1
+STOREIN DS ACC 10
+ADDI SP 1
+# // IfElse(Name('swapped'), [], [])
+# Exp(Global(Num('8')))
+SUBI SP 1
+LOADIN DS ACC 8
+STOREIN SP ACC 1
+# IfElse(Stack(Num('1')), [], [])
+LOADIN SP ACC 1
+ADDI SP 1
+# JUMP== GoTo(Name('do_while_after.0'))
+JUMP!= 5
+# write large immediate into ACC
+LOADI ACC 0
+MULTI ACC 1024
+ORI ACC 5
+ADD PC ACC
+# GoTo(Name('do_while_branch.4'))
+# Exp(GoTo(Name('do_while_branch.4')))
+# write large immediate into ACC
+LOADI ACC -1
+MULTI ACC 1024
+ORI ACC 888
+ADD PC ACC
+# // Block(Name('do_while_after.0'), [])
+# // Exp(Call(Name('print'), [Subscr(Attr(Name('st_ar'), Name('ar')), Call(Name('input'), []))]))
+# Ref(Global(Num('6')))
+SUBI SP 1
+LOADI IN1 6
+ADD IN1 DS
+STOREIN SP IN1 1
+# Ref(Attr(Stack(Num('1')), Name('ar')))
+LOADIN SP IN1 1
+ADDI IN1 1
+STOREIN SP IN1 1
+# Exp(Call(Name('input'), []))
+INT 2
+SUBI SP 1
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Exp(Call(Name('print'), [Stack(Num('1'))]))
+LOADIN SP ACC 1
+ADDI SP 1
+INT 0
+# // Exp(Call(Name('print'), [Subscr(Attr(Name('st_ar'), Name('ar')), Call(Name('input'), []))]))
+# Ref(Global(Num('6')))
+SUBI SP 1
+LOADI IN1 6
+ADD IN1 DS
+STOREIN SP IN1 1
+# Ref(Attr(Stack(Num('1')), Name('ar')))
+LOADIN SP IN1 1
+ADDI IN1 1
+STOREIN SP IN1 1
+# Exp(Call(Name('input'), []))
+INT 2
+SUBI SP 1
+STOREIN SP ACC 1
+# Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
+LOADIN SP IN2 2
+LOADIN IN2 IN1 0
+LOADIN SP IN2 1
+MULTI IN2 1
+ADD IN1 IN2
+ADDI SP 1
+STOREIN SP IN1 1
+# Exp(Stack(Num('1')))
+LOADIN SP IN1 1
+LOADIN IN1 ACC 0
+STOREIN SP ACC 1
+# Exp(Call(Name('print'), [Stack(Num('1'))]))
+LOADIN SP ACC 1
+ADDI SP 1
+INT 0
+# Return(Empty())
+JUMP 0
