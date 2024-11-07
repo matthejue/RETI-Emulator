@@ -8,4 +8,5 @@ sram.bin
 *.expected_output
 *.output
 *.error
+*.cast
 test_results

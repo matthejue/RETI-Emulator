@@ -341,7 +341,7 @@ void print_uart_meta_data() {
   } else {
     printf("Current input:\n");
   }
-  printf("Remaining Input: ");
+  printf("Remaining input: ");
   if (read_metadata && input_idx < input_len) {
     for (uint8_t i = input_idx; i < input_len; i++) {
       if (i == input_idx && (int8_t)received_num_idx >= 0) {
