@@ -12,6 +12,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <cstdlib>
+#define clrscr() system("cls")
+#else
+// Requires stdio.h (already included)
+#define clrscr() printf(/* clear sequence for ANSI terminals*/ "\e[1;1H\e[2J")
+#endif
+
 bool breakpoint_encountered = true;
 bool step_into_activated = false;
 bool isr_active = false;
@@ -463,6 +471,7 @@ bool draw_tui(void) {
     return false;
   }
 
+  clrscr();
   printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
