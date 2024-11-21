@@ -1,15 +1,41 @@
-# Installation auf Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
+# Installation auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
 ```bash
-git clone -b main https://github.com/matthejue/RETI-Interpreter.git --depth 1
-cd RETI-Interpreter
+git clone -b main https://github.com/matthejue/RETI-Interpreter.git ~/RETI-Interpreter --depth 1
+cd ~/RETI-Interpreter
 make install-linux-local
 ```
 
-# Installation auf Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
+# Installation auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
 ```bash
-git clone -b main https://github.com/matthejue/RETI-Interpreter.git --depth 1
-cd RETI-Interpreter
-sudo make install-linux-global
+git clone -b main https://github.com/matthejue/RETI-Interpreter.git ~/RETI-Interpreter --depth 1
+cd ~/RETI-Interpreter
+make install-linux-global
+```
+
+# Deinstallation auf Linux Systemen, wenn vorher lokal installiert wurde
+```bash
+cd ~/RETI-Interpreter
+make uninstall-linux-local
+```
+
+# Deinstallation auf Linux Systemen, wenn vorher global installiert wurde
+```bash
+cd ~/RETI-Interpreter
+make uninstall-linux-global
+```
+
+# Updaten auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
+```bash
+cd ~/RETI-Interpreter
+git pull
+make update-linux-local
+```
+
+# Updaten auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
+```bash
+cd ~/RETI-Interpreter
+git pull
+make update-linux-global
 ```
 
 # Verwendung
