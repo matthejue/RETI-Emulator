@@ -1,21 +1,15 @@
 # Installation auf Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
 ```bash
-ssh <pool_login>@login.informatik.uni-freiburg.de
-mkdir -p ~/.local/bin
-wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter -P ~/.local/bin
-chmod 755 ~/.local/bin/reti_interpreter
-echo 'export PATH="~/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc # um es direkt anzuwenden ohne sich neu einloggen zu müssen
-vim test.reti
-./reti_interpreter -d test.reti
+git clone -b main https://github.com/matthejue/RETI-Interpreter.git --depth 1
+cd RETI-Interpreter
+make install-linux-local
 ```
 
 # Installation auf Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
 ```bash
 git clone -b main https://github.com/matthejue/RETI-Interpreter.git --depth 1
 cd RETI-Interpreter
-make
-sudo make install-linux # nur unter Linux
+sudo make install-linux-global
 ```
 
 # Verwendung
