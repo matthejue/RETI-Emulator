@@ -77,7 +77,10 @@ install-linux-local:
 	chmod 500 ~/.local/bin/reti_interpreter
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 
-update-linux-local: install-linux-local
+pull-latest-version:
+	git pull
+
+update-linux-local: pull-latest-version install-linux-local
 
 uninstall-linux-local:
 	rm -f ~/.local/bin/reti_interpreter
@@ -86,7 +89,7 @@ uninstall-linux-local:
 install-linux-global: $(BIN_SRC)
 	@sudo bash -c "if [ -L /usr/local/bin/reti_interpreter ]; then rm -f /usr/local/bin/reti_interpreter; fi && chmod 500 ./bin/reti_interpreter_main && ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
 
-update-linux-global: install-linux-global
+update-linux-global: pull-latest-version install-linux-global
 
 uninstall-linux-global:
 	@sudo rm -f /usr/local/bin/reti_interpreter

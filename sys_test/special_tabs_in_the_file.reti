@@ -1,0 +1,10 @@
+# input:	14	3
+# output:	42
+INT 2			# important comment
+MOVE ACC IN1	# important comment
+INT 2			# important comment
+MULT ACC IN1	# important comment
+INT 0			# important comment
+JUMP 0
+
+

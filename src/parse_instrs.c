@@ -24,7 +24,7 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
   while (true) {
     rel_idx = 0;
     while (true) {
-      if (*prgrm_pntr == ' ') {
+      if (*prgrm_pntr == ' ' || *prgrm_pntr == '\t') {
         switch (token_cnt) {
         case 0:
           (str_instr->op)[rel_idx] = '\0';
@@ -39,7 +39,7 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
           (str_instr->opd3)[rel_idx] = '\0';
           break;
         }
-        while (*prgrm_pntr == ' ') {
+        while (*prgrm_pntr == ' ' || *prgrm_pntr == '\t') {
           prgrm_pntr++;
         }
         break;
