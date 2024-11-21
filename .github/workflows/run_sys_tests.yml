@@ -1,0 +1,32 @@
+name: run system tests
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - "*"
+  pull_request:
+    branches: [ main ]
+    tags:
+      - "*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install RETI-Interpreter
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        make
+    - name: Test with Shellscript
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        make unit-test
+        ./run_sys_tests.sh 79
+

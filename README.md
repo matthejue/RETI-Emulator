@@ -24,19 +24,21 @@ cd ~/RETI-Interpreter
 make uninstall-linux-global
 ```
 
-# Updaten auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
+# Updaten auf Linux Systemen, wenn vorher lokal installiert wurde
 ```bash
 cd ~/RETI-Interpreter
 git pull
 make update-linux-local
 ```
 
-# Updaten auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
+# Updaten auf Linux Systemen, wenn vorher global installiert wurde
 ```bash
 cd ~/RETI-Interpreter
 git pull
 make update-linux-global
 ```
+
+> Bitte lokale und globale Installationen nicht mischen, beim Wechsel zur jeweils anderen Installationsart vorher eine Deinstallation für die zuvor verwendete Installationsart durchführen.
 
 # Verwendung
 Der RETI-Interpreter ist dazu in der Lage, die RETI-Befehle eines in einer `.reti`-Datei angebenen RETI-Programms zu interpretieren. D.h. er kann das RETI-Programm **ausführen**, indem er die RETI-Befehle aus einer Datei `prgrm.reti` herausliest und in den simulierten SRAM schreibt und mithilfe eines autogenerierten EPROM-Startprogramms, dass zu Beginn ausgeführt wird an den Start dieses Programmes springt. Zum Ausführen eines Programmes muss der RETI-Interpreter mit dem Pfad zum RETI-Programm als Argument aufgerufen werden, z.B.:

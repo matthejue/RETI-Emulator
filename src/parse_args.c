@@ -30,7 +30,8 @@ void print_help(char *bin_name) {
           "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-          "(verbose) -b (binary mode) -a (all) -h (help page) "
+          "(verbose) -b (binary mode) -E (extended features) -a (all) -h (help "
+          "page) "
           "prgrm_path\n",
           bin_name);
 }
