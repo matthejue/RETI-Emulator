@@ -71,7 +71,7 @@ DEB_BIN := reti_interpreter_main
 debug: $(BIN_SRC) $(BIN_TEST)
 	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./run/deb_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
 
-install-linux-local: $(BIN_SRC)
+install-linux-local:
 	if [ -f ~/.local/bin/reti_interpreter ]; then rm ~/.local/bin/reti_interpreter; fi
 	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter -P ~/.local/bin
 	chmod 500 ~/.local/bin/reti_interpreter
