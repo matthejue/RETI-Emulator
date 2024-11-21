@@ -11,7 +11,6 @@ if [[ $2 == "all" ]]; then
 elif [[ -n "$2" ]]; then
   paths=(./sys_test/*$2*.reti)
 else
-  # paths=(./sys_test/{basic,advanced,special,example,error,tobias}*.reti)
   paths=(./sys_test/{basic,special,error}*.reti)
 fi
 

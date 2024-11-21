@@ -71,7 +71,24 @@ DEB_BIN := reti_interpreter_main
 debug: $(BIN_SRC) $(BIN_TEST)
 	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./run/deb_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
 
-install-linux: $(BIN_SRC)
-	@sudo bash -c "([[ ! -f /usr/local/bin/reti_interpreter ]] || rm /usr/local/bin/reti_interpreter) && chmod 755 ./bin/reti_interpreter_main && sudo ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
+install-linux-local: $(BIN_SRC)
+	if [ -f ~/.local/bin/reti_interpreter ]; then rm ~/.local/bin/reti_interpreter; fi
+	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter -P ~/.local/bin
+	chmod 500 ~/.local/bin/reti_interpreter
+	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
+
+update-linux-local: install-linux-local
+
+uninstall-linux-local:
+	rm -f ~/.local/bin/reti_interpreter
+	sed -i '/export PATH="~\/.local\/bin:$$PATH"/d' ~/.bashrc
+
+install-linux-global: $(BIN_SRC)
+	@sudo bash -c "if [ -L /usr/local/bin/reti_interpreter ]; then rm -f /usr/local/bin/reti_interpreter; fi && chmod 500 ./bin/reti_interpreter_main && ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
+
+update-linux-global: install-linux-global
+
+uninstall-linux-global:
+	@sudo rm -f /usr/local/bin/reti_interpreter
 
 -include $(OBJ:.o=.d)

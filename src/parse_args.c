@@ -30,7 +30,7 @@ void print_help(char *bin_name) {
           "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-          "(verbose) -b (binary mode) -h (help page) "
+          "(verbose) -b (binary mode) -a (all) -h (help page) "
           "prgrm_path\n",
           bin_name);
 }
@@ -38,7 +38,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmbE")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmbEa")) != -1) {
     char *endptr;
     long tmp_val;
 
@@ -131,6 +131,14 @@ void parse_args(uint8_t argc, char *argv[]) {
       binary_mode = true;
       break;
     case 'E':
+      extended_features = true;
+      break;
+    case 'a':
+      debug_mode = true;
+      peripherals_dir = "/tmp";
+      verbose = true;
+      read_metadata = true;
+      binary_mode = true;
       extended_features = true;
       break;
     case 'h':

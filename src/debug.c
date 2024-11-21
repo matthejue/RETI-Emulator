@@ -489,7 +489,7 @@ bool draw_tui(void) {
   printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
   printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
   if (extended_features) {
-    printf("(s)step into isr, (a)ssign watchpoint reg or addr\n");
+    printf("(s)tep into isr, (a)ssign watchpoint reg or addr\n");
   } else {
     printf("(a)ssign watchpoint reg or addr\n");
   }
