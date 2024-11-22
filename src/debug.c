@@ -16,8 +16,7 @@
 #include <cstdlib>
 #define clrscr() system("cls")
 #else
-// Requires stdio.h (already included)
-#define clrscr() printf(/* clear sequence for ANSI terminals*/ "\e[1;1H\e[2J")
+#define clrscr() printf("\e[1;1H\e[2J") // clear sequence for ANSI terminals
 #endif
 
 bool breakpoint_encountered = true;
