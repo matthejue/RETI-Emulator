@@ -15,7 +15,7 @@ extern uint32_t *regs;
 extern uint32_t *eprom;
 extern uint8_t *uart;
 extern FILE *sram;
-extern FILE *hdd;
+// extern FILE *hdd;
 
 extern char *eprom_watchpoint;
 extern char *sram_watchpoint_cs;

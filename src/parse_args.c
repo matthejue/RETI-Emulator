@@ -10,7 +10,7 @@
 
 uint32_t sram_size = 65536;
 uint16_t page_size = 4096;
-uint32_t hdd_size = 4294967295;
+// uint32_t hdd_size = 4294967295;
 bool debug_mode = false;
 bool test_mode = false;
 bool binary_mode = false;
@@ -27,7 +27,8 @@ char *isrs_prgrm_path = "";
 
 void print_help(char *bin_name) {
   fprintf(stderr,
-          "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
+          // "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
+          "Usage: %s -r ram_size -p page_size -d (daemon mode) "
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
           "(verbose) -b (binary mode) -E (extended features) -a (all) -h (help "
@@ -39,7 +40,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:H:dr:f:e:i:w:hvtmbEa")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEa")) != -1) {
     char *endptr;
     long tmp_val;
 
@@ -69,19 +70,19 @@ void parse_args(uint8_t argc, char *argv[]) {
       }
       page_size = tmp_val;
       break;
-    case 'H':
-      tmp_val = strtol(optarg, &endptr, 10);
-      if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid hdd size\n");
-        exit(EXIT_FAILURE);
-      }
-      if (tmp_val < 0 || tmp_val > UINT32_MAX) {
-        fprintf(stderr,
-                "Error: HDD max index must be between 0 and 4294967295\n");
-        exit(EXIT_FAILURE);
-      }
-      hdd_size = tmp_val;
-      break;
+    // case 'H':
+    //   tmp_val = strtol(optarg, &endptr, 10);
+    //   if (endptr == optarg || *endptr != '\0') {
+    //     fprintf(stderr, "Error: Invalid hdd size\n");
+    //     exit(EXIT_FAILURE);
+    //   }
+    //   if (tmp_val < 0 || tmp_val > UINT32_MAX) {
+    //     fprintf(stderr,
+    //             "Error: HDD max index must be between 0 and 4294967295\n");
+    //     exit(EXIT_FAILURE);
+    //   }
+    //   hdd_size = tmp_val;
+    //   break;
     case 'd':
       debug_mode = true;
       break;
@@ -163,7 +164,7 @@ void parse_args(uint8_t argc, char *argv[]) {
 void print_args() {
   printf("SRAM Size: %u\n", sram_size);
   printf("Page Size: %u\n", page_size);
-  printf("HDD Size: %u\n", hdd_size);
+  // printf("HDD Size: %u\n", hdd_size);
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
   printf("Daemon Mode: %s\n", debug_mode ? "true" : "false");
   printf("Read Metadata: %s\n", read_metadata ? "true" : "false");

@@ -157,12 +157,12 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
             proper_str_cat("%0", num_digits_for_idx_str(sram_size - 1)), "zu"),
         idx);
     break;
-  case HDD:
-    snprintf(idx_str, sizeof(idx_str),
-             proper_str_cat(
-                 proper_str_cat("%0", num_digits_for_idx_str(hdd_size)), "zu"),
-             idx);
-    break;
+  // case HDD:
+  //   snprintf(idx_str, sizeof(idx_str),
+  //            proper_str_cat(
+  //                proper_str_cat("%0", num_digits_for_idx_str(hdd_size)), "zu"),
+  //            idx);
+  //   break;
   case EPROM:
     snprintf(idx_str, sizeof(idx_str),
              proper_str_cat(proper_str_cat("%0", num_digits_for_idx_str(
@@ -248,12 +248,12 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                                  are_instrs, SRAM);
     }
     break;
-  case HDD:
-    for (uint64_t i = start; i <= end; i++) {
-      print_mem_content_with_idx(i, read_file(hdd, i), are_unsigned, are_instrs,
-                                 HDD);
-    }
-    break;
+  // case HDD:
+  //   for (uint64_t i = start; i <= end; i++) {
+  //     print_mem_content_with_idx(i, read_file(hdd, i), are_unsigned, are_instrs,
+  //                                HDD);
+  //   }
+  //   break;
   default:
     fprintf(stderr, "Error: Invalid memory type\n");
     exit(EXIT_FAILURE);

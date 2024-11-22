@@ -11,7 +11,8 @@
 uint32_t *regs, *eprom;
 uint8_t *uart;
 
-FILE *sram, *hdd;
+// FILE *sram, *hdd;
+FILE *sram;
 
 uint32_t ivt_max_idx = -1;
 uint32_t num_instrs_prgrm = 0;
@@ -23,7 +24,7 @@ char *sram_watchpoint_cs = "PC";
 char *sram_watchpoint_ds = "DS";
 char *sram_watchpoint_stack = "SP";
 
-uint64_t hdd_watchpoint = 0;
+// uint64_t hdd_watchpoint = 0;
 
 void init_reti() {
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);
@@ -43,10 +44,11 @@ void init_reti() {
   char *file_path = proper_str_cat(peripherals_dir, "/sram.bin");
   sram = fopen(file_path, "w+b");
 
-  file_path = proper_str_cat(peripherals_dir, "/hdd.bin");
-  hdd = fopen(file_path, "w+b");
+  // file_path = proper_str_cat(peripherals_dir, "/hdd.bin");
+  // hdd = fopen(file_path, "w+b");
 
-  if (!sram || !hdd) {
+  // if (!sram || !hdd) {
+  if (!sram) {
     fprintf(stderr, "Failed to open storage files\n");
     exit(EXIT_FAILURE);
   }
@@ -225,5 +227,5 @@ void write_storage(uint32_t addr, uint32_t buffer) {
 
 void fin_reti() {
   fclose(sram);
-  fclose(hdd);
+  // fclose(hdd);
 }

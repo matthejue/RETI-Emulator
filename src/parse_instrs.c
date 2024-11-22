@@ -2,6 +2,7 @@
 #include "../include/error.h"
 #include "../include/interpr.h"
 #include "../include/reti.h"
+#include "../include/parse_args.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,10 +72,20 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
       case 3:
         (str_instr->opd3)[rel_idx] = *prgrm_pntr;
         break;
-      default:
-        // TODO: also has to be a special error message
-        fprintf(stderr, "Error: Too many operands\n");
-        exit(EXIT_FAILURE);
+      default: {
+        char *opds =
+            malloc(strlen(str_instr->op) + strlen(str_instr->opd1) +
+                   strlen(str_instr->opd2) + strlen(str_instr->opd3) + 4);
+        strcpy(opds, str_instr->op);
+        strcat(opds, " ");
+        strcat(opds, str_instr->opd1);
+        strcat(opds, " ");
+        strcat(opds, str_instr->opd2);
+        strcat(opds, " ");
+        strcat(opds, str_instr->opd3);
+        display_error_message("SyntaxError", "For sure too many oparnds after \"%s\"", opds, Pntr);
+        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+      }
       }
       rel_idx++;
       prgrm_pntr++;

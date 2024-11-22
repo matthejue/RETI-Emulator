@@ -9,7 +9,8 @@ typedef struct {
   const char *name;
 } Mnemonic_to_String;
 
-typedef enum { REGS, EPROM, UART, SRAM, HDD } MemType;
+// typedef enum { REGS, EPROM, UART, SRAM, HDD } MemType;
+typedef enum { REGS, EPROM, UART, SRAM } MemType;
 
 extern const uint8_t mem_type_to_constant[];
 

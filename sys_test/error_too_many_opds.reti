@@ -1,3 +1,6 @@
 # output: SyntaxError
-INT 3 ACC
+# This is a comment that spans
+over multiple lines but
+unfortunetely every line needs a
+# sign in front of it
 JUMP 0

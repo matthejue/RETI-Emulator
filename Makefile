@@ -64,7 +64,7 @@ clean-files:
 	find . -type f -wholename "./sys_test/*.expected_output" -delete
 	find . -type f -wholename "./sys_test/*.error" -delete
 	find . -type f -name "sram.bin" -delete
-	find . -type f -name "hdd.bin" -delete
+	# find . -type f -name "hdd.bin" -delete
 	find . -type f -name "test_results" -delete
 
 DEB_BIN := reti_interpreter_main
