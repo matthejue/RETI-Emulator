@@ -5,7 +5,7 @@ if [[ $1 == "all" ]]; then
 elif [[ -n "$1" ]]; then
   paths=(./sys_test/*$1*.reti)
 else
-  paths=(./sys_test/{basic,special,error}*.reti)
+  paths=(./sys_test/{basic,special,example,error}*.reti)
 fi
 
 for test in "${paths[@]}"; do
