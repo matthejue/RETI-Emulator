@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-uint32_t sram_size = 4294967295;
+uint32_t sram_size = 65536;
 uint16_t page_size = 4096;
 uint32_t hdd_size = 4294967295;
 bool debug_mode = false;

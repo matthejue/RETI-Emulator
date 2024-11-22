@@ -4,13 +4,13 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include <ctype.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 bool breakpoint_encountered = true;
 bool step_into_activated = false;
@@ -102,7 +102,7 @@ char *assembly_to_str(Instruction *instr) {
   return instr_str;
 }
 
-char *mem_value_to_str(uint32_t mem_content, bool is_unsigned) {
+char *mem_value_to_str(int32_t mem_content, bool is_unsigned) {
   char *instr_str = malloc(12); // -2147483649
   if (is_unsigned) {
     sprintf(instr_str, "%u", mem_content);
@@ -151,10 +151,11 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   char idx_str[20];
   switch (mem_type) {
   case SRAM:
-    snprintf(idx_str, sizeof(idx_str),
-             proper_str_cat(
-                 proper_str_cat("%0", num_digits_for_idx_str(sram_size)), "zu"),
-             idx);
+    snprintf(
+        idx_str, sizeof(idx_str),
+        proper_str_cat(
+            proper_str_cat("%0", num_digits_for_idx_str(sram_size - 1)), "zu"),
+        idx);
     break;
   case HDD:
     snprintf(idx_str, sizeof(idx_str),
@@ -327,7 +328,7 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x) {
       false, true);
   print_file_with_idcs(
       SRAM, max(num_instrs_isrs + num_instrs_prgrm, sram_watchpoint_x - radius),
-      min(sram_watchpoint_x + radius, SRAM_MAX_IDX), false, false);
+      min(sram_watchpoint_x + radius, sram_size-1), false, false);
 }
 
 void print_uart_meta_data() {
@@ -477,9 +478,13 @@ bool draw_tui(void) {
   print_uart_meta_data();
 
   // the user shouldn't have to calculate the absolute address for the sram
-  sram_watchpoint_cs_int = sram_watchpoint_cs_int + (isdigit(sram_watchpoint_cs[0]) ? (1<<31) : 0);
-  sram_watchpoint_ds_int = sram_watchpoint_ds_int + (isdigit(sram_watchpoint_ds[0]) ? (1<<31) : 0);
-  sram_watchpoint_stack_int = sram_watchpoint_stack_int + (isdigit(sram_watchpoint_stack[0]) ? (1<<31) : 0);
+  sram_watchpoint_cs_int =
+      sram_watchpoint_cs_int + (isdigit(sram_watchpoint_cs[0]) ? (1 << 31) : 0);
+  sram_watchpoint_ds_int =
+      sram_watchpoint_ds_int + (isdigit(sram_watchpoint_ds[0]) ? (1 << 31) : 0);
+  sram_watchpoint_stack_int =
+      sram_watchpoint_stack_int +
+      (isdigit(sram_watchpoint_stack[0]) ? (1 << 31) : 0);
   printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
   printf("SRAM Watchpoint Codesegment (swc): %s (%lu)\n", sram_watchpoint_cs,
          sram_watchpoint_cs_int);

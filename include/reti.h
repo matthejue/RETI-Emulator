@@ -26,7 +26,6 @@ extern char *sram_watchpoint_stack;
 #define ADJUSTEED_EPROM_PRGRM_SIZE 14
 #define NUM_REGISTERS 8
 #define NUM_UART_ADDRESSES 3
-#define SRAM_MAX_IDX 2147483647
 
 #define EPROM_CONST 0b00
 #define UART_CONST 0b01

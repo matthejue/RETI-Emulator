@@ -56,14 +56,20 @@ void init_reti() {
 
 void load_adjusted_eprom_prgrm() {
   uint8_t i = 0;
+  uint32_t sram_size_num = 0b10 << 30 | (sram_size - 1);
+  // or because of assumption that num_instrs_isrs is less than 2^30
+  uint32_t num_upper = sign_extend_22_to_32(sram_size_num >> 10);
+  uint32_t num_lower = sram_size_num & TEN_BIT_MASK;
   String_Instruction str_instr = {
-      .op = "LOADI", .opd1 = "SP", .opd2 = "-1", .opd3 = ""};
+      .op = "LOADI", .opd1 = "SP", .opd2 = "", .opd3 = ""};
+  strcpy(str_instr.opd2, mem_value_to_str(num_upper, false));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr = (String_Instruction){
       .op = "MULTI", .opd1 = "SP", .opd2 = "1024", .opd3 = ""};
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr = (String_Instruction){
-      .op = "ADDI", .opd1 = "SP", .opd2 = "1023", .opd3 = ""};
+      .op = "ORI", .opd1 = "SP", .opd2 = "", .opd3 = ""};
+  strcpy(str_instr.opd2, mem_value_to_str(num_lower, true));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
 
   str_instr = (String_Instruction){
@@ -71,20 +77,20 @@ void load_adjusted_eprom_prgrm() {
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
 
   // Codesegment register
-  uint32_t im = 0b10 << 30 | num_instrs_isrs;
+  uint32_t isrs_num = 0b10 << 30 | num_instrs_isrs;
   // or because of assumption that num_instrs_isrs is less than 2^30
-  uint32_t im_upper_str = sign_extend_22_to_32(im >> 10);
-  uint32_t im_lower_str = im & IMMEDIATE_MASK;
+  num_upper = sign_extend_22_to_32(isrs_num >> 10);
+  num_lower = isrs_num & TEN_BIT_MASK;
   str_instr =
       (String_Instruction){.op = "LOADI", .opd1 = "CS", .opd2 = "", .opd3 = ""};
-  strcpy(str_instr.opd2, mem_value_to_str(im_upper_str, false));
+  strcpy(str_instr.opd2, mem_value_to_str(num_upper, false));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr = (String_Instruction){
       .op = "MULTI", .opd1 = "CS", .opd2 = "1024", .opd3 = ""};
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr =
       (String_Instruction){.op = "ORI", .opd1 = "CS", .opd2 = "", .opd3 = ""};
-  strcpy(str_instr.opd2, mem_value_to_str(im_lower_str, false));
+  strcpy(str_instr.opd2, mem_value_to_str(num_lower, true));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
 
   str_instr = (String_Instruction){
@@ -92,18 +98,18 @@ void load_adjusted_eprom_prgrm() {
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
 
   // Datensegment register
-  im_upper_str = sign_extend_22_to_32(num_instrs_prgrm >> 10);
-  im_lower_str = num_instrs_prgrm & IMMEDIATE_MASK;
+  num_upper = sign_extend_22_to_32(num_instrs_prgrm >> 10);
+  num_lower = num_instrs_prgrm & TEN_BIT_MASK;
   str_instr = (String_Instruction){
       .op = "LOADI", .opd1 = "ACC", .opd2 = "", .opd3 = ""};
-  strcpy(str_instr.opd2, mem_value_to_str(im_upper_str, false));
+  strcpy(str_instr.opd2, mem_value_to_str(num_upper, false));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr = (String_Instruction){
       .op = "MULTI", .opd1 = "ACC", .opd2 = "1024", .opd3 = ""};
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr =
       (String_Instruction){.op = "ORI", .opd1 = "ACC", .opd2 = "", .opd3 = ""};
-  strcpy(str_instr.opd2, mem_value_to_str(im_lower_str, false));
+  strcpy(str_instr.opd2, mem_value_to_str(num_lower, true));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
   str_instr = (String_Instruction){
       .op = "ADD", .opd1 = "DS", .opd2 = "ACC", .opd3 = ""};

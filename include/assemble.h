@@ -5,6 +5,7 @@
 #define ASSEMBLE_H
 
 #define IMMEDIATE_MASK 0x3FFFFF   // 22 bits for immediate value
+#define TEN_BIT_MASK 0x3FF   // 22 bits for immediate value
 /*#define ALL_BUT_IMMEDIATE_MASK 0xffc00000*/
 #define REGISTER_MASK 0x7
 

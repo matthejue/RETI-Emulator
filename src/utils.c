@@ -41,6 +41,15 @@ uint32_t sign_extend_22_to_32(uint32_t num) {
   return num;
 }
 
+// uint32_t sign_extend_10_to_32(uint32_t num) {
+//   if (num & (1 << 9)) {
+//     num |= ~((1 << 10) - 1);
+//   } else {
+//     num &= (1 << 10) - 1;
+//   }
+//   return num;
+// }
+
 uint32_t swap_endian_32(uint32_t value) {
   return (value >> 24) | ((value >> 8) & 0x0000FF00) |
          ((value << 8) & 0x00FF0000) | (value << 24);
