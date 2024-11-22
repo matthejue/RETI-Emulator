@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 bool breakpoint_encountered = true;
 bool step_into_activated = false;
@@ -386,43 +387,43 @@ void get_user_input(void) {
     }
     fflush(stdout);
 
-    char **stdin = split_string(buffer, &count);
-    if (stdin == NULL) {
+    char **split_input = split_string(buffer, &count);
+    if (split_input == NULL) {
       continue;
-    } else if (strcmp(stdin[0], "n") == 0 && count == 1) {
+    } else if (strcmp(split_input[0], "n") == 0 && count == 1) {
       return;
-    } else if (strcmp(stdin[0], "c") == 0 && count == 1) {
+    } else if (strcmp(split_input[0], "c") == 0 && count == 1) {
       breakpoint_encountered = false;
       return;
-    } else if (strcmp(stdin[0], "s") == 0 && count == 1) {
+    } else if (strcmp(split_input[0], "s") == 0 && count == 1) {
       if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
           INT) {
         continue;
       }
       step_into_activated = true;
       return;
-    } else if (strcmp(stdin[0], "a") == 0 && count == 3) {
-      if (strcmp(stdin[1], "ew") == 0) {
+    } else if (strcmp(split_input[0], "a") == 0 && count == 3) {
+      if (strcmp(split_input[1], "ew") == 0) {
         char *eprom_watchpoint_tmp = eprom_watchpoint;
-        eprom_watchpoint = stdin[2];
+        eprom_watchpoint = split_input[2];
         if (!draw_tui()) {
           eprom_watchpoint = eprom_watchpoint_tmp;
         }
-      } else if (strcmp(stdin[1], "swc") == 0) {
+      } else if (strcmp(split_input[1], "swc") == 0) {
         char *sram_watchpoint_cs_tmp = sram_watchpoint_cs;
-        sram_watchpoint_cs = stdin[2];
+        sram_watchpoint_cs = split_input[2];
         if (!draw_tui()) {
           sram_watchpoint_cs = sram_watchpoint_cs_tmp;
         }
-      } else if (strcmp(stdin[1], "swd") == 0) {
+      } else if (strcmp(split_input[1], "swd") == 0) {
         char *sram_watchpoint_ds_tmp = sram_watchpoint_ds;
-        sram_watchpoint_ds = stdin[2];
+        sram_watchpoint_ds = split_input[2];
         if (!draw_tui()) {
           sram_watchpoint_ds = sram_watchpoint_ds_tmp;
         }
-      } else if (strcmp(stdin[1], "sws") == 0) {
+      } else if (strcmp(split_input[1], "sws") == 0) {
         char *sram_watchpoint_stack_tmp = sram_watchpoint_stack;
-        sram_watchpoint_stack = stdin[2];
+        sram_watchpoint_stack = split_input[2];
         if (!draw_tui()) {
           sram_watchpoint_stack = sram_watchpoint_stack_tmp;
         }
@@ -432,11 +433,11 @@ void get_user_input(void) {
         continue;
       }
       continue;
-    } else if (strcmp(stdin[0], "D") == 0) {
+    } else if (strcmp(split_input[0], "D") == 0) {
 #ifdef __linux__
       __asm__("int3"); // ../.gdbinit
 #endif
-    } else if (strcmp(stdin[0], "q") == 0 && count == 1) {
+    } else if (strcmp(split_input[0], "q") == 0 && count == 1) {
       exit(EXIT_SUCCESS);
     } else {
       fprintf(stderr, "Error: Invalid command\n");
@@ -475,6 +476,10 @@ bool draw_tui(void) {
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
 
+  // the user shouldn't have to calculate the absolute address for the sram
+  sram_watchpoint_cs_int = sram_watchpoint_cs_int + (isdigit(sram_watchpoint_cs[0]) ? (1<<31) : 0);
+  sram_watchpoint_ds_int = sram_watchpoint_ds_int + (isdigit(sram_watchpoint_ds[0]) ? (1<<31) : 0);
+  sram_watchpoint_stack_int = sram_watchpoint_stack_int + (isdigit(sram_watchpoint_stack[0]) ? (1<<31) : 0);
   printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
   printf("SRAM Watchpoint Codesegment (swc): %s (%lu)\n", sram_watchpoint_cs,
          sram_watchpoint_cs_int);

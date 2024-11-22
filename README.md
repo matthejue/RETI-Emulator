@@ -27,14 +27,12 @@ make uninstall-linux-global
 # Updaten auf Linux Systemen, wenn vorher lokal installiert wurde
 ```bash
 cd ~/RETI-Interpreter
-git pull
 make update-linux-local
 ```
 
 # Updaten auf Linux Systemen, wenn vorher global installiert wurde
 ```bash
 cd ~/RETI-Interpreter
-git pull
 make update-linux-global
 ```
 

@@ -74,7 +74,7 @@ debug: $(BIN_SRC) $(BIN_TEST)
 install-linux-local:
 	if [ -f ~/.local/bin/reti_interpreter ]; then rm ~/.local/bin/reti_interpreter; fi
 	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter -P ~/.local/bin
-	chmod 500 ~/.local/bin/reti_interpreter
+	chmod 700 ~/.local/bin/reti_interpreter
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 
 pull-latest-version:
@@ -87,7 +87,7 @@ uninstall-linux-local:
 	sed -i '/export PATH="~\/.local\/bin:$$PATH"/d' ~/.bashrc
 
 install-linux-global: $(BIN_SRC)
-	@sudo bash -c "if [ -L /usr/local/bin/reti_interpreter ]; then rm -f /usr/local/bin/reti_interpreter; fi && chmod 500 ./bin/reti_interpreter_main && ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
+	@sudo bash -c "if [ -L /usr/local/bin/reti_interpreter ]; then rm -f /usr/local/bin/reti_interpreter; fi && chmod 700 ./bin/reti_interpreter_main && ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
 
 update-linux-global: pull-latest-version install-linux-global
 
