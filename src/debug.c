@@ -13,7 +13,6 @@
 #include <string.h>
 
 #ifdef _WIN32
-#include <cstdlib>
 #define clrscr() system("cls")
 #else
 #define clrscr() printf("\e[1;1H\e[2J") // clear sequence for ANSI terminals
