@@ -1,22 +1,30 @@
 # based on source: https://stackoverflow.com/a/30602701
 
-SRC_DIR := src
-OBJ_DIR := obj
-BIN_DIR := bin
-TEST_DIR := unit_test
+SRC_DIR      := src
+OBJ_DIR      := obj
+BIN_DIR      := bin
+TEST_DIR     := unit_test
 OBJ_TEST_DIR := obj_test
-INCLUDE_DIR := include
-LIB_DIR := lib
+INCLUDE_DIR  := include
 
-BIN_SRC := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
+BIN_SRC  := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
 BIN_TEST := $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(wildcard $(TEST_DIR)/*_test.c))
-SRC := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c))
-OBJ_SRC := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c))
+OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
+CC			 := gcc
 CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
-CFLAGS   := -Wall -g # -O2
-LDFLAGS  := -L$(LIB_DIR) #-static
+CFLAGS   := -Wall
+LDFLAGS  :=
 LDLIBS   := -lm
+
+ifeq ($(STATIC), 1)
+    LDFLAGS += -static
+else 
+	ifneq ($(MACOS), 1)
+    CFLAGS += -g
+	endif
+endif
 
 .PRECIOUS: $(OBJ_DIR)/%.o $(OBJ_TEST_DIR)/%.o
 .PHONY: all sys-test unit-test run clean clean-directories clean-files debug install-linux
