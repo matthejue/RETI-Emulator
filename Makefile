@@ -81,7 +81,8 @@ debug: $(BIN_SRC) $(BIN_TEST)
 
 install-linux-local:
 	if [ -f ~/.local/bin/reti_interpreter ]; then rm ~/.local/bin/reti_interpreter; fi
-	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter -P ~/.local/bin
+	mdkir -p ~/.local/bin
+	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter-linux -O ~/.local/bin/reti_interpreter
 	chmod 700 ~/.local/bin/reti_interpreter
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 
