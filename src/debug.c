@@ -2,10 +2,12 @@
 #include "../include/assemble.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
+#include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <ctype.h>
 #include <limits.h>
+#include <ncurses.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -156,6 +158,9 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
                                 MemType mem_type) {
   char idx_str[20];
   switch (mem_type) {
+  case SRAM_C:
+  case SRAM_D:
+  case SRAM_S:
   case SRAM:
     snprintf(
         idx_str, sizeof(idx_str),
@@ -163,12 +168,6 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
             proper_str_cat("%0", num_digits_for_idx_str(sram_size - 1)), "zu"),
         idx);
     break;
-  // case HDD:
-  //   snprintf(idx_str, sizeof(idx_str),
-  //            proper_str_cat(
-  //                proper_str_cat("%0", num_digits_for_idx_str(hdd_size)), "zu"),
-  //            idx);
-  //   break;
   case EPROM:
     snprintf(idx_str, sizeof(idx_str),
              proper_str_cat(proper_str_cat("%0", num_digits_for_idx_str(
@@ -197,13 +196,45 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
       mem_content_str = mem_value_to_str(mem_content, are_unsigned);
     }
   }
-  printf("%s: %s%s\n", idx_str, mem_content_str,
-         reg_to_mem_pntr(idx, mem_type));
+  if (better_debug_tui) {
+    char *reg_to_mem_pntr_str = reg_to_mem_pntr(idx, mem_type);
+    uint8_t len_final_str = strlen(idx_str) + strlen(mem_content_str) +
+                            strlen(reg_to_mem_pntr_str) + 4;
+    char *final_str = malloc(len_final_str);
+    snprintf(final_str, len_final_str, "%s: %s%s\n", idx_str, mem_content_str,
+             reg_to_mem_pntr_str);
+    switch (mem_type) {
+    case REGS:
+      write_text_into_box(&regs_box, final_str);
+      break;
+    case EPROM:
+      write_text_into_box(&eprom_box, final_str);
+      break;
+    case UART:
+      write_text_into_box(&uart_box, final_str);
+      break;
+    case SRAM_C:
+      write_text_into_box(&sram_c_box, final_str);
+      break;
+    case SRAM_D:
+      write_text_into_box(&sram_d_box, final_str);
+      break;
+    case SRAM_S:
+      write_text_into_box(&sram_s_box, final_str);
+      break;
+    default:
+      fprintf(stderr, "Error: Invalid memory type\n");
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    printf("%s: %s%s\n", idx_str, mem_content_str,
+           reg_to_mem_pntr(idx, mem_type));
+  }
 }
 
-void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
+void print_reg_content_with_reg(uint8_t reg_idx, uint32_t mem_content) {
   char reg_str[4];
-  snprintf(reg_str, sizeof(reg_str), "%3s", register_code_to_name[idx]);
+  snprintf(reg_str, sizeof(reg_str), "%3s", register_code_to_name[reg_idx]);
   const char *mem_content_str_unsigned;
   if (binary_mode) {
     mem_content_str_unsigned = mem_value_to_bin_str(mem_content);
@@ -211,8 +242,18 @@ void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content) {
     mem_content_str_unsigned = mem_value_to_str(mem_content, true);
   }
   const char *mem_content_str_signed = mem_value_to_str(mem_content, false);
-  printf("%s: %s (%s)\n", reg_str, mem_content_str_unsigned,
-         mem_content_str_signed);
+
+  if (better_debug_tui) {
+    uint8_t len_final_str = strlen(reg_str) + strlen(mem_content_str_unsigned) +
+                            strlen(mem_content_str_signed) + 7;
+    char *final_str = malloc(len_final_str);
+    snprintf(final_str, len_final_str, "%s: %s (%s)\n", reg_str,
+             mem_content_str_unsigned, mem_content_str_signed);
+    write_text_into_box(&regs_box, final_str);
+  } else {
+    printf("%s: %s (%s)\n", reg_str, mem_content_str_unsigned,
+           mem_content_str_signed);
+  }
 }
 
 void print_array_with_idcs(MemType mem_type, uint8_t length, bool are_instrs) {
@@ -228,7 +269,7 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
     }
     break;
   case EPROM:
-    for (uint64_t i = start; i <= end; i++) {
+    for (uint16_t i = start; i <= end; i++) {
       print_mem_content_with_idx(i, ((uint32_t *)eprom)[i], false, are_instrs,
                                  EPROM);
     }
@@ -256,7 +297,8 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
     break;
   // case HDD:
   //   for (uint64_t i = start; i <= end; i++) {
-  //     print_mem_content_with_idx(i, read_file(hdd, i), are_unsigned, are_instrs,
+  //     print_mem_content_with_idx(i, read_file(hdd, i), are_unsigned,
+  //     are_instrs,
   //                                HDD);
   //   }
   //   break;
@@ -334,25 +376,41 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x) {
       false, true);
   print_file_with_idcs(
       SRAM, max(num_instrs_isrs + num_instrs_prgrm, sram_watchpoint_x - radius),
-      min(sram_watchpoint_x + radius, sram_size-1), false, false);
+      min(sram_watchpoint_x + radius, sram_size - 1), false, false);
 }
 
 void print_uart_meta_data() {
-  printf("Current send data: %s\n", current_send_data ? current_send_data : "");
-  printf("All send data: %s\n", all_send_data ? all_send_data : "");
-  printf("Waiting time sending: ");
-  printf("%d\n", sending_waiting_time);
-  printf("Waiting time receiving: ");
-  printf("%d\n", receiving_waiting_time);
-  if (receiving_waiting_time > 0) {
-    printf("Current input: %u\n", received_num_part);
-  } else {
-    printf("Current input:\n");
-  }
-  printf("Remaining input: ");
-  if (read_metadata && input_idx < input_len) {
-    for (uint8_t i = input_idx; i < input_len; i++) {
-      if (i == input_idx && (int8_t)received_num_idx >= 0) {
+  if (better_debug_tui) {
+    printf("Current send data: %s\n",
+           current_send_data ? current_send_data : "");
+    printf("All send data: %s\n", all_send_data ? all_send_data : "");
+    printf("Waiting time sending: ");
+    printf("%d\n", sending_waiting_time);
+    printf("Waiting time receiving: ");
+    printf("%d\n", receiving_waiting_time);
+    if (receiving_waiting_time > 0) {
+      printf("Current input: %u\n", received_num_part);
+    } else {
+      printf("Current input:\n");
+    }
+    printf("Remaining input: ");
+    if (read_metadata && input_idx < input_len) {
+      for (uint8_t i = input_idx; i < input_len; i++) {
+        if (i == input_idx && (int8_t)received_num_idx >= 0) {
+          printf("%d(", received_num);
+          for (uint8_t j = received_num_idx; j != 0; j--) {
+            uint8_t received_num_part =
+                (received_num & (0xFF << (j * 8))) >> (j * 8);
+            printf("%u ", received_num_part);
+          }
+          uint8_t received_num_part = received_num & 0xFF;
+          printf("%u) ", received_num_part);
+        } else {
+          printf("%d ", uart_input[i]);
+        }
+      }
+    } else {
+      if ((int8_t)received_num_idx >= 0) {
         printf("%d(", received_num);
         for (uint8_t j = received_num_idx; j != 0; j--) {
           uint8_t received_num_part =
@@ -360,24 +418,54 @@ void print_uart_meta_data() {
           printf("%u ", received_num_part);
         }
         uint8_t received_num_part = received_num & 0xFF;
-        printf("%u) ", received_num_part);
-      } else {
-        printf("%d ", uart_input[i]);
+        printf("%u)", received_num_part);
       }
     }
+    printf("\n");
   } else {
-    if ((int8_t)received_num_idx >= 0) {
-      printf("%d(", received_num);
-      for (uint8_t j = received_num_idx; j != 0; j--) {
-        uint8_t received_num_part =
-            (received_num & (0xFF << (j * 8))) >> (j * 8);
-        printf("%u ", received_num_part);
-      }
-      uint8_t received_num_part = received_num & 0xFF;
-      printf("%u)", received_num_part);
+    uint8_t len_str = 
+    snprintf(, "Current send data: %s\n",
+           current_send_data ? current_send_data : "");
+    printf("All send data: %s\n", all_send_data ? all_send_data : "");
+    printf("Waiting time sending: ");
+    printf("%d\n", sending_waiting_time);
+    printf("Waiting time receiving: ");
+    printf("%d\n", receiving_waiting_time);
+    if (receiving_waiting_time > 0) {
+      printf("Current input: %u\n", received_num_part);
+    } else {
+      printf("Current input:\n");
     }
+    printf("Remaining input: ");
+    if (read_metadata && input_idx < input_len) {
+      for (uint8_t i = input_idx; i < input_len; i++) {
+        if (i == input_idx && (int8_t)received_num_idx >= 0) {
+          printf("%d(", received_num);
+          for (uint8_t j = received_num_idx; j != 0; j--) {
+            uint8_t received_num_part =
+                (received_num & (0xFF << (j * 8))) >> (j * 8);
+            printf("%u ", received_num_part);
+          }
+          uint8_t received_num_part = received_num & 0xFF;
+          printf("%u) ", received_num_part);
+        } else {
+          printf("%d ", uart_input[i]);
+        }
+      }
+    } else {
+      if ((int8_t)received_num_idx >= 0) {
+        printf("%d(", received_num);
+        for (uint8_t j = received_num_idx; j != 0; j--) {
+          uint8_t received_num_part =
+              (received_num & (0xFF << (j * 8))) >> (j * 8);
+          printf("%u ", received_num_part);
+        }
+        uint8_t received_num_part = received_num & 0xFF;
+        printf("%u)", received_num_part);
+      }
+    }
+    printf("\n");
   }
-  printf("\n");
 }
 
 void get_user_input(void) {
@@ -410,25 +498,25 @@ void get_user_input(void) {
       step_into_activated = true;
       return;
     } else if (strcmp(split_input[0], "a") == 0 && count == 3) {
-      if (strcmp(split_input[1], "ew") == 0) {
+      if (strcmp(split_input[1], "e") == 0) {
         char *eprom_watchpoint_tmp = eprom_watchpoint;
         eprom_watchpoint = split_input[2];
         if (!draw_tui()) {
           eprom_watchpoint = eprom_watchpoint_tmp;
         }
-      } else if (strcmp(split_input[1], "swc") == 0) {
+      } else if (strcmp(split_input[1], "sc") == 0) {
         char *sram_watchpoint_cs_tmp = sram_watchpoint_cs;
         sram_watchpoint_cs = split_input[2];
         if (!draw_tui()) {
           sram_watchpoint_cs = sram_watchpoint_cs_tmp;
         }
-      } else if (strcmp(split_input[1], "swd") == 0) {
+      } else if (strcmp(split_input[1], "sd") == 0) {
         char *sram_watchpoint_ds_tmp = sram_watchpoint_ds;
         sram_watchpoint_ds = split_input[2];
         if (!draw_tui()) {
           sram_watchpoint_ds = sram_watchpoint_ds_tmp;
         }
-      } else if (strcmp(split_input[1], "sws") == 0) {
+      } else if (strcmp(split_input[1], "ss") == 0) {
         char *sram_watchpoint_stack_tmp = sram_watchpoint_stack;
         sram_watchpoint_stack = split_input[2];
         if (!draw_tui()) {
@@ -454,6 +542,29 @@ void get_user_input(void) {
   }
 }
 
+void handle_heading(bool simple_debug_tui, bool better_debug_tui, Box box,
+                    char *format_str, uint8_t num_insert_chrs, char *watchpoint,
+                    uint64_t watchpoint_int) {
+  if (better_debug_tui) {
+    if (simple_debug_tui) {
+      box.title = malloc(strlen(format_str) + 1);
+      strcpy(box.title, format_str);
+    } else {
+      uint8_t len_title = strlen(watchpoint) +
+                          num_digits_for_num(watchpoint_int) +
+                          strlen(format_str) - num_insert_chrs + 1;
+      box.title = malloc(len_title);
+      snprintf(box.title, len_title, format_str, watchpoint, watchpoint_int);
+    }
+  } else {
+    if (simple_debug_tui) {
+      printf("%s\n", create_heading('-', format_str, LINEWIDTH));
+    } else {
+      printf(format_str, watchpoint, watchpoint_int);
+    }
+  }
+}
+
 bool draw_tui(void) {
   uint64_t eprom_watchpoint_int = determine_watchpoint_value(eprom_watchpoint);
   uint64_t sram_watchpoint_cs_int =
@@ -469,18 +580,21 @@ bool draw_tui(void) {
     return false;
   }
 
-  clrscr();
-  printf("%s\n", create_heading('-', "Registers", LINEWIDTH));
+  if (!better_debug_tui) {
+    clrscr();
+  }
+
+  handle_heading(true, better_debug_tui, regs_box, "Registers", 0, "", 0);
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
-  printf("%s\n", create_heading('-', "EPROM", LINEWIDTH));
-  printf("EPROM Watchpoint (ew): %s (%lu)\n", eprom_watchpoint,
-         eprom_watchpoint_int);
+  handle_heading(true, better_debug_tui, eprom_box, "EPROM", 0, "", 0);
+  handle_heading(false, better_debug_tui, eprom_box, "EPROM (e): %s (%lu)\n", 5,
+                 eprom_watchpoint, eprom_watchpoint_int);
   print_array_with_idcs_from_to(
       EPROM, max(0, eprom_watchpoint_int - radius),
       min(eprom_watchpoint_int + radius, num_instrs_start_prgrm - 1), true);
 
-  printf("%s\n", create_heading('-', "UART", LINEWIDTH));
+  handle_heading(true, better_debug_tui, uart_box, "UART", 0, "", 0);
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
 
@@ -492,26 +606,45 @@ bool draw_tui(void) {
   sram_watchpoint_stack_int =
       sram_watchpoint_stack_int +
       (isdigit(sram_watchpoint_stack[0]) ? (1 << 31) : 0);
-  printf("%s\n", create_heading('-', "SRAM", LINEWIDTH));
-  printf("SRAM Watchpoint Codesegment (swc): %s (%lu)\n", sram_watchpoint_cs,
-         sram_watchpoint_cs_int);
+  handle_heading(true, false, regs_box, "SRAM", 0, "", 0);
+  handle_heading(false, better_debug_tui, sram_c_box,
+                 "SRAM Codesegment (sc): %s (%lu)\n", 5, sram_watchpoint_cs,
+                 sram_watchpoint_cs_int);
   print_sram_watchpoint(sram_watchpoint_cs_int);
-  printf("SRAM Watchpoint Datasegment (swd): %s (%lu)\n", sram_watchpoint_ds,
-         sram_watchpoint_ds_int);
+
+  handle_heading(false, better_debug_tui, sram_d_box,
+                 "SRAM Datasegment (sd): %s (%lu)\n", 5, sram_watchpoint_ds,
+                 sram_watchpoint_ds_int);
   print_sram_watchpoint(sram_watchpoint_ds_int);
-  printf("SRAM Watchpoint Stack (sws): %s (%lu)\n", sram_watchpoint_stack,
-         sram_watchpoint_stack_int);
+
+  handle_heading(false, better_debug_tui, sram_s_box,
+                 "SRAM Stack (ss): %s (%lu)\n", 5, sram_watchpoint_stack,
+                 sram_watchpoint_stack_int);
   print_sram_watchpoint(sram_watchpoint_stack_int);
 
-  printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
-  printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
-  if (extended_features) {
-    printf("(s)tep into isr, (a)ssign watchpoint reg or addr\n");
+  if (better_debug_tui) {
+    if (extended_features) {
+      mvprintw(term_height, 0,
+               "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, (s)tep "
+               "into isr, (a)ssign watchpoint reg or addr");
+    } else {
+      mvprintw(term_height, 0,
+               "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, "
+               "(a)ssign watchpoint reg or addr");
+    }
   } else {
-    printf("(a)ssign watchpoint reg or addr\n");
+    printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
+    printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
+    if (extended_features) {
+      printf("(s)tep into isr, (a)ssign watchpoint reg or addr\n");
+    } else {
+      printf("(a)ssign watchpoint reg or addr\n");
+    }
   }
 
-  // print_file_idcs(hdd, max(0, hdd_view_pos - radius),
-  //                 min(hdd_view_pos + radius, hdd_size-1), false);
+  if (better_debug_tui) {
+    refresh(); // Refresh to display changes
+  }
+
   return true;
 }

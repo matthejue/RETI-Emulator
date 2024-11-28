@@ -6,6 +6,7 @@
 #include "../include/utils.h"
 #include "../include/special_opts.h"
 #include "../include/uart.h"
+#include "../include/tui.h"
 #include <string.h>
 
 int main(int argc, char *argv[]) {
@@ -21,6 +22,9 @@ int main(int argc, char *argv[]) {
   }
 
   init_reti();
+  if (better_debug_tui) {
+    init_tui();
+  }
 
   if (strcmp(isrs_prgrm_path, "") != 0) {
     error_context.filename = isrs_prgrm_path;
@@ -41,6 +45,9 @@ int main(int argc, char *argv[]) {
   interpr_prgrm();
 
   fin_reti();
+  if (better_debug_tui) {
+    fin_tui();
+  }
 
   if (test_mode) {
     close_out_and_err_file();
