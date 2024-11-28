@@ -19,6 +19,7 @@ bool read_metadata = false;
 uint8_t radius = 2;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
+bool better_debug_tui = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -31,8 +32,8 @@ void print_help(char *bin_name) {
           "Usage: %s -r ram_size -p page_size -d (daemon mode) "
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-          "(verbose) -b (binary mode) -E (extended features) -a (all) -h (help "
-          "page) "
+          "(verbose) -b (binary mode) -E (extended features) -a (all) "
+          "-T (better debug TUI) -h (help page)"
           "prgrm_path\n",
           bin_name);
 }
@@ -40,7 +41,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEa")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEaT")) != -1) {
     char *endptr;
     long tmp_val;
 
@@ -70,19 +71,6 @@ void parse_args(uint8_t argc, char *argv[]) {
       }
       page_size = tmp_val;
       break;
-    // case 'H':
-    //   tmp_val = strtol(optarg, &endptr, 10);
-    //   if (endptr == optarg || *endptr != '\0') {
-    //     fprintf(stderr, "Error: Invalid hdd size\n");
-    //     exit(EXIT_FAILURE);
-    //   }
-    //   if (tmp_val < 0 || tmp_val > UINT32_MAX) {
-    //     fprintf(stderr,
-    //             "Error: HDD max index must be between 0 and 4294967295\n");
-    //     exit(EXIT_FAILURE);
-    //   }
-    //   hdd_size = tmp_val;
-    //   break;
     case 'd':
       debug_mode = true;
       break;
@@ -142,6 +130,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       read_metadata = true;
       binary_mode = true;
       extended_features = true;
+      break;
+    case 'T':
+      better_debug_tui = true;
       break;
     case 'h':
       print_help(argv[0]);

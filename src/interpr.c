@@ -8,6 +8,7 @@
 #include "../include/utils.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include <ncurses.h>
 
 // TODO: Problem, dass immediates sign extended werden, aber bitweise xor, and
 // und or auf das nicht sign extendete mit 0en drangefügt angewandt werden

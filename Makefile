@@ -16,7 +16,7 @@ CC			 := gcc
 CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
 CFLAGS   := -Wall
 LDFLAGS  :=
-LDLIBS   := -lm
+LDLIBS   := -lm -lncurses
 
 ifeq ($(STATIC), 1)
     LDFLAGS += -static

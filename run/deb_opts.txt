@@ -1,1 +1,1 @@
--E -v -d -m -r 2 -f /tmp -i ./run/isrs.reti -w 0
+-E -v -d -T -m -r 2 -f /tmp -i ./run/isrs.reti -w 0
