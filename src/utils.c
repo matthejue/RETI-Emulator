@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 // r = a % m <-> r + m * q = a + m * p <-> r = a - m * q (q is biggest q such
 // that q*m <= a) = a − m * (a / m) 0 <= r < m, a,q € Z, m € N/0 (normal C /
@@ -254,4 +255,19 @@ char *num_digits_for_idx_str(uint64_t max_idx) {
   char *buffer = malloc(20);
   sprintf(buffer, "%d", (uint8_t)ceil(log10(max_idx)));
   return buffer;
+}
+
+
+char *create_formatted_str(const char *format, va_list args) {
+    // Calculate the size of the formatted string
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int size = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+
+    // Create the formatted string
+    char *result = (char *)malloc(size + 1);
+    vsnprintf(result, size + 1, format, args);
+
+    return result;
 }
