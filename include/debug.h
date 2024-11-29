@@ -1,4 +1,5 @@
 #include "../include/assemble.h"
+#include "../include/tui.h"
 #include <stdio.h>
 
 #ifndef DEBUG_H
@@ -10,9 +11,7 @@ typedef struct {
 } Mnemonic_to_String;
 
 // typedef enum { REGS, EPROM, UART, SRAM, HDD } MemType;
-typedef enum { REGS, EPROM, UART, SRAM, SRAM_C, SRAM_D, SRAM_S } MemType;
-
-extern const uint8_t mem_type_to_constant[];
+typedef enum { REGS, EPROM, UART, SRAM_C, SRAM_D, SRAM_S } MemType;
 
 extern bool breakpoint_encountered;
 extern bool step_into_activated;
@@ -37,5 +36,8 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
 char **split_string(const char *str, uint8_t *count);
 bool draw_tui(void);
 void get_user_input(void);
+void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
+                    char *format_str, uint8_t num_insert_chrs, char *watchpoint,
+                    uint64_t watchpoint_int);
 
 #endif // DEBUG_H
