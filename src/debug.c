@@ -355,24 +355,50 @@ uint64_t determine_watchpoint_value(char *watchpoint_str) {
   return watchpoint_val;
 }
 
+uint8_t calc_diameter_adjust(uint64_t startpoint, uint8_t radius,
+                             uint64_t border, bool is_lower_border) {
+  if (is_lower_border) {
+    return (int64_t)(startpoint - radius) < 0 ? -(int64_t)(startpoint - radius) : 0;
+  } else {
+    return startpoint + radius > border ? (startpoint + radius) - border : 0;
+  }
+}
+
+bool activate = false;
+
 void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
   if (!(sram_watchpoint_x & 0x80000000)) {
     return;
   }
   sram_watchpoint_x = sram_watchpoint_x & 0x7FFFFFFF;
+  uint8_t diameter_adjust_lower =
+      calc_diameter_adjust(sram_watchpoint_x, radius, 0, true);
+  uint8_t diameter_adjust_upper =
+      calc_diameter_adjust(sram_watchpoint_x, radius, sram_size - 1, false);
+  if (activate) {
+    FILE *fp3 = fopen("/tmp/reti3", "w");
+    fprintf(fp3, "%lu %d %d %d\n", sram_watchpoint_x, radius, diameter_adjust_lower, diameter_adjust_upper);
+    fclose(fp3);
+  }
+
   if (ivt_max_idx != -1) {
-    print_file_with_idcs(mem_type, max(0, sram_watchpoint_x - radius),
-                         min(sram_watchpoint_x + radius, ivt_max_idx), true,
-                         false);
+    print_file_with_idcs(
+        mem_type, max(0, sram_watchpoint_x - radius - diameter_adjust_upper),
+        min(sram_watchpoint_x + radius + diameter_adjust_lower, ivt_max_idx),
+        true, false);
   }
   print_file_with_idcs(
-      mem_type, max(ivt_max_idx + 1, sram_watchpoint_x - radius),
-      min(sram_watchpoint_x + radius, num_instrs_isrs + num_instrs_prgrm - 1),
+      mem_type,
+      max(ivt_max_idx + 1, sram_watchpoint_x - radius - diameter_adjust_upper),
+      min(sram_watchpoint_x + radius + diameter_adjust_lower,
+          num_instrs_isrs + num_instrs_prgrm - 1),
       false, true);
   print_file_with_idcs(
       mem_type,
-      max(num_instrs_isrs + num_instrs_prgrm, sram_watchpoint_x - radius),
-      min(sram_watchpoint_x + radius, sram_size - 1), false, false);
+      max(num_instrs_isrs + num_instrs_prgrm,
+          sram_watchpoint_x - radius - diameter_adjust_upper),
+      min(sram_watchpoint_x + radius + diameter_adjust_lower, sram_size - 1),
+      false, false);
 }
 
 void print_uart_meta_data() {
@@ -584,7 +610,9 @@ bool draw_tui(void) {
   handle_heading(better_debug_tui, false, &sram_c_box,
                  "SRAM Codesegment (sc): %s (%lu)", 5, sram_watchpoint_cs,
                  sram_watchpoint_cs_int);
+  activate = true;
   print_sram_watchpoint(sram_watchpoint_cs_int, SRAM_C);
+  activate = false;
 
   handle_heading(better_debug_tui, false, &sram_d_box,
                  "SRAM Datasegment (sd): %s (%lu)", 5, sram_watchpoint_ds,
