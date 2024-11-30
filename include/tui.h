@@ -30,5 +30,6 @@ void fin_tui();
 
 void display_input_box(char *input, const char *message);
 void reset_box_line(Box *box);
+void display_input_box(char *input, const char *message) ;
 
 #endif // TUI_H

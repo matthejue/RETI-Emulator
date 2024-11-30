@@ -21,6 +21,8 @@ extern uint8_t receiving_waiting_time;
 
 typedef enum { STRING, INTEGER = 4 } DataType;
 
+#define MAX_NUM_DIGITS_INTEGER 11
+
 extern DataType datatype;
 
 extern char *all_send_data;
