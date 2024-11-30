@@ -4,12 +4,12 @@
 #include <stdint.h>
 #include <string.h>
 
-Box regs_box = {"Register", 0, 0, 0, 0, 1, 1};
-Box eprom_box = {"EPROM (e): PC (0)", 0, 0, 0, 0, 1, 1};
-Box uart_box = {"UART", 0, 0, 0, 0, 1, 1};
-Box sram_c_box = {"SRAM Codesegment (sc): PC (0)", 0, 0, 0, 0, 1, 1};
-Box sram_d_box = {"SRAM Datasegment (sd): DS (0)", 0, 0, 0, 0, 1, 1};
-Box sram_s_box = {"SRAM Stack (ss): SP (0)", 0, 0, 0, 0, 1, 1};
+Box regs_box = {"", 0, 0, 0, 0, 1, 1};
+Box eprom_box = {"", 0, 0, 0, 0, 1, 1};
+Box uart_box = {"", 0, 0, 0, 0, 1, 1};
+Box sram_c_box = {"", 0, 0, 0, 0, 1, 1};
+Box sram_d_box = {"", 0, 0, 0, 0, 1, 1};
+Box sram_s_box = {"", 0, 0, 0, 0, 1, 1};
 
 uint16_t term_width, term_height;
 
@@ -72,8 +72,7 @@ void fin_tui() {
 // Function to draw a box at specified position and size
 void draw_box(Box *box) {
   int title_len = strlen(box->title);
-  int title_start = box->x + (box->width - 1 - title_len - 4) /
-                                2; // Calculate start position for title
+  int title_start = box->x + (box->width - title_len - 2) / 2;
 
   mvhline(box->y, box->x, 0, box->width - 1); // Top border
   mvprintw(box->y, title_start, " %s ",
