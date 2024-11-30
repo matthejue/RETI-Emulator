@@ -557,7 +557,7 @@ void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
       strcpy(box->title, format_str);
     } else {
       uint8_t len_title =
-          snprintf(NULL, 0, format_str, watchpoint, watchpoint_int);
+          snprintf(NULL, 0, format_str, watchpoint, watchpoint_int) + 1;
       box->title = malloc(len_title);
       snprintf(box->title, len_title, format_str, watchpoint, watchpoint_int);
     }
