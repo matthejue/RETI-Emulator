@@ -273,8 +273,12 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
     break;
   case EPROM:
     for (uint16_t i = start; i <= end; i++) {
-      print_mem_content_with_idx(i, ((uint32_t *)eprom)[i], false, are_instrs,
-                                 EPROM);
+      if (i < num_instrs_start_prgrm) {
+        print_mem_content_with_idx(i, ((uint32_t *)eprom)[i], false, are_instrs,
+                                   EPROM);
+      } else {
+        print_mem_content_with_idx(i, 0, false, false, EPROM);
+      }
     }
     break;
   case UART:
@@ -355,13 +359,43 @@ uint64_t determine_watchpoint_value(char *watchpoint_str) {
   return watchpoint_val;
 }
 
+void print_eprom_watchpoint(uint64_t eprom_watchpoint) {
+  if (eprom_watchpoint & 0xC0000000) {
+    return;
+  }
+  if (better_debug_tui) {
+    radius = (eprom_box.height - 2) / 2;
+  }
+  uint8_t diameter_adjust_lower = (int64_t)(eprom_watchpoint - radius) < 0
+                                      ? -(int64_t)(eprom_watchpoint - radius)
+                                      : 0;
+  uint8_t diameter_adjust_upper =
+      eprom_watchpoint + radius > (sram_size - 1)
+          ? (eprom_watchpoint + radius) - (sram_size - 1)
+          : 0;
+  print_array_with_idcs_from_to(
+      EPROM, max(0, eprom_watchpoint - radius - diameter_adjust_upper),
+      min(eprom_watchpoint + radius + diameter_adjust_lower, num_instrs_start_prgrm - 1), true);
+  print_array_with_idcs_from_to(
+      EPROM, max(num_instrs_start_prgrm, eprom_watchpoint - radius - diameter_adjust_upper),
+      min(eprom_watchpoint + radius + diameter_adjust_lower, EPROM_SIZE - 1), false);
+}
+
 void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
   if (!(sram_watchpoint_x & 0x80000000)) {
     return;
   }
+  if (better_debug_tui) {
+    radius = (sram_c_box.height - 2) / 2;
+  }
   sram_watchpoint_x = sram_watchpoint_x & 0x7FFFFFFF;
-  uint8_t diameter_adjust_lower = (int64_t)(sram_watchpoint_x - radius) < 0 ? -(int64_t)(sram_watchpoint_x - radius) : 0;
-  uint8_t diameter_adjust_upper = sram_watchpoint_x + radius > (sram_size - 1) ? (sram_watchpoint_x + radius) - (sram_size -1) : 0;
+  uint8_t diameter_adjust_lower = (int64_t)(sram_watchpoint_x - radius) < 0
+                                      ? -(int64_t)(sram_watchpoint_x - radius)
+                                      : 0;
+  uint8_t diameter_adjust_upper =
+      sram_watchpoint_x + radius > (sram_size - 1)
+          ? (sram_watchpoint_x + radius) - (sram_size - 1)
+          : 0;
 
   if (ivt_max_idx != -1) {
     print_file_with_idcs(
@@ -515,16 +549,15 @@ void get_user_input(void) {
 }
 
 void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
-                    char *format_str, uint8_t num_insert_chrs, char *watchpoint,
+                    char *format_str, char *watchpoint,
                     uint64_t watchpoint_int) {
   if (better_debug_tui) {
     if (simple_debug_tui) {
       box->title = malloc(strlen(format_str) + 1);
       strcpy(box->title, format_str);
     } else {
-      uint8_t len_title = strlen(watchpoint) +
-                          num_digits_for_num(watchpoint_int) +
-                          strlen(format_str) - num_insert_chrs + 1;
+      uint8_t len_title =
+          snprintf(NULL, 0, format_str, watchpoint, watchpoint_int);
       box->title = malloc(len_title);
       snprintf(box->title, len_title, format_str, watchpoint, watchpoint_int);
     }
@@ -562,19 +595,17 @@ bool draw_tui(void) {
     clrscr();
   }
 
-  handle_heading(better_debug_tui, true, &regs_box, "Registers", 0, "", 0);
+  handle_heading(better_debug_tui, true, &regs_box, "Registers", "", 0);
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
   if (!better_debug_tui) {
-    handle_heading(false, true, &eprom_box, "EPROM", 0, "", 0);
+    handle_heading(false, true, &eprom_box, "EPROM", "", 0);
   }
-  handle_heading(better_debug_tui, false, &eprom_box, "EPROM (e): %s (%lu)", 5,
+  handle_heading(better_debug_tui, false, &eprom_box, "EPROM (e): %s (%lu)",
                  eprom_watchpoint, eprom_watchpoint_int);
-  print_array_with_idcs_from_to(
-      EPROM, max(0, eprom_watchpoint_int - radius),
-      min(eprom_watchpoint_int + radius, num_instrs_start_prgrm - 1), true);
+  print_eprom_watchpoint(eprom_watchpoint_int);
 
-  handle_heading(better_debug_tui, true, &uart_box, "UART", 0, "", 0);
+  handle_heading(better_debug_tui, true, &uart_box, "UART", "", 0);
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
 
@@ -587,30 +618,30 @@ bool draw_tui(void) {
       sram_watchpoint_stack_int +
       (isdigit(sram_watchpoint_stack[0]) ? (1 << 31) : 0);
   if (!better_debug_tui) {
-    handle_heading(false, true, &regs_box, "SRAM", 0, "", 0);
+    handle_heading(false, true, &regs_box, "SRAM", "", 0);
   }
   handle_heading(better_debug_tui, false, &sram_c_box,
-                 "SRAM Codesegment (sc): %s (%lu)", 5, sram_watchpoint_cs,
+                 "SRAM Codesegment (sc): %s (%lu)", sram_watchpoint_cs,
                  sram_watchpoint_cs_int);
   print_sram_watchpoint(sram_watchpoint_cs_int, SRAM_C);
 
   handle_heading(better_debug_tui, false, &sram_d_box,
-                 "SRAM Datasegment (sd): %s (%lu)", 5, sram_watchpoint_ds,
+                 "SRAM Datasegment (sd): %s (%lu)", sram_watchpoint_ds,
                  sram_watchpoint_ds_int);
   print_sram_watchpoint(sram_watchpoint_ds_int, SRAM_D);
 
   handle_heading(better_debug_tui, false, &sram_s_box,
-                 "SRAM Stack (ss): %s (%lu)", 5, sram_watchpoint_stack,
+                 "SRAM Stack (ss): %s (%lu)", sram_watchpoint_stack,
                  sram_watchpoint_stack_int);
   print_sram_watchpoint(sram_watchpoint_stack_int, SRAM_S);
 
   if (better_debug_tui) {
     if (extended_features) {
-      mvprintw(term_height, 0,
+      mvprintw(term_height - 1, 0,
                "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, (s)tep "
                "into isr, (a)ssign watchpoint reg or addr");
     } else {
-      mvprintw(term_height, 0,
+      mvprintw(term_height - 1, 0,
                "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, "
                "(a)ssign watchpoint reg or addr");
     }
