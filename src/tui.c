@@ -1,4 +1,5 @@
 #include "../include/tui.h"
+#include "../include/uart.h"
 #include "../include/parse_args.h"
 #include <ncurses.h>
 #include <stdint.h>
@@ -112,35 +113,31 @@ void write_text_into_box(Box *box, const char *text) {
 void reset_box_line(Box *box) { box->line = 1; }
 
 void display_input_box(char *input, const char *message) {
-  int max_length = 20;
-  int box_width = 30;
-  int box_height = 5;
+  int max_length = MAX_NUM_DIGITS_INTEGER + 1;
+  int box_width = strlen(message) + 6;
+  int box_height = 3;
   int startx = (term_width - box_width) / 2;
   int starty = (term_height - box_height) / 2;
 
-  initscr();
-  noecho();
-  cbreak();
   keypad(stdscr, TRUE);
 
   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
   box(input_box, 0, 0);
-  mvwprintw(input_box, 0, (box_width - strlen(message)) / 2, "%s", message);
+  mvwprintw(input_box, 0, (box_width - strlen(message) - 2) / 2, " %s ", message);
   wrefresh(input_box);
 
   echo();
-  mvwgetnstr(input_box, 2, 1, input, max_length + 1);
+  mvwgetnstr(input_box, 1, 1, input, max_length + 1);
   noecho();
 
   if (strlen(input) > max_length) {
     WINDOW *error_box = newwin(box_height, box_width, starty, startx);
     box(error_box, 0, 0);
-    mvwprintw(error_box, 2, 1, "Input too long!");
+    mvwprintw(error_box, 1, 1, "Input too long!");
     wrefresh(error_box);
     wgetch(error_box);
     delwin(error_box);
   }
 
   delwin(input_box);
-  endwin();
 }
