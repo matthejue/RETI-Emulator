@@ -28,8 +28,12 @@ void draw_box(Box *box);
 void init_tui();
 void fin_tui();
 
+#define HEIGHT_REGS_BOX 10
+#define HEIGHT_UART_BOX 11
+
 void display_input_box(char *input, const char *message);
 void reset_box_line(Box *box);
-void display_input_box(char *input, const char *message) ;
+void display_input_box(char *input, const char *message);
+void update_term_and_box_sizes();
 
 #endif // TUI_H
