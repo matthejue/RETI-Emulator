@@ -1,6 +1,6 @@
 #include "../include/tui.h"
-#include "../include/uart.h"
 #include "../include/parse_args.h"
+#include "../include/uart.h"
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
@@ -23,17 +23,21 @@ void init_tui() {
   cbreak();
   noecho();
   curs_set(0); // Hide cursor
+}
 
+void update_term_and_box_sizes() {
+  refresh(); // has to be because term_height and term_width can only be
+             // determined after refresh
   getmaxyx(stdscr, term_height, term_width);
 
-  int first_box_width = term_width / 4;
-  int remaining_width = term_width - first_box_width;
-  int other_box_width = remaining_width / 3;
-  int box_height = term_height-1;
+  uint16_t first_box_width = term_width / 4;
+  uint16_t remaining_width = term_width - first_box_width;
+  uint16_t other_box_width = remaining_width / 3;
+  uint16_t box_height = term_height - 1;
 
-  int first_box_height = 12;
-  int third_box_height = 11;
-  int second_box_height = box_height - first_box_height - third_box_height;
+  uint16_t first_box_height = HEIGHT_REGS_BOX;
+  uint16_t third_box_height = HEIGHT_UART_BOX;
+  uint16_t second_box_height = box_height - first_box_height - third_box_height;
 
   regs_box.x = 0;
   regs_box.y = 0;
@@ -78,11 +82,12 @@ void draw_box(Box *box) {
   mvhline(box->y, box->x, 0, box->width - 1); // Top border
   mvprintw(box->y, title_start, " %s ",
            box->title); // Print title centered with spaces
-  mvhline(box->y + box->height - 1, box->x, 0, box->width - 1);     // Bottom border
-  mvvline(box->y + 1, box->x, 0, box->height - 1);                 // Left border
-  mvvline(box->y + 1, box->x + box->width - 1, 0, box->height - 1); // Right border
+  mvhline(box->y + box->height - 1, box->x, 0, box->width - 1); // Bottom border
+  mvvline(box->y + 1, box->x, 0, box->height - 1);              // Left border
+  mvvline(box->y + 1, box->x + box->width - 1, 0,
+          box->height - 1); // Right border
 
-  mvaddch(box->y, box->x, ACS_ULCORNER);                  // Top-left corner
+  mvaddch(box->y, box->x, ACS_ULCORNER);                   // Top-left corner
   mvaddch(box->y, box->x + box->width - 1, ACS_URCORNER);  // Top-right corner
   mvaddch(box->y + box->height - 1, box->x, ACS_LLCORNER); // Bottom-left corner
   mvaddch(box->y + box->height - 1, box->x + box->width - 1,
@@ -123,7 +128,8 @@ void display_input_box(char *input, const char *message) {
 
   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
   box(input_box, 0, 0);
-  mvwprintw(input_box, 0, (box_width - strlen(message) - 2) / 2, " %s ", message);
+  mvwprintw(input_box, 0, (box_width - strlen(message) - 2) / 2, " %s ",
+            message);
   wrefresh(input_box);
 
   echo();

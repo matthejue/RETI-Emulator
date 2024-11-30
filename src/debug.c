@@ -375,10 +375,15 @@ void print_eprom_watchpoint(uint64_t eprom_watchpoint) {
           : 0;
   print_array_with_idcs_from_to(
       EPROM, max(0, eprom_watchpoint - radius - diameter_adjust_upper),
-      min(eprom_watchpoint + radius + diameter_adjust_lower, num_instrs_start_prgrm - 1), true);
+      min(eprom_watchpoint + radius + diameter_adjust_lower,
+          num_instrs_start_prgrm - 1),
+      true);
   print_array_with_idcs_from_to(
-      EPROM, max(num_instrs_start_prgrm, eprom_watchpoint - radius - diameter_adjust_upper),
-      min(eprom_watchpoint + radius + diameter_adjust_lower, EPROM_SIZE - 1), false);
+      EPROM,
+      max(num_instrs_start_prgrm,
+          eprom_watchpoint - radius - diameter_adjust_upper),
+      min(eprom_watchpoint + radius + diameter_adjust_lower, EPROM_SIZE - 1),
+      false);
 }
 
 void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
@@ -389,30 +394,35 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
     radius = (sram_c_box.height - 2) / 2;
   }
   sram_watchpoint_x = sram_watchpoint_x & 0x7FFFFFFF;
-  uint8_t diameter_adjust_lower = (int64_t)(sram_watchpoint_x - radius) < 0
-                                      ? -(int64_t)(sram_watchpoint_x - radius)
-                                      : 0;
+  uint8_t diameter_adjust_lower =
+      (int64_t)(sram_watchpoint_x - radius) < 0 && better_debug_tui
+          ? -(int64_t)(sram_watchpoint_x - radius)
+          : 0;
   uint8_t diameter_adjust_upper =
-      sram_watchpoint_x + radius > (sram_size - 1)
+      sram_watchpoint_x + radius > (sram_size - 1) && better_debug_tui
           ? (sram_watchpoint_x + radius) - (sram_size - 1)
           : 0;
 
   if (ivt_max_idx != -1) {
     print_file_with_idcs(
-        mem_type, max(0, sram_watchpoint_x - radius - diameter_adjust_upper),
+        mem_type,
+        max(0, sram_watchpoint_x - radius - diameter_adjust_upper +
+                   (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
         min(sram_watchpoint_x + radius + diameter_adjust_lower, ivt_max_idx),
         true, false);
   }
-  print_file_with_idcs(
-      mem_type,
-      max(ivt_max_idx + 1, sram_watchpoint_x - radius - diameter_adjust_upper),
-      min(sram_watchpoint_x + radius + diameter_adjust_lower,
-          num_instrs_isrs + num_instrs_prgrm - 1),
-      false, true);
+  print_file_with_idcs(mem_type,
+                       max(ivt_max_idx + 1, sram_watchpoint_x - radius -
+                                                diameter_adjust_upper +
+                                                (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
+                       min(sram_watchpoint_x + radius + diameter_adjust_lower,
+                           num_instrs_isrs + num_instrs_prgrm - 1),
+                       false, true);
   print_file_with_idcs(
       mem_type,
       max(num_instrs_isrs + num_instrs_prgrm,
-          sram_watchpoint_x - radius - diameter_adjust_upper),
+          sram_watchpoint_x - radius - diameter_adjust_upper +
+              (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
       min(sram_watchpoint_x + radius + diameter_adjust_lower, sram_size - 1),
       false, false);
 }
@@ -470,7 +480,6 @@ void get_user_input(void) {
     if (better_debug_tui) {
       int ch = getchar();
       if (ch == EOF) {
-        fprintf(stderr, "Error: Reading input not successful\n");
         continue;
       }
       buffer[0] = (char)ch;
@@ -541,9 +550,10 @@ void get_user_input(void) {
     } else if (strcmp(split_input[0], "q") == 0 && count == 1) {
       exit(EXIT_SUCCESS);
     } else {
-      fprintf(stderr, "Error: Invalid command\n");
-      invalid_input = true;
-      continue;
+      if (!better_debug_tui) {
+        fprintf(stderr, "Error: Invalid command\n");
+        invalid_input = true;
+      }
     }
   }
 }

@@ -6,6 +6,7 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include "tui.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <ncurses.h>
@@ -381,6 +382,7 @@ no_pc_increase:;
 void interpr_prgrm() {
   while (true) {
     if (debug_mode && breakpoint_encountered && (!extended_features || !(isr_active && !step_into_activated))) {
+      update_term_and_box_sizes();
       draw_tui();
       get_user_input();
     }
