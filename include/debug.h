@@ -37,7 +37,7 @@ char **split_string(const char *str, uint8_t *count);
 bool draw_tui(void);
 void get_user_input(void);
 void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
-                    char *format_str, uint8_t num_insert_chrs, char *watchpoint,
+                    char *format_str, char *watchpoint,
                     uint64_t watchpoint_int);
 
 #endif // DEBUG_H

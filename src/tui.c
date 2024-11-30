@@ -28,7 +28,7 @@ void init_tui() {
   int first_box_width = term_width / 4;
   int remaining_width = term_width - first_box_width;
   int other_box_width = remaining_width / 3;
-  int box_height = term_height;
+  int box_height = term_height-1;
 
   int first_box_height = 12;
   int third_box_height = 11;
@@ -63,8 +63,6 @@ void init_tui() {
   sram_s_box.y = 0;
   sram_s_box.width = other_box_width;
   sram_s_box.height = box_height;
-
-  radius = (box_height - 2) / 2;
 }
 
 void fin_tui() {
