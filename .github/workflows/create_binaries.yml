@@ -27,28 +27,49 @@ jobs:
 
     - name: Set up environment
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -y gcc
+      run: |
+        sudo apt-get update && sudo apt-get install -y build-essential wget tar
+        wget https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz
+        tar -xzf ncurses-6.5.tar.gz
+        cd ncurses-6.5
+        ./configure --prefix=$GITHUB_WORKSPACE --enable-static --without-shared
+        make
+        make install
 
     - name: Set up environment
       if: matrix.os == 'macos-latest'
       run: |
         brew install gcc
 
-    - name: Set up environment
+    - name: Install MSYS2
+      if: matrix.os == 'windows-latest'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-ucrt-x86_64-ncurses
+
+    - name: Build with Make
       if: matrix.os == 'windows-latest'
       run: |
-        choco install mingw
-        dir "C:\ProgramData\mingw64\mingw64\bin"
-        echo "C:\ProgramData\mingw64\mingw64\bin" >> $GITHUB_PATH
+        mkdir -p lib include/ncurses
+        cp /ucrt64/lib/libncurses.a ./lib
+        cp /ucrt64/include/ncurses/ncurses.h ./include/ncurses
+        mingw32-make WINDOWS=1
+        mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
+      shell: msys2 {0}
+
+    - name: Build with Make
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        make LINUX_STATIC=1
+        mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
       shell: bash
 
     - name: Build with Make
+      if: matrix.os == 'macos-latest'
       run: |
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then
-          make MACOS=1
-        else
-          make STATIC=1
-        fi
+        make MACOS=1
         mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
       shell: bash
 

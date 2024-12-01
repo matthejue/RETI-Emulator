@@ -2,6 +2,7 @@
 obj/
 obj_test/
 bin/
+lib/
 compile_commands.json
 hdd.bin
 sram.bin

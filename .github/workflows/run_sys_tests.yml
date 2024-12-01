@@ -23,7 +23,7 @@ jobs:
     - name: Install RETI-Interpreter
       run: |
         cd ${GITHUB_WORKSPACE}
-        make
+        make DYNAMIC=1
     - name: Test with Shellscript
       run: |
         cd ${GITHUB_WORKSPACE}
