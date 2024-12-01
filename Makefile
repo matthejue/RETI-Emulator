@@ -5,6 +5,7 @@ OBJ_DIR      := obj
 BIN_DIR      := bin
 TEST_DIR     := unit_test
 OBJ_TEST_DIR := obj_test
+LIB_DIR      := lib
 INCLUDE_DIR  := include
 
 BIN_SRC  := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
@@ -16,13 +17,29 @@ CC			 := gcc
 CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
 CFLAGS   := -Wall
 LDFLAGS  :=
-LDLIBS   := -lm -lncurses
+LDLIBS   := -lm
 
-ifeq ($(STATIC), 1)
-    LDFLAGS += -static
+ifeq ($(LINUX_STATIC), 1)
+	CPPFLAGS += -I$(INCLUDE_DIR)/ncursesw
+	LDFLAGS  += -static -L$(LIB_DIR)
+	LDLIBS   += -lncursesw
 else 
-	ifneq ($(MACOS), 1)
-    CFLAGS += -g
+	ifeq ($(LINUX), 1)
+		LDLIBS += -lncurses
+	else
+		ifeq ($(WINDOWS), 1)
+			CPPFLAGS += -I$(INCLUDE_DIR)/ncurses
+			CFLAGS   += -DNCURSES_STATIC
+			LDFLAGS  += -L$(LIB_DIR)
+			LDLIBS   += -lncurses
+		else
+			ifeq ($(MACOS), 1)
+				LDLIBS += -lncurses
+			else
+				CFLAGS += -g
+				LDLIBS += -lncurses
+			endif
+		endif
 	endif
 endif
 

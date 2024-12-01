@@ -33,8 +33,7 @@ void print_help(char *bin_name) {
           "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
           "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
           "(verbose) -b (binary mode) -E (extended features) -a (all) "
-          "-T (better debug TUI) -h (help page)"
-          "prgrm_path\n",
+          "-T (better debug TUI) -h (help page) prgrm_path\n",
           bin_name);
 }
 
