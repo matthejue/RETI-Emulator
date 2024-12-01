@@ -1,1 +1,1 @@
--E -f /tmp -i ./run/isrs.reti
+-f /tmp -i ./run/isrs.reti

@@ -44,13 +44,7 @@ int main(int argc, char *argv[]) {
 
   interpr_prgrm();
 
-  fin_reti();
-  if (better_debug_tui) {
-    fin_tui();
-  }
+  finalize();
 
-  if (test_mode) {
-    close_out_and_err_file();
-  }
   return 0;
 }

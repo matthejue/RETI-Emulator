@@ -3,6 +3,7 @@
 #include "../include/error.h"
 #include "../include/parse_args.h"
 #include "../include/utils.h"
+#include "../include/reti.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -150,4 +151,14 @@ void adjust_print(bool is_stdout, const char *format,
 void close_out_and_err_file() {
   fclose(out_file);
   fclose(err_file);
+}
+
+void finalize() {
+  fin_reti();
+  if (better_debug_tui) {
+    fin_tui();
+  }
+  if (test_mode) {
+    close_out_and_err_file();
+  }
 }
