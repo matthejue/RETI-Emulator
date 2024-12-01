@@ -24,5 +24,6 @@ char *int_to_bin_str(int num, int bits);
 uint8_t num_digits_for_num(uint64_t num);
 char *num_digits_for_idx_str(uint64_t max_idx);
 char *create_formatted_str(const char *format, va_list args);
+void clear_input_buffer(void);
 
 #endif // UTILS_H

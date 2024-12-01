@@ -6,7 +6,7 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include "tui.h"
+#include "../include/tui.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <ncurses.h>
@@ -384,7 +384,7 @@ void interpr_prgrm() {
     if (debug_mode && breakpoint_encountered && (!extended_features || !(isr_active && !step_into_activated))) {
       update_term_and_box_sizes();
       draw_tui();
-      get_user_input();
+      evaluate_keyboard_input();
     }
 
     uint32_t machine_instr = read_storage(read_array(regs, PC, false));

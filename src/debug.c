@@ -310,27 +310,6 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
   }
 }
 
-char **split_string(const char *str, uint8_t *count) {
-  char *str_copy = strdup(str);
-
-  char **result = NULL;
-  int words = 0;
-
-  char *token = strtok(str_copy, " \t\n");
-  while (token != NULL) {
-    result = realloc(result, (words + 1) * sizeof(char *));
-
-    result[words] = strdup(token);
-    words++;
-    token = strtok(NULL, " \t\n");
-  }
-  *count = words;
-
-  free(str_copy);
-
-  return result;
-}
-
 uint64_t determine_watchpoint_value(char *watchpoint_str) {
   for (int i = 0; i < NUM_REGISTERS; i++) {
     if (strcmp(watchpoint_str, register_code_to_name[i]) == 0) {
@@ -411,13 +390,14 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
         min(sram_watchpoint_x + radius + diameter_adjust_lower, ivt_max_idx),
         true, false);
   }
-  print_file_with_idcs(mem_type,
-                       max(ivt_max_idx + 1, sram_watchpoint_x - radius -
-                                                diameter_adjust_upper +
-                                                (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
-                       min(sram_watchpoint_x + radius + diameter_adjust_lower,
-                           num_instrs_isrs + num_instrs_prgrm - 1),
-                       false, true);
+  print_file_with_idcs(
+      mem_type,
+      max(ivt_max_idx + 1,
+          sram_watchpoint_x - radius - diameter_adjust_upper +
+              (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
+      min(sram_watchpoint_x + radius + diameter_adjust_lower,
+          num_instrs_isrs + num_instrs_prgrm - 1),
+      false, true);
   print_file_with_idcs(
       mem_type,
       max(num_instrs_isrs + num_instrs_prgrm,
@@ -473,87 +453,98 @@ void print_uart_meta_data() {
   print_formatted_to_stdout_or_box("\n", &uart_box);
 }
 
-void get_user_input(void) {
-  uint8_t count;
-  char buffer[26];
+void evaluate_keyboard_input(void) {
+  char key;
   while (true) {
-    if (better_debug_tui) {
-      int ch = getchar();
-      if (ch == EOF) {
-        continue;
-      }
-      buffer[0] = (char)ch;
-      buffer[1] = '\0';
-    } else {
-      if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-        fprintf(stderr, "Error: Reading input not successful\n");
-        continue;
-      }
-      printf("\033[A\033[K");
-      if (invalid_input) {
-        printf("\033[A\033[K");
-        invalid_input = false;
-      }
-      fflush(stdout);
+    if (!better_debug_tui) {
+      printf("Enter a command letter and press enter: ");
     }
-
-    char **split_input = split_string(buffer, &count);
-    if (split_input == NULL) {
+    int ch = getchar();
+    if (ch == EOF) {
       continue;
-    } else if (strcmp(split_input[0], "n") == 0 && count == 1) {
+    }
+    if (!better_debug_tui) {
+      clear_input_buffer();
+    }
+    key = (char)ch;
+    if (key == 'n') {
       return;
-    } else if (strcmp(split_input[0], "c") == 0 && count == 1) {
+    } else if (key == 'c') {
       breakpoint_encountered = false;
       return;
-    } else if (strcmp(split_input[0], "s") == 0 && count == 1) {
+    } else if (key == 's') {
       if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
           INT) {
         continue;
       }
       step_into_activated = true;
       return;
-    } else if (strcmp(split_input[0], "a") == 0 && count == 3) {
-      if (strcmp(split_input[1], "e") == 0) {
+    } else if (key == 'a') {
+      printf("\033[A\033[K");
+      const uint8_t MAX_CHARS_BOX_IDENTIFIER = 2;
+      char box_identifier[MAX_CHARS_BOX_IDENTIFIER + 1];
+      if (!ask_for_user_input(box_identifier, "Enter a box identifier:",
+                              MAX_CHARS_BOX_IDENTIFIER)) {
+        printf("\033[A\033[K");
+      }
+      printf("\033[A\033[K");
+      const uint8_t MAX_CHARS_WATCHOBJECT = 20;
+      char watchobject[MAX_CHARS_WATCHOBJECT + 1];
+      if (!ask_for_user_input(watchobject, "Enter a register or address:",
+                             MAX_CHARS_WATCHOBJECT)) {
+        printf("\033[A\033[K");
+      }
+      if (strcmp(box_identifier, "e") == 0) {
         char *eprom_watchpoint_tmp = eprom_watchpoint;
-        eprom_watchpoint = split_input[2];
+        eprom_watchpoint = watchobject;
         if (!draw_tui()) {
           eprom_watchpoint = eprom_watchpoint_tmp;
         }
-      } else if (strcmp(split_input[1], "sc") == 0) {
+      } else if (strcmp(box_identifier, "sc") == 0) {
         char *sram_watchpoint_cs_tmp = sram_watchpoint_cs;
-        sram_watchpoint_cs = split_input[2];
+        sram_watchpoint_cs = watchobject;
         if (!draw_tui()) {
           sram_watchpoint_cs = sram_watchpoint_cs_tmp;
         }
-      } else if (strcmp(split_input[1], "sd") == 0) {
+      } else if (strcmp(box_identifier, "sd") == 0) {
         char *sram_watchpoint_ds_tmp = sram_watchpoint_ds;
-        sram_watchpoint_ds = split_input[2];
+        sram_watchpoint_ds = watchobject;
         if (!draw_tui()) {
           sram_watchpoint_ds = sram_watchpoint_ds_tmp;
         }
-      } else if (strcmp(split_input[1], "ss") == 0) {
+      } else if (strcmp(box_identifier, "ss") == 0) {
         char *sram_watchpoint_stack_tmp = sram_watchpoint_stack;
-        sram_watchpoint_stack = split_input[2];
+        sram_watchpoint_stack = box_identifier;
         if (!draw_tui()) {
           sram_watchpoint_stack = sram_watchpoint_stack_tmp;
         }
       } else {
         fprintf(stderr, "Error: Invalid command\n");
         invalid_input = true;
-        continue;
       }
-      continue;
-    } else if (strcmp(split_input[0], "D") == 0) {
+    } else if (key == 'D') {
 #ifdef __linux__
       __asm__("int3"); // ../.gdbinit
 #endif
-    } else if (strcmp(split_input[0], "q") == 0 && count == 1) {
+    } else if (key == 'q') {
       exit(EXIT_SUCCESS);
     } else {
       if (!better_debug_tui) {
         fprintf(stderr, "Error: Invalid command\n");
         invalid_input = true;
       }
+    }
+    if (invalid_input && !better_debug_tui) {
+      printf("Press enter to continue");
+      // wait until the Enter key is pressed
+      while (getchar() != '\n') {
+      }
+      if (key == '\n') {
+        printf("\033[A\033[K");
+      }
+      printf("\033[A\033[K\033[A\033[K\033[A\033[K");
+      invalid_input = false;
+      fflush(stdout);
     }
   }
 }
