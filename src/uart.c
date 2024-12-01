@@ -2,8 +2,8 @@
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
-#include "../include/utils.h"
 #include "../include/tui.h"
+#include "../include/utils.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
@@ -161,33 +161,47 @@ void uart_send() {
   }
 }
 
-uint32_t ask_for_user_input() {
-  char input[MAX_NUM_DIGITS_INTEGER + 2];
-
-  while (true) {
-    if (better_debug_tui) {
-      display_input_box(input, "Number between -2147483648 and 2147483647 or a character:");
+bool display_input_message(char *input, const char *message,
+                           uint8_t max_num_digits) {
+  printf("%s ", message);
+  if (fgets((char *)input, max_num_digits + 2, stdin) == NULL) {
+    fprintf(stderr, "Error: Couldn't read input\n");
+    return false;
+  } else {
+    // Find the position of the newline character
+    uint8_t idx_of_newline = strcspn((char *)input, "\n");
+    // If the newline character is not found, it means the input was too
+    // long
+    if (input[idx_of_newline] != '\n') {
+      // Clear the input buffer
+      uint32_t c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+      fprintf(stderr, "Error: Input too long\n");
+      return false;
     } else {
-      printf("Number between -2147483648 and 2147483647 or a character: ");
-      if (fgets((char *)input, sizeof(input), stdin) == NULL) {
-        fprintf(stderr, "Error: Couldn't read input\n");
-      } else {
-        // Find the position of the newline character
-        uint8_t idx_of_newline = strcspn((char *)input, "\n");
-        // If the newline character is not found, it means the input was too
-        // long
-        if (input[idx_of_newline] != '\n') {
-          // Clear the input buffer
-          uint32_t c;
-          while ((c = getchar()) != '\n' && c != EOF)
-            ;
-          fprintf(stderr, "Error: Input too long\n");
-          continue;
-        } else {
-          // Replace the newline character with a null terminator
-          input[idx_of_newline] = '\0';
-        }
-      }
+      // Replace the newline character with a null terminator
+      input[idx_of_newline] = '\0';
+    }
+  }
+  return true;
+}
+
+bool ask_for_user_input(char *input, char *message, uint8_t max_num_digits) {
+  if (better_debug_tui) {
+    return display_input_box(input, message, max_num_digits);
+  } else {
+    return display_input_message(input, message, max_num_digits);
+  }
+}
+
+uint32_t get_user_input() {
+  char input[MAX_NUM_DIGITS_INTEGER + 2]; // null terminator + newline character
+  while (true) {
+    if (!ask_for_user_input(
+            input, "Number between -2147483648 and 2147483647 or a character:",
+            MAX_NUM_DIGITS_INTEGER)) {
+      continue;
     }
 
     if (isalpha(input[0])) {
@@ -202,7 +216,7 @@ uint32_t ask_for_user_input() {
       if (*endptr != '\0') {
         const char *str = "Error: Further characters after number: ";
         const char *str2 = proper_str_cat(str, endptr);
-        const char *str3 = proper_str_cat(str2, ".\n");
+        const char *str3 = proper_str_cat(str2, "\n");
         fprintf(stderr, "%s", str3);
       } else if ((int64_t)tmp_num < INT32_MIN || (int64_t)tmp_num > INT32_MAX) {
         fprintf(stderr, "Error: Number out of range, must be between "
@@ -222,7 +236,7 @@ void uart_receive() {
       if (read_metadata && input_idx < input_len) {
         received_num = uart_input[input_idx];
       } else {
-        received_num = ask_for_user_input();
+        received_num = get_user_input();
       }
       received_num_idx = 3;
     }

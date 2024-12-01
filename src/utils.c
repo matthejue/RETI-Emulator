@@ -271,3 +271,9 @@ char *create_formatted_str(const char *format, va_list args) {
 
     return result;
 }
+
+void clear_input_buffer(void) {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}

@@ -94,4 +94,25 @@ char *read_stdin_content() {
 //   return content;
 // }
 
+char **split_string(const char *str, uint8_t *count) {
+  char *str_copy = strdup(str);
+
+  char **result = NULL;
+  int words = 0;
+
+  char *token = strtok(str_copy, " \t\n");
+  while (token != NULL) {
+    result = realloc(result, (words + 1) * sizeof(char *));
+
+    result[words] = strdup(token);
+    words++;
+    token = strtok(NULL, " \t\n");
+  }
+  *count = words;
+
+  free(str_copy);
+
+  return result;
+}
+
 #endif
