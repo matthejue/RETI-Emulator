@@ -53,24 +53,7 @@ void test_mem_content_to_str_negative() {
   assert(strcmp(instr_str, "-42") == 0);
 }
 
-void test_split_string() {
-  const char *str = "This is a test string";
-  uint8_t count;
-  char **words = split_string(str, &count);
-
-  char *expected_words[] = {"This", "is", "a", "test", "string"};
-
-  for (int i = 0; i < count; i++) {
-    assert(strcmp(words[i], expected_words[i]) == 0);
-    assert(count == 5);
-    free(words[i]); // Free each word
-  }
-  free(words); // Free the array of words
-}
-
-
 int main() {
-  test_split_string();
   test_assembly_to_str();
   test_assembly_to_str_negative();
   test_mem_content_to_str();

@@ -381,7 +381,7 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    if (debug_mode && breakpoint_encountered && (!extended_features || !(isr_active && !step_into_activated))) {
+    if (debug_mode && breakpoint_encountered && !(isr_active && !step_into_activated)) {
       update_term_and_box_sizes();
       draw_tui();
       evaluate_keyboard_input();

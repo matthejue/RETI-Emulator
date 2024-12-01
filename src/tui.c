@@ -1,6 +1,7 @@
 #include "../include/tui.h"
 #include "../include/parse_args.h"
 #include "../include/uart.h"
+#include "../include/utils.h"
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
@@ -76,12 +77,14 @@ void fin_tui() {
 
 // Function to draw a box at specified position and size
 void draw_box(Box *box) {
-  int title_len = strlen(box->title);
-  int title_start = box->x + (box->width - title_len - 2) / 2;
+  const uint8_t TITLE_LEN = strlen(box->title);
 
   mvhline(box->y, box->x, 0, box->width - 1); // Top border
-  mvprintw(box->y, title_start, " %s ",
-           box->title); // Print title centered with spaces
+  uint16_t rel_pos = box->width >= TITLE_LEN + 2 ? (box->width - TITLE_LEN - 2 /* 2 spaces */) / 2 : 0;
+  mvprintw(
+      box->y, rel_pos == 0 ? box->x + 1 : box->x + rel_pos, " %.*s ",
+      (uint32_t)min(box->width - 4 /* 2 spaces + 2 corner */, TITLE_LEN + 2),
+      box->title);
   mvhline(box->y + box->height - 1, box->x, 0, box->width - 1); // Bottom border
   mvvline(box->y + 1, box->x, 0, box->height - 1);              // Left border
   mvvline(box->y + 1, box->x + box->width - 1, 0,
@@ -117,36 +120,74 @@ void write_text_into_box(Box *box, const char *text) {
 
 void reset_box_line(Box *box) { box->line = 1; }
 
-bool display_input_box(char *input, const char *message, uint8_t max_num_digits) {
-  int max_length = max_num_digits + 1;
-  int box_width = strlen(message) + 6;
-  int box_height = 3;
-  int startx = (term_width - box_width) / 2;
-  int starty = (term_height - box_height) / 2;
+void make_unneccessary_spaces_visible(Box *box) {
+  for (int i = box->y + 1; i < box->y + box->height - 1; i++) {
+    for (int j = box->x + 1; j < box->x + box->width - 1; j++) {
+      mvaddch(i, j, '_');
+    }
+  }
+}
+
+void display_error_box(const char *message) {
+  const uint8_t LEN_ERROR = strlen("Error");
+  const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to continue");
+  const uint8_t LEN_MESSAGE = strlen(message);
+  uint8_t box_width = max(LEN_MESSAGE + 4, LEN_PRESS_ENTER + 4);
+  uint8_t box_height = 4;
+  uint16_t startx = (term_width - box_width) / 2;
+  uint16_t starty = (term_height - box_height) / 2;
+
+  // Create a window to save the contents under the box
+  WINDOW *saved_area = newwin(box_height, box_width, starty, startx);
+  // Copy the contents of the screen to the saved window
+  for (int i = 0; i < box_height; i++) {
+    for (int j = 0; j < box_width; j++) {
+      mvwaddch(saved_area, i, j, mvwinch(stdscr, starty + i, startx + j));
+    }
+  }
+
+  WINDOW *error_box = newwin(box_height, box_width, starty, startx);
+  box(error_box, 0, 0);
+  mvwprintw(error_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ", "Error");
+  mvwprintw(error_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
+  mvwprintw(error_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
+            "Press Enter to continue");
+  wrefresh(error_box);
+  int ch;
+  while ((ch = wgetch(error_box)) != '\n' && ch != '\r') {
+    // Wait for Enter key (newline or carriage return)
+  }
+
+  // Restore the saved contents
+  for (int i = 0; i < box_height; i++) {
+    for (int j = 0; j < box_width; j++) {
+      mvwaddch(stdscr, starty + i, startx + j, mvwinch(saved_area, i, j));
+    }
+  }
+
+  delwin(error_box);
+  delwin(saved_area);
+  wrefresh(stdscr);
+}
+
+void display_input_box(char *input, const char *message,
+                       uint8_t max_num_digits) {
+  const uint8_t LEN_MESSAGE = strlen(message);
+  uint8_t box_width = LEN_MESSAGE + 4; // 2 spaces, 2 corncer chrs
+  uint8_t box_height = 3;
+  uint16_t startx = (term_width - box_width) / 2;
+  uint16_t starty = (term_height - box_height) / 2;
 
   keypad(stdscr, TRUE);
 
   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
   box(input_box, 0, 0);
-  mvwprintw(input_box, 0, (box_width - strlen(message) - 2) / 2, " %s ",
-            message);
+  mvwprintw(input_box, 0, (box_width - LEN_MESSAGE - 2) / 2, " %s ", message);
   wrefresh(input_box);
 
   echo();
-  mvwgetnstr(input_box, 1, 1, input, max_length);
+  mvwgetnstr(input_box, 1, 1, input, max_num_digits);
   noecho();
 
-  if (strlen(input) == max_length) {
-    WINDOW *error_box = newwin(box_height, box_width, starty, startx);
-    box(error_box, 0, 0);
-    mvwprintw(error_box, 1, 1, "Input too long!");
-    wrefresh(error_box);
-    wgetch(error_box);
-    delwin(error_box);
   delwin(input_box);
-    return false;
-  }
-
-  delwin(input_box);
-  return true;
 }

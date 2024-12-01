@@ -161,6 +161,16 @@ void uart_send() {
   }
 }
 
+void display_error_notification(const char *message) {
+  fprintf(stderr, "%s\n", message);
+  printf("Press Enter to continue");
+  // wait until the Enter key is pressed
+  while (getchar() != '\n') {
+  }
+  printf("\033[A\033[K\033[A\033[K\033[A\033[K");
+  fflush(stdout);
+}
+
 bool display_input_message(char *input, const char *message,
                            uint8_t max_num_digits) {
   printf("%s ", message);
@@ -177,7 +187,7 @@ bool display_input_message(char *input, const char *message,
       uint32_t c;
       while ((c = getchar()) != '\n' && c != EOF)
         ;
-      fprintf(stderr, "Error: Input too long\n");
+      display_error_notification("Error: Input too long\n");
       return false;
     } else {
       // Replace the newline character with a null terminator
@@ -189,9 +199,18 @@ bool display_input_message(char *input, const char *message,
 
 bool ask_for_user_input(char *input, char *message, uint8_t max_num_digits) {
   if (better_debug_tui) {
-    return display_input_box(input, message, max_num_digits);
+    display_input_box(input, message, max_num_digits);
+    return true;
   } else {
     return display_input_message(input, message, max_num_digits);
+  }
+}
+
+void display_input_error(const char *message) {
+  if (better_debug_tui) {
+    display_error_box(message);
+  } else {
+    display_error_notification(message);
   }
 }
 
@@ -206,7 +225,7 @@ uint32_t get_user_input() {
 
     if (isalpha(input[0])) {
       if (strlen((char *)input) > 1) {
-        fprintf(stderr, "Error: Only one character allowed\n");
+        display_input_error("Error: Only one character allowed");
       } else {
         return *(uint32_t *)input;
       }
@@ -225,7 +244,7 @@ uint32_t get_user_input() {
         return tmp_num;
       }
     } else {
-      fprintf(stderr, "Error: Invalid input\n");
+      display_input_error("Error: Invalid input");
     }
   }
 }

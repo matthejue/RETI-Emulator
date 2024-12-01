@@ -1,8 +1,8 @@
 #ifndef TUI_H
 #define TUI_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef struct {
   char *title;
@@ -32,9 +32,11 @@ void fin_tui();
 #define HEIGHT_REGS_BOX 10
 #define HEIGHT_UART_BOX 11
 
-bool display_input_box(char *input, const char *message,
+void display_input_box(char *input, const char *message,
                        uint8_t max_num_digits);
+void display_error_box(const char *message);
 void reset_box_line(Box *box);
+void make_unneccessary_spaces_visible(Box *box);
 void update_term_and_box_sizes();
 
 #endif // TUI_H

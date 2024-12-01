@@ -19,13 +19,6 @@ uint32_t num_instrs_prgrm = 0;
 uint32_t num_instrs_start_prgrm = 0;
 uint32_t num_instrs_isrs = 0;
 
-char *eprom_watchpoint = "PC";
-char *sram_watchpoint_cs = "PC";
-char *sram_watchpoint_ds = "DS";
-char *sram_watchpoint_stack = "SP";
-
-// uint64_t hdd_watchpoint = 0;
-
 void init_reti() {
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);
   // TODO: herausfinden, wie man num_instrs_start_prgrm vorher bestimmt

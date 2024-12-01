@@ -17,6 +17,11 @@ extern bool breakpoint_encountered;
 extern bool step_into_activated;
 extern bool isr_active;
 
+extern char *eprom_watchobject;
+extern char *sram_watchobject_cs;
+extern char *sram_watchobject_ds;
+extern char *sram_watchobject_stack;
+
 char *read_stdin();
 void process_and_print_array(uint32_t *array, size_t length);
 char *assembly_to_str(Instruction *instr);
