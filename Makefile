@@ -77,7 +77,7 @@ sys-test: $(BIN_SRC)
 
 RUN_PRGRM := ./run/prgrm.reti
 run: $(BIN_SRC)
-	./bin/reti_interpreter_main $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+	./bin/reti_emulator_main $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
 
 clean: clean-files clean-directories
 clean-directories:
@@ -92,15 +92,15 @@ clean-files:
 	# find . -type f -name "hdd.bin" -delete
 	find . -type f -name "test_results" -delete
 
-DEB_BIN := reti_interpreter_main
+DEB_BIN := reti_emulator_main
 debug: $(BIN_SRC) $(BIN_TEST)
 	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./run/deb_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
 
 install-linux-local:
-	if [ -f ~/.local/bin/reti_interpreter ]; then rm ~/.local/bin/reti_interpreter; fi
+	if [ -f ~/.local/bin/reti_emulator ]; then rm ~/.local/bin/reti_emulator; fi
 	mkdir -p ~/.local/bin
-	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_interpreter-linux -O ~/.local/bin/reti_interpreter
-	chmod 700 ~/.local/bin/reti_interpreter
+	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_emulator-linux -O ~/.local/bin/reti_emulator
+	chmod 700 ~/.local/bin/reti_emulator
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 
 pull-latest-version:
@@ -109,15 +109,15 @@ pull-latest-version:
 update-linux-local: pull-latest-version install-linux-local
 
 uninstall-linux-local:
-	rm -f ~/.local/bin/reti_interpreter
+	rm -f ~/.local/bin/reti_emulator
 	sed -i '/export PATH="~\/.local\/bin:$$PATH"/d' ~/.bashrc
 
 install-linux-global: $(BIN_SRC)
-	@sudo bash -c "if [ -L /usr/local/bin/reti_interpreter ]; then rm -f /usr/local/bin/reti_interpreter; fi && chmod 700 ./bin/reti_interpreter_main && ln -s $(realpath .)/bin/reti_interpreter_main /usr/local/bin/reti_interpreter"
+	@sudo bash -c "if [ -L /usr/local/bin/reti_emulator ]; then rm -f /usr/local/bin/reti_emulator; fi && chmod 700 ./bin/reti_emulator_main && ln -s $(realpath .)/bin/reti_emulator_main /usr/local/bin/reti_emulator"
 
 update-linux-global: pull-latest-version install-linux-global
 
 uninstall-linux-global:
-	@sudo rm -f /usr/local/bin/reti_interpreter
+	@sudo rm -f /usr/local/bin/reti_emulator
 
 -include $(OBJ:.o=.d)

@@ -97,6 +97,12 @@ void draw_box(Box *box) {
           ACS_LRCORNER); // Bottom-right corner
 }
 
+// void draw_box(Box *box, WINDOW *window) {
+//   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
+//   box(input_box, 0, 0);
+//   mvwprintw(input_box, 0, (box_width - LEN_MESSAGE - 2) / 2, " %s ", message);
+// }
+
 void write_text_into_box(Box *box, const char *text) {
   uint8_t text_len = strlen(text);
   for (uint8_t i = 0; i < text_len; i++) {
