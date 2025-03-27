@@ -10,7 +10,6 @@
 
 uint32_t sram_size = 65536;
 uint16_t page_size = 4096;
-// uint32_t hdd_size = 4294967295;
 bool debug_mode = false;
 bool test_mode = false;
 bool binary_mode = false;
@@ -20,6 +19,7 @@ uint8_t radius = 2;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool better_debug_tui = false;
+bool ds_vals_unsigned = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -27,24 +27,31 @@ char *sram_prgrm_path = "";
 char *isrs_prgrm_path = "";
 
 void print_help(char *bin_name) {
-  fprintf(stderr,
-          // "Usage: %s -r ram_size -p page_size -H hdd_size -d (daemon mode) "
-          "Usage: %s -r ram_size -p page_size -d (daemon mode) "
-          "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
-          "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-          "(verbose) -b (binary mode) -E (extended features) -a (all) "
-          "-T (better debug TUI) -h (help page) prgrm_path\n",
-          bin_name);
+  fprintf(
+      stderr,
+      "Usage: %s -r ram_size -p page_size -d (daemon mode) "
+      "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
+      "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
+      "(verbose) -b (binary mode) -E (extended features) -a (all) "
+      "-T (better debug TUI) -u (ds vals unsigned) -h (help page) prgrm_path\n",
+      bin_name);
 }
 
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEaT")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEauT")) != -1) {
     char *endptr;
     long tmp_val;
 
     switch (opt) {
+    case 'a':
+      debug_mode = true;
+      peripherals_dir = "/tmp";
+      verbose = true;
+      read_metadata = true;
+      binary_mode = true;
+      break;
     case 's':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
@@ -122,16 +129,11 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'E':
       extended_features = true;
       break;
-    case 'a':
-      debug_mode = true;
-      peripherals_dir = "/tmp";
-      verbose = true;
-      read_metadata = true;
-      binary_mode = true;
-      extended_features = true;
-      break;
     case 'T':
       better_debug_tui = true;
+      break;
+    case 'u':
+      ds_vals_unsigned = true;
       break;
     case 'h':
       print_help(argv[0]);
@@ -152,18 +154,20 @@ void parse_args(uint8_t argc, char *argv[]) {
 }
 
 void print_args() {
-  printf("SRAM Size: %u\n", sram_size);
-  printf("Page Size: %u\n", page_size);
-  // printf("HDD Size: %u\n", hdd_size);
+  printf("SRAM size: %u\n", sram_size);
+  printf("Page size: %u\n", page_size);
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
-  printf("Daemon Mode: %s\n", debug_mode ? "true" : "false");
-  printf("Read Metadata: %s\n", read_metadata ? "true" : "false");
-  printf("Test Mode: %s\n", test_mode ? "true" : "false");
-  printf("Binary Mode: %s\n", binary_mode ? "true" : "false");
+  printf("Debug mode: %s\n", debug_mode ? "true" : "false");
+  printf("Read metadata: %s\n", read_metadata ? "true" : "false");
+  printf("Test mode: %s\n", test_mode ? "true" : "false");
+  printf("Binary mode: %s\n", binary_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");
+  printf("Datasegment values unsigned: %s\n", ds_vals_unsigned ? "true" : "false");
+  printf("Extended features: %s\n", extended_features ? "true" : "false");
+  printf("Better debug TUI: %s\n", better_debug_tui ? "true" : "false");
   printf("Radius: %u\n", radius);
-  printf("Peripheral File Directory: %s\n", peripherals_dir);
-  printf("Eprom Program Path: %s\n", eprom_prgrm_path);
-  printf("Interrupt Service Routines Program Path: %s\n", isrs_prgrm_path);
-  printf("SRAM Program Path: %s\n", sram_prgrm_path);
+  printf("Peripheral file directory: %s\n", peripherals_dir);
+  printf("Eprom program path: %s\n", eprom_prgrm_path);
+  printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);
+  printf("SRAM program path: %s\n", sram_prgrm_path);
 }

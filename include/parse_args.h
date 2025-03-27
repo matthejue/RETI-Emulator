@@ -16,6 +16,7 @@ extern uint8_t radius;
 extern uint8_t max_waiting_instrs;
 extern bool verbose;
 extern bool better_debug_tui;
+extern bool ds_vals_unsigned;
 
 extern char *peripherals_dir;
 extern char *eprom_prgrm_path;

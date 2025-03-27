@@ -408,7 +408,7 @@ void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
           sram_watchpoint_x - radius - diameter_adjust_upper +
               (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
       min(sram_watchpoint_x + radius + diameter_adjust_lower, sram_size - 1),
-      false, false);
+      ds_vals_unsigned, false);
 }
 
 void print_uart_meta_data() {
