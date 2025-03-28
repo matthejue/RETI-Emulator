@@ -3,12 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <ncurses.h>
 
 typedef struct {
   char *title;
   uint8_t x, y;
   uint8_t width, height;
   uint8_t line, col;
+  WINDOW *win;
 } Box;
 
 extern uint16_t term_width, term_height;
@@ -21,10 +23,10 @@ extern Box sram_d_box;
 extern Box sram_s_box;
 
 extern Box *boxes[];
-extern uint8_t box_length;
+extern uint8_t num_boxes;
 
 void write_text_into_box(Box *box, const char *text);
-void draw_box(Box *box);
+void draw_boxes();
 
 void init_tui();
 void fin_tui();

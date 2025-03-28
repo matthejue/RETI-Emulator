@@ -588,8 +588,8 @@ bool draw_tui(void) {
   }
 
   if (better_debug_tui) {
-    clear();
-    for (int i = 0; i < box_length; i++) {
+    for (int i = 0; i < num_boxes; i++) {
+      wclear(boxes[i]->win);
       reset_box_line(boxes[i]);
       if (extended_features) {
         make_unneccessary_spaces_visible(boxes[i]);
@@ -642,20 +642,16 @@ bool draw_tui(void) {
   print_sram_watchpoint(sram_watchobject_stack_int, SRAM_S);
 
   if (better_debug_tui) {
+    draw_boxes();
+
     mvprintw(term_height - 1, 0,
              "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, (s)tep "
              "into isr, (a)ssign watchpoint reg or addr");
+    refresh();
   } else {
     printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
     printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
     printf("(s)tep into isr, (a)ssign watchpoint reg or addr\n");
-  }
-
-  if (better_debug_tui) {
-    for (int i = 0; i < box_length; i++) {
-      draw_box(boxes[i]);
-    }
-    refresh(); // Refresh to display changes
   }
 
   return true;

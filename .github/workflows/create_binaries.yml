@@ -16,11 +16,11 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            output: reti_interpreter-linux
+            output: reti_emulator-linux
           - os: macos-latest
-            output: reti_interpreter-macos
+            output: reti_emulator-macos
           - os: windows-latest
-            output: reti_interpreter-windows.exe
+            output: reti_emulator-windows.exe
 
     steps:
     - uses: actions/checkout@v3
@@ -56,21 +56,21 @@ jobs:
         cp /ucrt64/lib/libncurses.a ./lib
         cp /ucrt64/include/ncurses/ncurses.h ./include/ncurses
         mingw32-make WINDOWS=1
-        mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
+        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
       shell: msys2 {0}
 
     - name: Build with Make
       if: matrix.os == 'ubuntu-latest'
       run: |
         make LINUX_STATIC=1
-        mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
+        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
       shell: bash
 
     - name: Build with Make
       if: matrix.os == 'macos-latest'
       run: |
         make MACOS=1
-        mv ./bin/reti_interpreter_main ./bin/${{ matrix.output }}
+        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
       shell: bash
 
     - name: Upload artifact
@@ -90,8 +90,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          ./reti_interpreter-linux/reti_interpreter-linux
-          ./reti_interpreter-macos/reti_interpreter-macos
-          ./reti_interpreter-windows.exe/reti_interpreter-windows.exe
+          ./reti_emulator-linux/reti_emulator-linux
+          ./reti_emulator-macos/reti_emulator-macos
+          ./reti_emulator-windows.exe/reti_emulator-windows.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

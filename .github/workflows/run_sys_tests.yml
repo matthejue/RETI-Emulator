@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Install RETI-Interpreter
+    - name: Install RETI-Emulator
       run: |
         cd ${GITHUB_WORKSPACE}
         make DYNAMIC=1
