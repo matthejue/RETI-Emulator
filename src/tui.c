@@ -6,24 +6,30 @@
 #include <stdint.h>
 #include <string.h>
 
-Box regs_box = {"", 0, 0, 0, 0, 1, 1};
-Box eprom_box = {"", 0, 0, 0, 0, 1, 1};
-Box uart_box = {"", 0, 0, 0, 0, 1, 1};
-Box sram_c_box = {"", 0, 0, 0, 0, 1, 1};
-Box sram_d_box = {"", 0, 0, 0, 0, 1, 1};
-Box sram_s_box = {"", 0, 0, 0, 0, 1, 1};
+Box regs_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box eprom_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box uart_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box sram_c_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box sram_d_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 
 uint16_t term_width, term_height;
 
 Box *boxes[] = {&regs_box,   &eprom_box,  &uart_box,
                 &sram_c_box, &sram_d_box, &sram_s_box};
-uint8_t box_length = sizeof(boxes) / sizeof(boxes[0]);
+uint8_t num_boxes = sizeof(boxes) / sizeof(boxes[0]);
 
 void init_tui() {
   initscr();
   cbreak();
   noecho();
   curs_set(0); // Hide cursor
+
+  getmaxyx(stdscr, term_height, term_width);
+
+  for (uint8_t i = 0; i < num_boxes; i++) {
+    boxes[i]->win = newwin(1, 1, 0, 0);
+  }
 }
 
 void update_term_and_box_sizes() {
@@ -69,39 +75,38 @@ void update_term_and_box_sizes() {
   sram_s_box.y = 0;
   sram_s_box.width = other_box_width;
   sram_s_box.height = box_height;
+
+  for (uint8_t i = 0; i < num_boxes; i++) {
+    wresize(boxes[i]->win, boxes[i]->height,
+            boxes[i]->width); // Resize the window
+    mvwin(boxes[i]->win, boxes[i]->y,
+          boxes[i]->x); // Move the window to a new position
+  }
 }
 
 void fin_tui() {
+  for (uint8_t i = 0; i < num_boxes; i++) {
+    delwin(boxes[i]->win);
+  }
+
   endwin(); // End ncurses mode
 }
 
-// Function to draw a box at specified position and size
-void draw_box(Box *box) {
-  const uint8_t TITLE_LEN = strlen(box->title);
-
-  mvhline(box->y, box->x, 0, box->width - 1); // Top border
-  uint16_t rel_pos = box->width >= TITLE_LEN + 2 ? (box->width - TITLE_LEN - 2 /* 2 spaces */) / 2 : 0;
-  mvprintw(
-      box->y, rel_pos == 0 ? box->x + 1 : box->x + rel_pos, " %.*s ",
-      (uint32_t)min(box->width - 4 /* 2 spaces + 2 corner */, TITLE_LEN + 2),
-      box->title);
-  mvhline(box->y + box->height - 1, box->x, 0, box->width - 1); // Bottom border
-  mvvline(box->y + 1, box->x, 0, box->height - 1);              // Left border
-  mvvline(box->y + 1, box->x + box->width - 1, 0,
-          box->height - 1); // Right border
-
-  mvaddch(box->y, box->x, ACS_ULCORNER);                   // Top-left corner
-  mvaddch(box->y, box->x + box->width - 1, ACS_URCORNER);  // Top-right corner
-  mvaddch(box->y + box->height - 1, box->x, ACS_LLCORNER); // Bottom-left corner
-  mvaddch(box->y + box->height - 1, box->x + box->width - 1,
-          ACS_LRCORNER); // Bottom-right corner
+void draw_boxes() {
+  for (uint8_t i = 0; i < num_boxes; i++) {
+    const uint8_t TITLE_LEN = strlen(boxes[i]->title);
+    uint16_t rel_pos =
+        boxes[i]->width >= TITLE_LEN + 2
+            ? (boxes[i]->width - TITLE_LEN - 2 /* 2 spaces */) / 2
+            : 0;
+    box(boxes[i]->win, 0, 0);
+    mvwprintw(boxes[i]->win, 0, rel_pos == 0 ? 1 : rel_pos, " %.*s ",
+              (uint32_t)min(boxes[i]->width - 4 /* 2 spaces + 2 corner */,
+                            TITLE_LEN + 2),
+              boxes[i]->title);
+    wrefresh(boxes[i]->win);
+  }
 }
-
-// void draw_box(Box *box, WINDOW *window) {
-//   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
-//   box(input_box, 0, 0);
-//   mvwprintw(input_box, 0, (box_width - LEN_MESSAGE - 2) / 2, " %s ", message);
-// }
 
 void write_text_into_box(Box *box, const char *text) {
   uint8_t text_len = strlen(text);
@@ -118,7 +123,7 @@ void write_text_into_box(Box *box, const char *text) {
     }
     if (box->line <
         (box->height - 1)) { // Ensure we don't write on the bottom border
-      mvaddch(box->y + box->line, box->x + box->col, text[i]);
+      mvwaddch(box->win, box->line, box->col, text[i]);
       box->col++;
     }
   }
@@ -127,9 +132,9 @@ void write_text_into_box(Box *box, const char *text) {
 void reset_box_line(Box *box) { box->line = 1; }
 
 void make_unneccessary_spaces_visible(Box *box) {
-  for (int i = box->y + 1; i < box->y + box->height - 1; i++) {
-    for (int j = box->x + 1; j < box->x + box->width - 1; j++) {
-      mvaddch(i, j, '_');
+  for (int i = 1; i < box->height - 1; i++) {
+    for (int j = 1; j < box->width - 1; j++) {
+      mvwaddch(box->win, i, j, '_');
     }
   }
 }
@@ -143,15 +148,6 @@ void display_error_box(const char *message) {
   uint16_t startx = (term_width - box_width) / 2;
   uint16_t starty = (term_height - box_height) / 2;
 
-  // Create a window to save the contents under the box
-  WINDOW *saved_area = newwin(box_height, box_width, starty, startx);
-  // Copy the contents of the screen to the saved window
-  for (int i = 0; i < box_height; i++) {
-    for (int j = 0; j < box_width; j++) {
-      mvwaddch(saved_area, i, j, mvwinch(stdscr, starty + i, startx + j));
-    }
-  }
-
   WINDOW *error_box = newwin(box_height, box_width, starty, startx);
   box(error_box, 0, 0);
   mvwprintw(error_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ", "Error");
@@ -164,15 +160,7 @@ void display_error_box(const char *message) {
     // Wait for Enter key (newline or carriage return)
   }
 
-  // Restore the saved contents
-  for (int i = 0; i < box_height; i++) {
-    for (int j = 0; j < box_width; j++) {
-      mvwaddch(stdscr, starty + i, startx + j, mvwinch(saved_area, i, j));
-    }
-  }
-
   delwin(error_box);
-  delwin(saved_area);
   wrefresh(stdscr);
 }
 
