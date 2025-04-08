@@ -1,15 +1,35 @@
 #include "../include/interpr.h"
 #include "../include/assemble.h"
+#include "../include/datastructures.h"
 #include "../include/debug.h"
 #include "../include/error.h"
+#include "../include/interrupt.h"
+#include "../include/interrupt_controller.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
+#include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include "../include/tui.h"
+#include <ncurses.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <ncurses.h>
+
+bool is_hardware_interrupt = false;
+
+uint8_t current_isr;
+
+void setup_interrupt(uint32_t ivt_table_addr) {
+  write_array(regs, SP, read_array(regs, SP, false) - 1, false);
+  write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
+  // TODO: Tobias, wird mit DS ausgefüllt?
+  // write_array(regs, PC, read_storage_ds_fill(assembly_instr->opd1), false);
+  write_array(regs, PC, read_storage_sram_constant_fill(ivt_table_addr), false);
+}
+
+static void return_from_interrupt() {
+  write_array(regs, PC, read_storage(read_array(regs, SP, false) + 1), false);
+  write_array(regs, SP, read_array(regs, SP, false) + 1, false);
+}
 
 // TODO: Problem, dass immediates sign extended werden, aber bitweise xor, and
 // und or auf das nicht sign extendete mit 0en drangefügt angewandt werden
@@ -277,8 +297,7 @@ void interpr_instr(Instruction *assembly_instr) {
     // In case i is not allowed to be signed need mask
     // write_array(regs, assembly_instr->opd1,
     //             assembly_instr->opd2 & IMMEDIATE_MASK, false);
-    write_array(regs, assembly_instr->opd1,
-                assembly_instr->opd2, false);
+    write_array(regs, assembly_instr->opd1, assembly_instr->opd2, false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
@@ -302,20 +321,30 @@ void interpr_instr(Instruction *assembly_instr) {
   case NOP:
     break;
   case INT:
-    write_array(regs, SP, read_array(regs, SP, false) - 1, false);
-    write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
-    // TODO: Tobias, wird mit DS ausgefüllt?
-    // write_array(regs, PC, read_storage_ds_fill(assembly_instr->opd1), false);
-    write_array(regs, PC, read_storage_sram_constant_fill(assembly_instr->opd1),
-                false);
+    setup_interrupt(assembly_instr->opd1);
+    current_isr = assembly_instr->opd1;
     isr_active = true;
     goto no_pc_increase;
     break;
   case RTI:
-    write_array(regs, PC, read_storage(read_array(regs, SP, false) + 1), false);
-    write_array(regs, SP, read_array(regs, SP, false) + 1, false);
-    isr_active = false;
-    step_into_activated = false;
+    return_from_interrupt();
+    if (!is_hardware_interrupt) {
+      isr_active = false;
+      step_into_activated = false;
+    }
+    if (heap_size > 0) {
+      struct prio_isr ret_val = handle_next_hardware_interrupt();
+      if (ret_val.has_higher_prio) {
+        setup_interrupt(ret_val.isr);
+      }
+    }
+    if (is_hardware_interrupt) {
+      stack_top--;
+      is_hardware_interrupt = false;
+    }
+    if (current_isr == isr_of_timer_interrupt) {
+      interrupt_timer_active = true;
+    }
     break;
   case JUMPGT:
     if ((int32_t)read_array(regs, ACC, false) > 0) {
@@ -381,7 +410,8 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    if (debug_mode && breakpoint_encountered && !(isr_active && !step_into_activated)) {
+    if (debug_mode && breakpoint_encountered &&
+        !(isr_active && !step_into_activated)) {
       update_term_and_box_sizes();
       draw_tui();
       evaluate_keyboard_input();
@@ -401,6 +431,7 @@ void interpr_prgrm() {
       free(assembly_instr);
     }
 
+    timer_interrupt_check();
     uart_receive();
     uart_send();
   }

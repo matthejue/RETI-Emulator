@@ -2,9 +2,7 @@
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
-#include "../include/tui.h"
 #include "../include/utils.h"
-#include <ctype.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -157,94 +155,6 @@ void uart_send() {
       // angezeigt wird, wenn die waiting time abgelaufen ist
       uart[2] = uart[2] | 0b00000001;
       sending_finished = false;
-    }
-  }
-}
-
-void display_error_notification(const char *message) {
-  fprintf(stderr, "%s\n", message);
-  printf("Press Enter to continue");
-  // wait until the Enter key is pressed
-  while (getchar() != '\n') {
-  }
-  printf("\033[A\033[K\033[A\033[K\033[A\033[K");
-  fflush(stdout);
-}
-
-bool display_input_message(char *input, const char *message,
-                           uint8_t max_num_digits) {
-  printf("%s ", message);
-  if (fgets((char *)input, max_num_digits + 2, stdin) == NULL) {
-    fprintf(stderr, "Error: Couldn't read input\n");
-    return false;
-  } else {
-    // Find the position of the newline character
-    uint8_t idx_of_newline = strcspn((char *)input, "\n");
-    // If the newline character is not found, it means the input was too
-    // long
-    if (input[idx_of_newline] != '\n') {
-      // Clear the input buffer
-      uint32_t c;
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
-      display_error_notification("Error: Input too long\n");
-      return false;
-    } else {
-      // Replace the newline character with a null terminator
-      input[idx_of_newline] = '\0';
-    }
-  }
-  return true;
-}
-
-bool ask_for_user_input(char *input, char *message, uint8_t max_num_digits) {
-  if (better_debug_tui) {
-    display_input_box(input, message, max_num_digits);
-    return true;
-  } else {
-    return display_input_message(input, message, max_num_digits);
-  }
-}
-
-void display_input_error(const char *message) {
-  if (better_debug_tui) {
-    display_error_box(message);
-  } else {
-    display_error_notification(message);
-  }
-}
-
-uint32_t get_user_input() {
-  char input[MAX_NUM_DIGITS_INTEGER + 2]; // null terminator + newline character
-  while (true) {
-    if (!ask_for_user_input(
-            input, "Number between -2147483648 and 2147483647 or a character:",
-            MAX_NUM_DIGITS_INTEGER)) {
-      continue;
-    }
-
-    if (isalpha(input[0])) {
-      if (strlen((char *)input) > 1) {
-        display_input_error("Error: Only one character allowed");
-      } else {
-        return *(uint32_t *)input;
-      }
-    } else if (isdigit(input[0]) || input[0] == '-') {
-      char *endptr;
-      uint64_t tmp_num = strtol((char *)input, &endptr, 10);
-      if (*endptr != '\0') {
-        const char *str = "Error: Further characters after number: ";
-        const char *str2 = proper_str_cat(str, endptr);
-        const char *str3 = proper_str_cat(str2, "\n");
-        fprintf(stderr, "%s", str3);
-      } else if ((int64_t)tmp_num < INT32_MIN || (int64_t)tmp_num > INT32_MAX) {
-        fprintf(stderr, "Error: Number out of range, must be between "
-                        "-2147483648 and 2147483647\n");
-      } else {
-        return tmp_num;
-      }
-    } else {
-      display_input_error("Error: Invalid input");
     }
   }
 }

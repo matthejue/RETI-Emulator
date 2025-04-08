@@ -1,4 +1,6 @@
 #include "../include/error.h"
+#include "../include/interrupt.h"
+#include "../include/interrupt_controller.h"
 #include "../include/parse_args.h"
 #include "../include/parse_instrs.h"
 #include "../include/utils.h"
@@ -9,9 +11,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+uint8_t isr_of_timer_interrupt;
+
 // TODO: wrong name
-const char *register_code_to_name[] = {"PC", "IN1", "IN2", "ACC",
-                                       "SP", "BAF", "CS",  "DS"};
+const char *register_code_to_name[] = {
+    "PC", "IN1", "IN2",      "ACC",     "SP",       "BAF",
+    "CS", "DS",  "INTTIMER", "UARTREC", "UARTSEND", "KEYPRESS"};
+static uint8_t isr_num = 0;
 
 String_to_Mnemonic mnemonic_to_opcode[] = {
     {"ADDI", ADDI},     {"SUBI", SUBI},     {"MULTI", MULTI},
@@ -71,7 +77,8 @@ uint32_t get_im(char *str, uint8_t op) {
 
   // TODO: not sure this is correct
   if (errno == ERANGE) {
-    fprintf(stderr, "Error: Immediate is way too large, it is not even between -9223372036854775808 and 9223372036854775807\n");
+    fprintf(stderr, "Error: Immediate is way too large, it is not even between "
+                    "-9223372036854775808 and 9223372036854775807\n");
     exit(EXIT_FAILURE);
   }
 
@@ -90,6 +97,11 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
   if (ADDR <= op && op <= ANDR) {
     if (isdigit(str_instr->opd2[0])) {
       op += 8;
+    }
+  }
+  if (op == IVTE) {
+    if (strcmp(str_instr->opd2, "") != 0) {
+      op++;
     }
   }
 
@@ -148,6 +160,24 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
     machine_instr = op << 25;
   } else if (op == IVTE) {
     machine_instr = 0b10 << 30 | opd1;
+    isr_num++;
+  } else if (op == IVTEDP) {
+    machine_instr = 0b10 << 30 | opd1;
+    isr_num++;
+    isr_to_prio = realloc(isr_to_prio, sizeof(uint8_t) * (isr_num));
+    assign_isr_and_prio(opd2, isr_num - 1, opd3);
+    switch (opd2) {
+    case INTERRUPT_TIMER:
+      interrupt_timer_active = true;
+      isr_of_timer_interrupt = isr_num - 1;
+      break;
+    case KEYPRESS:
+      keypress_interrupt_active = true;
+      break;
+    default:
+      fprintf(stderr, "Error: Invalid device\n");
+      exit(EXIT_FAILURE);
+    }
   } else {
     fprintf(stderr, "Error: Invalid opcode\n");
     exit(EXIT_FAILURE);

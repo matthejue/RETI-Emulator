@@ -1,9 +1,9 @@
 #ifndef TUI_H
 #define TUI_H
 
+#include <ncurses.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <ncurses.h>
 
 typedef struct {
   char *title;
@@ -23,7 +23,7 @@ extern Box sram_d_box;
 extern Box sram_s_box;
 
 extern Box *boxes[];
-extern uint8_t num_boxes;
+extern const uint8_t NUM_BOXES;
 
 void write_text_into_box(Box *box, const char *text);
 void draw_boxes();
@@ -34,9 +34,6 @@ void fin_tui();
 #define HEIGHT_REGS_BOX 10
 #define HEIGHT_UART_BOX 11
 
-void display_input_box(char *input, const char *message,
-                       uint8_t max_num_digits);
-void display_error_box(const char *message);
 void reset_box_line(Box *box);
 void make_unneccessary_spaces_visible(Box *box);
 void update_term_and_box_sizes();

@@ -177,6 +177,10 @@ void check_instr(uint8_t op, String_Instruction *str_instr) {
     check_opd(IM, str_instr->opd1);
     check_opd(EMPTY, str_instr->opd2);
     check_opd(EMPTY, str_instr->opd3);
+  } else if (op == IVTEDP) {
+    check_opd(IM, str_instr->opd1);
+    check_opd(REG, str_instr->opd2);
+    check_opd(IM, str_instr->opd3);
   } else {
     fprintf(stderr, "Error: Invalid opcode\n");
     exit(EXIT_FAILURE);
