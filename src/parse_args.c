@@ -1,5 +1,6 @@
 #include "../include/parse_args.h"
 #include "../include/interpr.h"
+#include "../include/interrupt.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include <limits.h>
@@ -31,18 +32,19 @@ void print_help(char *bin_name) {
       stderr,
       "Usage: %s -r ram_size -p page_size -d (daemon mode) "
       "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
-      "-w max_waiting_instrs -t (test mode) -m (read metadata) -v "
-      "(verbose) -b (binary mode) -E (extended features) -a (all) "
-      "-T (better debug TUI) -u (ds vals unsigned) -h (help page) prgrm_path\n",
+      "-w max_waiting_instrs -t (test mode) -m (read metadata) -v (verbose) "
+      "-b (binary mode) -E (extended features) -a (all) -T (better debug TUI) "
+      "-u (ds vals unsigned) -I timer_interrupt_interval -h (help page) "
+      "prgrm_path\n",
       bin_name);
 }
 
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEauT")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEauTI:")) != -1) {
     char *endptr;
-    long tmp_val;
+    int64_t tmp_val;
 
     switch (opt) {
     case 'a':
@@ -107,9 +109,9 @@ void parse_args(uint8_t argc, char *argv[]) {
         fprintf(stderr, "Error: Invalid max waiting instructions\n");
         exit(EXIT_FAILURE);
       }
-      if (tmp_val < 0 || tmp_val > UINT8_MAX) {
+      if (tmp_val < 0 || tmp_val > UINT32_MAX) {
         fprintf(stderr,
-                "Error: Max waiting instructions must be between 0 and 255\n");
+                "Error: Invalid max waiting must be between 0 and 4294967296\n");
         exit(EXIT_FAILURE);
       }
       max_waiting_instrs = tmp_val;
@@ -138,6 +140,19 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'h':
       print_help(argv[0]);
       exit(EXIT_SUCCESS);
+    case 'I':
+      tmp_val = strtol(optarg, &endptr, 10);
+      if (endptr == optarg || *endptr != '\0') {
+        fprintf(stderr, "Error: Invalid interrupt timer interval\n");
+        exit(EXIT_FAILURE);
+      }
+      if (tmp_val < 0 || tmp_val > UINT8_MAX) {
+        fprintf(stderr,
+                "Error: Max waiting instructions must be between 0 and 255\n");
+        exit(EXIT_FAILURE);
+      }
+      interrupt_timer_interval = tmp_val;
+      break;
     default:
       print_help(argv[0]);
       exit(EXIT_FAILURE);
@@ -157,12 +172,14 @@ void print_args() {
   printf("SRAM size: %u\n", sram_size);
   printf("Page size: %u\n", page_size);
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
+  printf("Interrupt timer interval: %u\n", interrupt_timer_interval);
   printf("Debug mode: %s\n", debug_mode ? "true" : "false");
   printf("Read metadata: %s\n", read_metadata ? "true" : "false");
   printf("Test mode: %s\n", test_mode ? "true" : "false");
   printf("Binary mode: %s\n", binary_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");
-  printf("Datasegment values unsigned: %s\n", ds_vals_unsigned ? "true" : "false");
+  printf("Datasegment values unsigned: %s\n",
+         ds_vals_unsigned ? "true" : "false");
   printf("Extended features: %s\n", extended_features ? "true" : "false");
   printf("Better debug TUI: %s\n", better_debug_tui ? "true" : "false");
   printf("Radius: %u\n", radius);

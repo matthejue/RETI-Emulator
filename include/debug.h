@@ -1,4 +1,5 @@
 #include "../include/assemble.h"
+#include "../include/input_output.h"
 #include "../include/tui.h"
 #include <stdio.h>
 
@@ -10,17 +11,41 @@ typedef struct {
   const char *name;
 } Mnemonic_to_String;
 
-// typedef enum { REGS, EPROM, UART, SRAM, HDD } MemType;
 typedef enum { REGS, EPROM, UART, SRAM_C, SRAM_D, SRAM_S } MemType;
+
+typedef enum {
+  REGS_BOX,
+  EPROM_BOX,
+  UART_BOX,
+  SRAM_C_BOX,
+  SRAM_D_BOX,
+  SRAM_S_BOX
+} BoxIdentifier;
+
+extern char *watchobject_addr;
+
+extern const Menu_Entry box_entries[];
+
+extern const Menu_Entry identifier_to_box[];
+
+extern const uint8_t NUM_BOX_ENTRIES;
+
+extern const Menu_Entry register_entries[];
+
+extern const Menu_Entry identifier_to_register_or_address[];
+
+extern const char* register_or_address_to_identifier[];
+
+extern const uint8_t NUM_REGISTER_ENTRIES;
 
 extern bool breakpoint_encountered;
 extern bool step_into_activated;
 extern bool isr_active;
 
-extern char *eprom_watchobject;
-extern char *sram_watchobject_cs;
-extern char *sram_watchobject_ds;
-extern char *sram_watchobject_stack;
+extern Register eprom_watchobject;
+extern Register sram_watchobject_cs;
+extern Register sram_watchobject_ds;
+extern Register sram_watchobject_stack;
 
 char *read_stdin();
 void process_and_print_array(uint32_t *array, size_t length);
@@ -40,8 +65,6 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
-void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
-                    char *format_str, char *watchpoint,
-                    uint64_t watchpoint_int);
+void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box, char *format_str, const char *watchobject, uint64_t watchobject_int) ;
 
 #endif // DEBUG_H

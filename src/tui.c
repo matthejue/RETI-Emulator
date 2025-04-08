@@ -5,6 +5,7 @@
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 Box regs_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box eprom_box = {"", 0, 0, 0, 0, 1, 1, NULL};
@@ -12,12 +13,22 @@ Box uart_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_c_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_d_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
+Box info_box = {
+    "(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, "
+    "(r)estart, (a)ssign watchobject reg or addr, (t)rigger isr, (q)uit",
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    NULL};
 
 uint16_t term_width, term_height;
 
-Box *boxes[] = {&regs_box,   &eprom_box,  &uart_box,
-                &sram_c_box, &sram_d_box, &sram_s_box};
-uint8_t num_boxes = sizeof(boxes) / sizeof(boxes[0]);
+Box *boxes[] = {&regs_box,   &eprom_box,  &uart_box, &sram_c_box,
+                &sram_d_box, &sram_s_box, &info_box};
+const uint8_t NUM_BOXES = sizeof(boxes) / sizeof(boxes[0]);
 
 void init_tui() {
   initscr();
@@ -25,9 +36,7 @@ void init_tui() {
   noecho();
   curs_set(0); // Hide cursor
 
-  getmaxyx(stdscr, term_height, term_width);
-
-  for (uint8_t i = 0; i < num_boxes; i++) {
+  for (uint8_t i = 0; i < NUM_BOXES; i++) {
     boxes[i]->win = newwin(1, 1, 0, 0);
   }
 }
@@ -46,37 +55,42 @@ void update_term_and_box_sizes() {
   uint16_t third_box_height = HEIGHT_UART_BOX;
   uint16_t second_box_height = box_height - first_box_height - third_box_height;
 
-  regs_box.x = 0;
-  regs_box.y = 0;
+  // regs_box.x = 0;
+  // regs_box.y = 0;
   regs_box.width = first_box_width;
   regs_box.height = first_box_height;
 
-  eprom_box.x = 0;
+  // eprom_box.x = 0;
   eprom_box.y = first_box_height;
   eprom_box.width = first_box_width;
   eprom_box.height = second_box_height;
 
-  uart_box.x = 0;
+  // uart_box.x = 0;
   uart_box.y = first_box_height + second_box_height;
   uart_box.width = first_box_width;
   uart_box.height = third_box_height;
 
   sram_c_box.x = first_box_width;
-  sram_c_box.y = 0;
+  // sram_c_box.y = 0;
   sram_c_box.width = other_box_width;
   sram_c_box.height = box_height;
 
   sram_d_box.x = first_box_width + other_box_width;
-  sram_d_box.y = 0;
+  // sram_d_box.y = 0;
   sram_d_box.width = other_box_width;
   sram_d_box.height = box_height;
 
   sram_s_box.x = first_box_width + 2 * other_box_width;
-  sram_s_box.y = 0;
+  // sram_s_box.y = 0;
   sram_s_box.width = other_box_width;
   sram_s_box.height = box_height;
 
-  for (uint8_t i = 0; i < num_boxes; i++) {
+  // info_box.x = 0;
+  info_box.y = term_height - 1;
+  info_box.width = term_width - 1;
+  info_box.height = 1;
+
+  for (uint8_t i = 0; i < NUM_BOXES; i++) {
     wresize(boxes[i]->win, boxes[i]->height,
             boxes[i]->width); // Resize the window
     mvwin(boxes[i]->win, boxes[i]->y,
@@ -85,7 +99,7 @@ void update_term_and_box_sizes() {
 }
 
 void fin_tui() {
-  for (uint8_t i = 0; i < num_boxes; i++) {
+  for (uint8_t i = 0; i < NUM_BOXES; i++) {
     delwin(boxes[i]->win);
   }
 
@@ -93,13 +107,15 @@ void fin_tui() {
 }
 
 void draw_boxes() {
-  for (uint8_t i = 0; i < num_boxes; i++) {
+  for (uint8_t i = 0; i < NUM_BOXES; i++) {
     const uint8_t TITLE_LEN = strlen(boxes[i]->title);
     uint16_t rel_pos =
         boxes[i]->width >= TITLE_LEN + 2
             ? (boxes[i]->width - TITLE_LEN - 2 /* 2 spaces */) / 2
             : 0;
-    box(boxes[i]->win, 0, 0);
+    if (i < NUM_BOXES - 1) {
+      box(boxes[i]->win, 0, 0);
+    }
     mvwprintw(boxes[i]->win, 0, rel_pos == 0 ? 1 : rel_pos, " %.*s ",
               (uint32_t)min(boxes[i]->width - 4 /* 2 spaces + 2 corner */,
                             TITLE_LEN + 2),
@@ -137,51 +153,4 @@ void make_unneccessary_spaces_visible(Box *box) {
       mvwaddch(box->win, i, j, '_');
     }
   }
-}
-
-void display_error_box(const char *message) {
-  const uint8_t LEN_ERROR = strlen("Error");
-  const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to continue");
-  const uint8_t LEN_MESSAGE = strlen(message);
-  uint8_t box_width = max(LEN_MESSAGE + 4, LEN_PRESS_ENTER + 4);
-  uint8_t box_height = 4;
-  uint16_t startx = (term_width - box_width) / 2;
-  uint16_t starty = (term_height - box_height) / 2;
-
-  WINDOW *error_box = newwin(box_height, box_width, starty, startx);
-  box(error_box, 0, 0);
-  mvwprintw(error_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ", "Error");
-  mvwprintw(error_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
-  mvwprintw(error_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
-            "Press Enter to continue");
-  wrefresh(error_box);
-  int ch;
-  while ((ch = wgetch(error_box)) != '\n' && ch != '\r') {
-    // Wait for Enter key (newline or carriage return)
-  }
-
-  delwin(error_box);
-  wrefresh(stdscr);
-}
-
-void display_input_box(char *input, const char *message,
-                       uint8_t max_num_digits) {
-  const uint8_t LEN_MESSAGE = strlen(message);
-  uint8_t box_width = LEN_MESSAGE + 4; // 2 spaces, 2 corncer chrs
-  uint8_t box_height = 3;
-  uint16_t startx = (term_width - box_width) / 2;
-  uint16_t starty = (term_height - box_height) / 2;
-
-  keypad(stdscr, TRUE);
-
-  WINDOW *input_box = newwin(box_height, box_width, starty, startx);
-  box(input_box, 0, 0);
-  mvwprintw(input_box, 0, (box_width - LEN_MESSAGE - 2) / 2, " %s ", message);
-  wrefresh(input_box);
-
-  echo();
-  mvwgetnstr(input_box, 1, 1, input, max_num_digits);
-  noecho();
-
-  delwin(input_box);
 }

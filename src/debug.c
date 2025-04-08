@@ -1,12 +1,13 @@
 #include "../include/debug.h"
 #include "../include/assemble.h"
+#include "../include/input_output.h"
+#include "../include/interrupt.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include <ctype.h>
 #include <limits.h>
 #include <ncurses.h>
 #include <stdbool.h>
@@ -21,16 +22,54 @@
 #define clrscr() printf("\e[1;1H\e[2J") // clear sequence for ANSI terminals
 #endif
 
+const Menu_Entry box_entries[] = {
+    // {"Registers", REGS_BOX},
+    {"EPROM", EPROM_BOX},
+    // {"UART", UART_BOX},
+    {"SRAM Codesegment", SRAM_C_BOX},
+    {"SRAM Datasegment", SRAM_D_BOX},
+    {"SRAM Stack", SRAM_S_BOX},
+};
+
+const Menu_Entry identifier_to_box[] = {
+    {"E", EPROM_BOX},
+    {"SC", SRAM_C_BOX},
+    {"SD", SRAM_D_BOX},
+    {"SS", SRAM_S_BOX},
+};
+// const Menu_Entry identifier_to_box[] = {
+//     {"R", REGS_BOX},    {"E", EPROM_BOX},   {"U", UART_BOX},
+//     {"SC", SRAM_C_BOX}, {"SD", SRAM_D_BOX}, {"SS", SRAM_S_BOX},
+// };
+
+const uint8_t NUM_BOX_ENTRIES = sizeof(box_entries) / sizeof(box_entries[0]);
+
+const Menu_Entry register_entries[] = {
+    {"PC", PC},   {"IN1", IN1}, {"IN2", IN2}, {"ACC", ACC},         {"SP", SP},
+    {"BAF", BAF}, {"CS", CS},   {"DS", DS},   {"Address", ADDRESS},
+};
+
+const Menu_Entry identifier_to_register_or_address[] = {
+    {"PC", PC},   {"IN1", IN1}, {"IN2", IN2}, {"ACC", ACC},   {"SP", SP},
+    {"BAF", BAF}, {"CS", CS},   {"DS", DS},   {"A", ADDRESS},
+};
+
+const char *register_or_address_to_identifier[] = {
+    "PC", "IN1", "IN2", "ACC", "SP", "BAF", "CS", "DS", "Address"};
+
+const uint8_t NUM_REGISTER_ENTRIES =
+    sizeof(register_entries) / sizeof(register_entries[0]);
+
 bool breakpoint_encountered = true;
 bool step_into_activated = false;
 bool isr_active = false;
 
 const uint8_t LINEWIDTH = 54;
 
-char *eprom_watchobject = "PC";
-char *sram_watchobject_cs = "PC";
-char *sram_watchobject_ds = "DS";
-char *sram_watchobject_stack = "SP";
+Register eprom_watchobject = PC;
+Register sram_watchobject_cs = PC;
+Register sram_watchobject_ds = DS;
+Register sram_watchobject_stack = DS;
 
 Mnemonic_to_String opcode_to_mnemonic[] = {
     {ADDI, "ADDI"},     {SUBI, "SUBI"},       {MULTI, "MULTI"},
@@ -314,23 +353,21 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
   }
 }
 
-uint64_t determine_watchpoint_value(char *watchpoint_str) {
-  for (int i = 0; i < NUM_REGISTERS; i++) {
-    if (strcmp(watchpoint_str, register_code_to_name[i]) == 0) {
-      return read_array(regs, i, false);
-    }
+uint64_t determine_watchobject_value(Register watchobject_enum) {
+  if (watchobject_enum != ADDRESS) {
+    return read_array(regs, watchobject_enum, false);
   }
 
   char *endptr;
-  uint64_t watchpoint_val = strtol(watchpoint_str, &endptr, 10);
+  uint64_t watchobject_val = strtol(watchobject_addr, &endptr, 10);
   if (*endptr != '\0') {
     const char *str = "Error: Invalid register or number: ";
-    const char *str2 = proper_str_cat(str, watchpoint_str);
+    const char *str2 = proper_str_cat(str, watchobject_addr);
     display_input_error(str2);
     // this value will never be reached
     return UINT64_MAX;
-  } else if (watchpoint_val < 0 &&
-             watchpoint_val >
+  } else if (watchobject_val < 0 &&
+             watchobject_val >
                  UINT64_MAX) { // this should never happen, because the input
                                // already can't be higher than this
     display_input_error("Error: Number out of range, must be between 0 and "
@@ -339,75 +376,75 @@ uint64_t determine_watchpoint_value(char *watchpoint_str) {
     return UINT64_MAX;
   }
 
-  return watchpoint_val;
+  return watchobject_val;
 }
 
-void print_eprom_watchpoint(uint64_t eprom_watchpoint) {
-  if (eprom_watchpoint & 0xC0000000) {
+void print_eprom_watchobject(uint64_t eprom_watchobject) {
+  if (eprom_watchobject & 0xC0000000) {
     return;
   }
   if (better_debug_tui) {
     radius = (eprom_box.height - 2) / 2;
   }
-  uint8_t diameter_adjust_lower = (int64_t)(eprom_watchpoint - radius) < 0
-                                      ? -(int64_t)(eprom_watchpoint - radius)
+  uint8_t diameter_adjust_lower = (int64_t)(eprom_watchobject - radius) < 0
+                                      ? -(int64_t)(eprom_watchobject - radius)
                                       : 0;
   uint8_t diameter_adjust_upper =
-      eprom_watchpoint + radius > (sram_size - 1)
-          ? (eprom_watchpoint + radius) - (sram_size - 1)
+      eprom_watchobject + radius > (sram_size - 1)
+          ? (eprom_watchobject + radius) - (sram_size - 1)
           : 0;
   print_array_with_idcs_from_to(
-      EPROM, max(0, eprom_watchpoint - radius - diameter_adjust_upper),
-      min(eprom_watchpoint + radius + diameter_adjust_lower,
+      EPROM, max(0, eprom_watchobject - radius - diameter_adjust_upper),
+      min(eprom_watchobject + radius + diameter_adjust_lower,
           num_instrs_start_prgrm - 1),
       true);
   print_array_with_idcs_from_to(
       EPROM,
       max(num_instrs_start_prgrm,
-          eprom_watchpoint - radius - diameter_adjust_upper),
-      min(eprom_watchpoint + radius + diameter_adjust_lower, EPROM_SIZE - 1),
+          eprom_watchobject - radius - diameter_adjust_upper),
+      min(eprom_watchobject + radius + diameter_adjust_lower, EPROM_SIZE - 1),
       false);
 }
 
-void print_sram_watchpoint(uint64_t sram_watchpoint_x, MemType mem_type) {
-  if (!(sram_watchpoint_x & 0x80000000)) {
+void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
+  if (!(sram_watchobject_x & 0x80000000)) {
     return;
   }
   if (better_debug_tui) {
     radius = (sram_c_box.height - 2) / 2;
   }
-  sram_watchpoint_x = sram_watchpoint_x & 0x7FFFFFFF;
+  sram_watchobject_x = sram_watchobject_x & 0x7FFFFFFF;
   uint8_t diameter_adjust_lower =
-      (int64_t)(sram_watchpoint_x - radius) < 0 && better_debug_tui
-          ? -(int64_t)(sram_watchpoint_x - radius)
+      (int64_t)(sram_watchobject_x - radius) < 0 && better_debug_tui
+          ? -(int64_t)(sram_watchobject_x - radius)
           : 0;
   uint8_t diameter_adjust_upper =
-      sram_watchpoint_x + radius > (sram_size - 1) && better_debug_tui
-          ? (sram_watchpoint_x + radius) - (sram_size - 1)
+      sram_watchobject_x + radius > (sram_size - 1) && better_debug_tui
+          ? (sram_watchobject_x + radius) - (sram_size - 1)
           : 0;
 
   if (ivt_max_idx != -1) {
     print_file_with_idcs(
         mem_type,
-        max(0, sram_watchpoint_x - radius - diameter_adjust_upper +
+        max(0, sram_watchobject_x - radius - diameter_adjust_upper +
                    (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
-        min(sram_watchpoint_x + radius + diameter_adjust_lower, ivt_max_idx),
+        min(sram_watchobject_x + radius + diameter_adjust_lower, ivt_max_idx),
         true, false);
   }
   print_file_with_idcs(
       mem_type,
       max(ivt_max_idx + 1,
-          sram_watchpoint_x - radius - diameter_adjust_upper +
+          sram_watchobject_x - radius - diameter_adjust_upper +
               (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
-      min(sram_watchpoint_x + radius + diameter_adjust_lower,
+      min(sram_watchobject_x + radius + diameter_adjust_lower,
           num_instrs_isrs + num_instrs_prgrm - 1),
       false, true);
   print_file_with_idcs(
       mem_type,
       max(num_instrs_isrs + num_instrs_prgrm,
-          sram_watchpoint_x - radius - diameter_adjust_upper +
+          sram_watchobject_x - radius - diameter_adjust_upper +
               (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
-      min(sram_watchpoint_x + radius + diameter_adjust_lower, sram_size - 1),
+      min(sram_watchobject_x + radius + diameter_adjust_lower, sram_size - 1),
       ds_vals_unsigned, false);
 }
 
@@ -457,13 +494,15 @@ void print_uart_meta_data() {
   print_formatted_to_stdout_or_box("\n", &uart_box);
 }
 
+char *watchobject_addr = NULL;
+
 void evaluate_keyboard_input(void) {
   char key;
   while (true) {
     if (!better_debug_tui) {
       printf("Enter a command letter and press enter: ");
     }
-    int ch = getchar();
+    char ch = getchar();
     if (ch == EOF) {
       continue;
     }
@@ -487,48 +526,63 @@ void evaluate_keyboard_input(void) {
       if (!better_debug_tui) {
         printf("\033[A\033[K");
       }
-      const uint8_t MAX_CHARS_BOX_IDENTIFIER = 2;
-      char *box_identifier = malloc(MAX_CHARS_BOX_IDENTIFIER + 1);
-      if (!ask_for_user_input(box_identifier, "Enter a box identifier:",
-                              MAX_CHARS_BOX_IDENTIFIER)) {
-        continue;
-      }
+
+      BoxIdentifier box_identifier = ask_for_user_decision(
+          box_entries, identifier_to_box, NUM_BOX_ENTRIES,
+          "Choose a box identifier:", MAX_CHARS_BOX_IDENTIFIER);
       if (!better_debug_tui) {
         printf("\033[A\033[K");
       }
-      const uint8_t MAX_CHARS_WATCHOBJECT = 20;
-      char *watchobject = malloc(MAX_CHARS_WATCHOBJECT + 1);
-      if (!ask_for_user_input(watchobject, "Enter a register or address:",
-                              MAX_CHARS_WATCHOBJECT)) {
-        continue;
+
+      Register watchobject = ask_for_user_decision(
+          register_entries, identifier_to_register_or_address,
+          NUM_REGISTER_ENTRIES,
+          "Enter a register or address:", MAX_CHARS_WATCHOBJECT);
+      if (watchobject == ADDRESS) {
+        watchobject_addr = malloc(MAX_CHARS_WATCHOBJECT + 1);
+        ask_for_user_input(watchobject_addr,
+                           "Enter an address:", MAX_CHARS_WATCHOBJECT);
       }
-      if (strcmp(box_identifier, "e") == 0) {
-        char *eprom_watchobject_tmp = eprom_watchobject;
+
+      switch (box_identifier) {
+      case EPROM_BOX: {
+        Register eprom_watchobject_tmp = eprom_watchobject;
         eprom_watchobject = watchobject;
         if (!draw_tui()) {
           eprom_watchobject = eprom_watchobject_tmp;
         }
-      } else if (strcmp(box_identifier, "sc") == 0) {
-        char *sram_watchobject_cs_tmp = sram_watchobject_cs;
+        break;
+      }
+      case SRAM_C_BOX: {
+        Register sram_watchobject_cs_tmp = sram_watchobject_cs;
         sram_watchobject_cs = watchobject;
         if (!draw_tui()) {
           sram_watchobject_cs = sram_watchobject_cs_tmp;
         }
-      } else if (strcmp(box_identifier, "sd") == 0) {
-        char *sram_watchobject_ds_tmp = sram_watchobject_ds;
+        break;
+      }
+      case SRAM_D_BOX: {
+        Register sram_watchobject_ds_tmp = sram_watchobject_ds;
         sram_watchobject_ds = watchobject;
         if (!draw_tui()) {
           sram_watchobject_ds = sram_watchobject_ds_tmp;
         }
-      } else if (strcmp(box_identifier, "ss") == 0) {
-        char *sram_watchobject_stack_tmp = sram_watchobject_stack;
+        break;
+      }
+      case SRAM_S_BOX: {
+        Register sram_watchobject_stack_tmp = sram_watchobject_stack;
         sram_watchobject_stack = watchobject;
         if (!draw_tui()) {
           sram_watchobject_stack = sram_watchobject_stack_tmp;
         }
-      } else {
-        display_input_error("Error: Invalid box identifier");
+        break;
       }
+      default:
+        display_input_error("Error: Invalid box identifier");
+        break;
+      }
+    } else if (key == 't') {
+      keypress_interrupt_trigger();
     } else if (key == 'D') {
 #ifdef __linux__
       __asm__("int3"); // ../.gdbinit
@@ -549,23 +603,23 @@ void evaluate_keyboard_input(void) {
 }
 
 void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
-                    char *format_str, char *watchpoint,
-                    uint64_t watchpoint_int) {
+                    char *format_str, const char *watchobject,
+                    uint64_t watchobject_int) {
   if (better_debug_tui) {
     if (simple_debug_tui) {
       box->title = malloc(strlen(format_str) + 1);
       strcpy(box->title, format_str);
     } else {
       uint8_t len_title =
-          snprintf(NULL, 0, format_str, watchpoint, watchpoint_int) + 1;
+          snprintf(NULL, 0, format_str, watchobject, watchobject_int) + 1;
       box->title = malloc(len_title);
-      snprintf(box->title, len_title, format_str, watchpoint, watchpoint_int);
+      snprintf(box->title, len_title, format_str, watchobject, watchobject_int);
     }
   } else {
     if (simple_debug_tui) {
       printf("%s\n", create_heading('-', format_str, LINEWIDTH));
     } else {
-      printf(format_str, watchpoint, watchpoint_int);
+      printf(format_str, watchobject, watchobject_int);
       printf("\n");
     }
   }
@@ -573,13 +627,13 @@ void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
 
 bool draw_tui(void) {
   uint64_t eprom_watchobject_int =
-      determine_watchpoint_value(eprom_watchobject);
+      determine_watchobject_value(eprom_watchobject);
   uint64_t sram_watchobject_cs_int =
-      determine_watchpoint_value(sram_watchobject_cs);
+      determine_watchobject_value(sram_watchobject_cs);
   uint64_t sram_watchobject_ds_int =
-      determine_watchpoint_value(sram_watchobject_ds);
+      determine_watchobject_value(sram_watchobject_ds);
   uint64_t sram_watchobject_stack_int =
-      determine_watchpoint_value(sram_watchobject_stack);
+      determine_watchobject_value(sram_watchobject_stack);
   if (eprom_watchobject_int == UINT64_MAX ||
       sram_watchobject_cs_int == UINT64_MAX ||
       sram_watchobject_ds_int == UINT64_MAX ||
@@ -588,7 +642,7 @@ bool draw_tui(void) {
   }
 
   if (better_debug_tui) {
-    for (int i = 0; i < num_boxes; i++) {
+    for (int i = 0; i < NUM_BOXES; i++) {
       wclear(boxes[i]->win);
       reset_box_line(boxes[i]);
       if (extended_features) {
@@ -605,9 +659,10 @@ bool draw_tui(void) {
   if (!better_debug_tui) {
     handle_heading(false, true, &eprom_box, "EPROM", "", 0);
   }
-  handle_heading(better_debug_tui, false, &eprom_box, "EPROM (e): %s (%lu)",
-                 eprom_watchobject, eprom_watchobject_int);
-  print_eprom_watchpoint(eprom_watchobject_int);
+  handle_heading(better_debug_tui, false, &eprom_box, "EPROM: %s (%lu)",
+                 register_or_address_to_identifier[eprom_watchobject],
+                 eprom_watchobject_int);
+  print_eprom_watchobject(eprom_watchobject_int);
 
   handle_heading(better_debug_tui, true, &uart_box, "UART", "", 0);
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
@@ -616,42 +671,40 @@ bool draw_tui(void) {
   // the user shouldn't have to calculate the absolute address for the sram
   sram_watchobject_cs_int =
       sram_watchobject_cs_int +
-      (isdigit(sram_watchobject_cs[0]) ? (uint32_t)(1 << 31) : 0);
+      ((sram_watchobject_cs == ADDRESS) ? (uint32_t)(1 << 31) : 0);
   sram_watchobject_ds_int =
       sram_watchobject_ds_int +
-      (uint64_t)(isdigit(sram_watchobject_ds[0]) ? (uint32_t)(1 << 31) : 0);
+      (uint64_t)((sram_watchobject_ds == ADDRESS) ? (uint32_t)(1 << 31) : 0);
   sram_watchobject_stack_int =
       sram_watchobject_stack_int +
-      (uint64_t)(isdigit(sram_watchobject_stack[0]) ? (uint32_t)(1 << 31) : 0);
+      (uint64_t)((sram_watchobject_stack == ADDRESS) ? (uint32_t)(1 << 31) : 0);
   if (!better_debug_tui) {
     handle_heading(false, true, &regs_box, "SRAM", "", 0);
   }
   handle_heading(better_debug_tui, false, &sram_c_box,
-                 "SRAM Codesegment (sc): %s (%lu)", sram_watchobject_cs,
+                 "SRAM Codesegment: %s (%lu)",
+                 register_or_address_to_identifier[sram_watchobject_cs],
                  sram_watchobject_cs_int);
-  print_sram_watchpoint(sram_watchobject_cs_int, SRAM_C);
+  print_sram_watchobject(sram_watchobject_cs_int, SRAM_C);
 
   handle_heading(better_debug_tui, false, &sram_d_box,
-                 "SRAM Datasegment (sd): %s (%lu)", sram_watchobject_ds,
+                 "SRAM Datasegment: %s (%lu)",
+                 register_or_address_to_identifier[sram_watchobject_ds],
                  sram_watchobject_ds_int);
-  print_sram_watchpoint(sram_watchobject_ds_int, SRAM_D);
+  print_sram_watchobject(sram_watchobject_ds_int, SRAM_D);
 
-  handle_heading(better_debug_tui, false, &sram_s_box,
-                 "SRAM Stack (ss): %s (%lu)", sram_watchobject_stack,
+  handle_heading(better_debug_tui, false, &sram_s_box, "SRAM Stack: %s (%lu)",
+                 register_or_address_to_identifier[sram_watchobject_stack],
                  sram_watchobject_stack_int);
-  print_sram_watchpoint(sram_watchobject_stack_int, SRAM_S);
+  print_sram_watchobject(sram_watchobject_stack_int, SRAM_S);
 
   if (better_debug_tui) {
     draw_boxes();
-
-    mvprintw(term_height - 1, 0,
-             "(n)ext instruction, (c)ontinue to breakpoint, (q)uit, (s)tep "
-             "into isr, (a)ssign watchpoint reg or addr");
-    refresh();
   } else {
     printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
-    printf("(n)ext instruction, (c)ontinue to breakpoint, (q)uit\n");
-    printf("(s)tep into isr, (a)ssign watchpoint reg or addr\n");
+    printf("(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, \n");
+    printf("(r)estart, (a)ssign watchobject reg or addr, \n");
+    printf("(t)rigger isr, (q)uit\n");
   }
 
   return true;

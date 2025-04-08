@@ -4,12 +4,14 @@
 #ifndef ASSEMBLE_H
 #define ASSEMBLE_H
 
-#define IMMEDIATE_MASK 0x3FFFFF   // 22 bits for immediate value
-#define TEN_BIT_MASK 0x3FF   // 22 bits for immediate value
+#define IMMEDIATE_MASK 0x3FFFFF // 22 bits for immediate value
+#define TEN_BIT_MASK 0x3FF      // 22 bits for immediate value
 /*#define ALL_BUT_IMMEDIATE_MASK 0xffc00000*/
 #define REGISTER_MASK 0x7
 
-typedef enum { PC, IN1, IN2, ACC, SP, BAF, CS, DS } Register;
+extern uint8_t isr_of_timer_interrupt;
+
+typedef enum { PC, IN1, IN2, ACC, SP, BAF, CS, DS, ADDRESS } Register;
 
 typedef enum {
   ADDI,   // 0b0000000
@@ -54,11 +56,9 @@ typedef enum {
   JUMP = 0b1111100,
 } Unique_Opcode;
 
-typedef enum {
-  IVTE = 0b10000000
-} Directive;
+typedef enum { IVTE = 0b10000000, IVTEDP } Directive;
 
-typedef enum { COMPUTE_M, LOAD_M, STORE_M, JUMP_M} mode;
+typedef enum { COMPUTE_M, LOAD_M, STORE_M, JUMP_M } mode;
 
 extern const char *register_code_to_name[];
 
@@ -76,7 +76,7 @@ typedef struct {
   char op[8];
   char opd1[9];
   char opd2[9];
-  char opd3[9];
+  char opd3[9]; // because len("-2097152") = 8 + null-terminator
 } String_Instruction;
 
 typedef struct {

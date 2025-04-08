@@ -3,10 +3,10 @@
 #include "../include/parse_args.h"
 #include "../include/parse_instrs.h"
 #include "../include/reti.h"
-#include "../include/utils.h"
 #include "../include/special_opts.h"
-#include "../include/uart.h"
 #include "../include/tui.h"
+#include "../include/uart.h"
+#include "../include/utils.h"
 #include <string.h>
 
 int main(int argc, char *argv[]) {
