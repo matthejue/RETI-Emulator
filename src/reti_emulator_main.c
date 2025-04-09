@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   }
 
   init_reti();
-  if (better_debug_tui) {
+  if (!legacy_debug_tui) {
     init_tui();
   }
 
