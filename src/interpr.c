@@ -332,6 +332,7 @@ void interpr_instr(Instruction *assembly_instr) {
       isr_active = false;
       step_into_activated = false;
     }
+    isr_finished = true;
     if (heap_size > 0) {
       struct prio_isr ret_val = handle_next_hardware_interrupt();
       if (ret_val.has_higher_prio) {
@@ -410,8 +411,8 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    if (debug_mode && breakpoint_encountered &&
-        !(isr_active && !step_into_activated)) {
+    if (debug_mode && breakpoint_encountered && isr_finished &&
+        (!isr_active || step_into_activated)) {
       update_term_and_box_sizes();
       draw_tui();
       evaluate_keyboard_input();

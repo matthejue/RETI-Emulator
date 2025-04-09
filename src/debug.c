@@ -55,6 +55,7 @@ const uint8_t NUM_REGISTER_ENTRIES =
     sizeof(register_entries) / sizeof(register_entries[0]);
 
 bool breakpoint_encountered = true;
+bool isr_finished = true;
 bool step_into_activated = false;
 bool isr_active = false;
 
@@ -509,13 +510,6 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'c') {
       breakpoint_encountered = false;
       return;
-    } else if (key == 's') {
-      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
-          INT) {
-        continue;
-      }
-      step_into_activated = true;
-      return;
     } else if (key == 'r') {
       write_array(regs, PC, 0, false);
       write_array(regs, IN1, 0, false);
@@ -526,6 +520,20 @@ void evaluate_keyboard_input(void) {
       write_array(regs, CS, 0, false);
       write_array(regs, DS, 0, false);
       draw_tui();
+    } else if (key == 's') {
+      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
+          INT) {
+        continue;
+      }
+      step_into_activated = true;
+      return;
+    } else if (key == 'f') {
+      if (isr_active) {
+        isr_finished = false;
+        return;
+      }
+    } else if (key == 't') {
+      keypress_interrupt_trigger();
     } else if (key == 'a') {
       if (legacy_debug_tui) {
         printf("\033[A\033[K");
@@ -595,8 +603,6 @@ void evaluate_keyboard_input(void) {
         display_input_error("Error: Invalid box identifier");
         break;
       }
-    } else if (key == 't') {
-      keypress_interrupt_trigger();
     } else if (key == 'D') {
 #ifdef __linux__
       __asm__("int3"); // ../.gdbinit
@@ -715,8 +721,8 @@ bool draw_tui(void) {
 
   if (legacy_debug_tui) {
     printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
-    printf("(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, \n");
-    printf("(f)inalize isr, (t)rigger isr, (r)estart, \n");
+    printf("(n)ext instruction, (c)ontinue to breakpoint, (r)estart, \n");
+    printf("(s)tep into isr, (f)inalize isr, (t)rigger isr, \n");
     printf("(a)ssign watchobject reg or addr, (q)uit\n");
   } else {
     draw_boxes();
