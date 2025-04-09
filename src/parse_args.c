@@ -146,9 +146,9 @@ void parse_args(uint8_t argc, char *argv[]) {
         fprintf(stderr, "Error: Invalid interrupt timer interval\n");
         exit(EXIT_FAILURE);
       }
-      if (tmp_val < 0 || tmp_val > UINT8_MAX) {
+      if (tmp_val < 0 || tmp_val > UINT32_MAX) {
         fprintf(stderr,
-                "Error: Max waiting instructions must be between 0 and 255\n");
+                "Error: Interrupt timer interval must be between 0 and 4294967296\n");
         exit(EXIT_FAILURE);
       }
       interrupt_timer_interval = tmp_val;

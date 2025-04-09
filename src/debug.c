@@ -37,10 +37,6 @@ const Menu_Entry identifier_to_box[] = {
     {"SD", SRAM_D_BOX},
     {"SS", SRAM_S_BOX},
 };
-// const Menu_Entry identifier_to_box[] = {
-//     {"R", REGS_BOX},    {"E", EPROM_BOX},   {"U", UART_BOX},
-//     {"SC", SRAM_C_BOX}, {"SD", SRAM_D_BOX}, {"SS", SRAM_S_BOX},
-// };
 
 const uint8_t NUM_BOX_ENTRIES = sizeof(box_entries) / sizeof(box_entries[0]);
 
@@ -69,7 +65,7 @@ const uint8_t LINEWIDTH = 54;
 Register eprom_watchobject = PC;
 Register sram_watchobject_cs = PC;
 Register sram_watchobject_ds = DS;
-Register sram_watchobject_stack = DS;
+Register sram_watchobject_stack = SP;
 
 Mnemonic_to_String opcode_to_mnemonic[] = {
     {ADDI, "ADDI"},     {SUBI, "SUBI"},       {MULTI, "MULTI"},
@@ -522,6 +518,16 @@ void evaluate_keyboard_input(void) {
       }
       step_into_activated = true;
       return;
+    } else if (key == 'r') {
+      write_array(regs, PC, 0, false);
+      write_array(regs, IN1, 0, false);
+      write_array(regs, IN2, 0, false);
+      write_array(regs, ACC, 0, false);
+      write_array(regs, SP, 0, false);
+      write_array(regs, BAF, 0, false);
+      write_array(regs, CS, 0, false);
+      write_array(regs, DS, 0, false);
+      draw_tui();
     } else if (key == 'a') {
       if (!better_debug_tui) {
         printf("\033[A\033[K");
@@ -534,6 +540,11 @@ void evaluate_keyboard_input(void) {
         printf("\033[A\033[K");
       }
 
+      if (box_identifier == CANCEL) {
+        draw_tui();
+        continue;
+      }
+
       Register watchobject = ask_for_user_decision(
           register_entries, identifier_to_register_or_address,
           NUM_REGISTER_ENTRIES,
@@ -542,6 +553,11 @@ void evaluate_keyboard_input(void) {
         watchobject_addr = malloc(MAX_CHARS_WATCHOBJECT + 1);
         ask_for_user_input(watchobject_addr,
                            "Enter an address:", MAX_CHARS_WATCHOBJECT);
+      }
+      
+      if (watchobject == CANCEL2) {
+        draw_tui();
+        continue;
       }
 
       switch (box_identifier) {
