@@ -13,16 +13,16 @@ Box uart_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_c_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_d_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
-Box info_box = {
-    "(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, (f)inalize "
-    "isr, (t)rigger isr, (r)estart, (a)ssign watchobject reg or addr, (q)uit",
-    0,
-    0,
-    0,
-    0,
-    1,
-    1,
-    NULL};
+Box info_box = {"(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
+                "(s)tep into isr, (f)inalize isr, (t)rigger isr, "
+                "(a)ssign watchobject reg or addr, (q)uit",
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                NULL};
 
 uint16_t term_width, term_height;
 
