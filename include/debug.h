@@ -19,7 +19,8 @@ typedef enum {
   UART_BOX,
   SRAM_C_BOX,
   SRAM_D_BOX,
-  SRAM_S_BOX
+  SRAM_S_BOX,
+  CANCEL = 0b11111111,
 } BoxIdentifier;
 
 extern char *watchobject_addr;

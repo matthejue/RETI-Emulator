@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint8_t isr_of_timer_interrupt;
+uint8_t isr_of_timer_interrupt = MAX_VAL_ISR; // unreachable value
 
 // TODO: wrong name
 const char *register_code_to_name[] = {
@@ -180,6 +180,13 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
     }
   } else {
     fprintf(stderr, "Error: Invalid opcode\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (isr_num == MAX_VAL_ISR) {
+    fprintf(stderr,
+            "Error: There can't be more than %d interrupt service routines\n",
+            MAX_VAL_ISR);
     exit(EXIT_FAILURE);
   }
 

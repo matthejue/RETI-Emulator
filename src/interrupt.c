@@ -2,6 +2,7 @@
 #include "../include/debug.h"
 #include "../include/interpr.h"
 #include "../include/interrupt_controller.h"
+#include "../include/parse_args.h"
 #include "../include/reti.h"
 #include <stdint.h>
 
@@ -21,7 +22,9 @@ void timer_interrupt_check() {
       is_hardware_interrupt = true;
       interrupt_timer_active = false;
       uint8_t isr = device_to_isr[INTERRUPT_TIMER - START_DEVICES];
-      draw_tui();
+      if (debug_mode) {
+        draw_tui();
+      }
       if (!isr_active || step_into_activated) {
         display_notification_box("Interrupt Timer",
                                  "Interrupt Timer triggered");

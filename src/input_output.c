@@ -2,6 +2,7 @@
 #include "../include/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"
+#include "../include/debug.h"
 #include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -101,6 +102,10 @@ uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
     case '\r':
       decision_made = true;
       break;
+    case 27:
+    case 'q':
+      delwin(menu_win);
+      return CANCEL;
     }
 
     if (decision_made) {
@@ -172,7 +177,8 @@ uint8_t ask_for_user_decision(const Menu_Entry menu_entries[],
           return identifier_to_obj[i].object;
         }
       }
-      display_error_notification("Error: Input is not the identifier of any register\n");
+      display_error_notification(
+          "Error: Input is not the identifier of any register\n");
     }
   }
 }

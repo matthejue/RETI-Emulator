@@ -10,8 +10,20 @@
 #define REGISTER_MASK 0x7
 
 extern uint8_t isr_of_timer_interrupt;
+#define MAX_VAL_ISR UINT8_MAX
 
-typedef enum { PC, IN1, IN2, ACC, SP, BAF, CS, DS, ADDRESS } Register;
+typedef enum {
+  PC,
+  IN1,
+  IN2,
+  ACC,
+  SP,
+  BAF,
+  CS,
+  DS,
+  ADDRESS,
+  CANCEL2 = 0b11111111
+} Register;
 
 typedef enum {
   ADDI,   // 0b0000000
