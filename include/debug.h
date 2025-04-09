@@ -35,7 +35,7 @@ extern const Menu_Entry register_entries[];
 
 extern const Menu_Entry identifier_to_register_or_address[];
 
-extern const char* register_or_address_to_identifier[];
+extern const char *register_or_address_to_identifier[];
 
 extern const uint8_t NUM_REGISTER_ENTRIES;
 
@@ -66,6 +66,8 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
-void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box, char *format_str, const char *watchobject, uint64_t watchobject_int) ;
+void handle_heading(bool legacy_debug_tui, bool simple_debug_tui, Box *box,
+                    char *format_str, const char *watchobject,
+                    uint64_t watchobject_int);
 
 #endif // DEBUG_H

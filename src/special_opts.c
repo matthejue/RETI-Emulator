@@ -155,7 +155,7 @@ void close_out_and_err_file() {
 
 void finalize() {
   fin_reti();
-  if (better_debug_tui) {
+  if (!legacy_debug_tui) {
     fin_tui();
   }
   if (test_mode) {

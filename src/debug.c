@@ -23,9 +23,7 @@
 #endif
 
 const Menu_Entry box_entries[] = {
-    // {"Registers", REGS_BOX},
     {"EPROM", EPROM_BOX},
-    // {"UART", UART_BOX},
     {"SRAM Codesegment", SRAM_C_BOX},
     {"SRAM Datasegment", SRAM_D_BOX},
     {"SRAM Stack", SRAM_S_BOX},
@@ -194,11 +192,11 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
 void print_formatted_to_stdout_or_box(const char *format, Box *box, ...) {
   va_list args;
   va_start(args, box);
-  if (better_debug_tui) {
+  if (legacy_debug_tui) {
+    vprintf(format, args);
+  } else {
     char *final_str = create_formatted_str(format, args);
     write_text_into_box(box, final_str);
-  } else {
-    vprintf(format, args);
   }
   va_end(args);
 }
@@ -250,7 +248,9 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
 
   char *reg_to_mem_pntr_str = reg_to_mem_pntr(idx, mem_type);
   Box *box;
-  if (better_debug_tui) {
+  if (legacy_debug_tui) {
+    box = NULL;
+  } else {
     switch (mem_type) {
     case REGS:
       box = &regs_box;
@@ -274,8 +274,6 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
       fprintf(stderr, "Error: Invalid memory type\n");
       exit(EXIT_FAILURE);
     }
-  } else {
-    box = NULL;
   }
 
   print_formatted_to_stdout_or_box("%s: %s%s\n", box, idx_str, mem_content_str,
@@ -379,7 +377,7 @@ void print_eprom_watchobject(uint64_t eprom_watchobject) {
   if (eprom_watchobject & 0xC0000000) {
     return;
   }
-  if (better_debug_tui) {
+  if (!legacy_debug_tui) {
     radius = (eprom_box.height - 2) / 2;
   }
   uint8_t diameter_adjust_lower = (int64_t)(eprom_watchobject - radius) < 0
@@ -406,16 +404,16 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
   if (!(sram_watchobject_x & 0x80000000)) {
     return;
   }
-  if (better_debug_tui) {
+  if (!legacy_debug_tui) {
     radius = (sram_c_box.height - 2) / 2;
   }
   sram_watchobject_x = sram_watchobject_x & 0x7FFFFFFF;
   uint8_t diameter_adjust_lower =
-      (int64_t)(sram_watchobject_x - radius) < 0 && better_debug_tui
+      (int64_t)(sram_watchobject_x - radius) < 0 && !legacy_debug_tui
           ? -(int64_t)(sram_watchobject_x - radius)
           : 0;
   uint8_t diameter_adjust_upper =
-      sram_watchobject_x + radius > (sram_size - 1) && better_debug_tui
+      sram_watchobject_x + radius > (sram_size - 1) && !legacy_debug_tui
           ? (sram_watchobject_x + radius) - (sram_size - 1)
           : 0;
 
@@ -423,7 +421,7 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
     print_file_with_idcs(
         mem_type,
         max(0, sram_watchobject_x - radius - diameter_adjust_upper +
-                   (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
+                   (term_height % 2 == 1 && !legacy_debug_tui ? 1 : 0)),
         min(sram_watchobject_x + radius + diameter_adjust_lower, ivt_max_idx),
         true, false);
   }
@@ -431,7 +429,7 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
       mem_type,
       max(ivt_max_idx + 1,
           sram_watchobject_x - radius - diameter_adjust_upper +
-              (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
+              (term_height % 2 == 1 && !legacy_debug_tui ? 1 : 0)),
       min(sram_watchobject_x + radius + diameter_adjust_lower,
           num_instrs_isrs + num_instrs_prgrm - 1),
       false, true);
@@ -439,7 +437,7 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
       mem_type,
       max(num_instrs_isrs + num_instrs_prgrm,
           sram_watchobject_x - radius - diameter_adjust_upper +
-              (term_height % 2 == 1 && better_debug_tui ? 1 : 0)),
+              (term_height % 2 == 1 && !legacy_debug_tui ? 1 : 0)),
       min(sram_watchobject_x + radius + diameter_adjust_lower, sram_size - 1),
       ds_vals_unsigned, false);
 }
@@ -495,14 +493,14 @@ char *watchobject_addr = NULL;
 void evaluate_keyboard_input(void) {
   char key;
   while (true) {
-    if (!better_debug_tui) {
+    if (legacy_debug_tui) {
       printf("Enter a command letter and press enter: ");
     }
     char ch = getchar();
     if (ch == EOF) {
       continue;
     }
-    if (!better_debug_tui) {
+    if (legacy_debug_tui) {
       clear_input_buffer();
     }
     key = (char)ch;
@@ -529,14 +527,14 @@ void evaluate_keyboard_input(void) {
       write_array(regs, DS, 0, false);
       draw_tui();
     } else if (key == 'a') {
-      if (!better_debug_tui) {
+      if (legacy_debug_tui) {
         printf("\033[A\033[K");
       }
 
       BoxIdentifier box_identifier = ask_for_user_decision(
           box_entries, identifier_to_box, NUM_BOX_ENTRIES,
           "Choose a box identifier:", MAX_CHARS_BOX_IDENTIFIER);
-      if (!better_debug_tui) {
+      if (legacy_debug_tui) {
         printf("\033[A\033[K");
       }
 
@@ -554,7 +552,7 @@ void evaluate_keyboard_input(void) {
         ask_for_user_input(watchobject_addr,
                            "Enter an address:", MAX_CHARS_WATCHOBJECT);
       }
-      
+
       if (watchobject == CANCEL2) {
         draw_tui();
         continue;
@@ -607,7 +605,7 @@ void evaluate_keyboard_input(void) {
       finalize();
       exit(EXIT_SUCCESS);
     } else {
-      if (!better_debug_tui) {
+      if (legacy_debug_tui) {
         display_error_notification("Error: Invalid command\n");
         if (key == '\n') {
           printf("\033[A\033[K");
@@ -618,10 +616,17 @@ void evaluate_keyboard_input(void) {
   }
 }
 
-void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
+void handle_heading(bool legacy_debug_tui, bool simple_debug_tui, Box *box,
                     char *format_str, const char *watchobject,
                     uint64_t watchobject_int) {
-  if (better_debug_tui) {
+  if (legacy_debug_tui) {
+    if (simple_debug_tui) {
+      printf("%s\n", create_heading('-', format_str, LINEWIDTH));
+    } else {
+      printf(format_str, watchobject, watchobject_int);
+      printf("\n");
+    }
+  } else {
     if (simple_debug_tui) {
       box->title = malloc(strlen(format_str) + 1);
       strcpy(box->title, format_str);
@@ -630,13 +635,6 @@ void handle_heading(bool better_debug_tui, bool simple_debug_tui, Box *box,
           snprintf(NULL, 0, format_str, watchobject, watchobject_int) + 1;
       box->title = malloc(len_title);
       snprintf(box->title, len_title, format_str, watchobject, watchobject_int);
-    }
-  } else {
-    if (simple_debug_tui) {
-      printf("%s\n", create_heading('-', format_str, LINEWIDTH));
-    } else {
-      printf(format_str, watchobject, watchobject_int);
-      printf("\n");
     }
   }
 }
@@ -657,7 +655,9 @@ bool draw_tui(void) {
     return false;
   }
 
-  if (better_debug_tui) {
+  if (legacy_debug_tui) {
+    clrscr();
+  } else {
     for (int i = 0; i < NUM_BOXES; i++) {
       wclear(boxes[i]->win);
       reset_box_line(boxes[i]);
@@ -665,22 +665,21 @@ bool draw_tui(void) {
         make_unneccessary_spaces_visible(boxes[i]);
       }
     }
-  } else {
-    clrscr();
   }
 
-  handle_heading(better_debug_tui, true, &regs_box, "Registers", "", 0);
+  handle_heading(legacy_debug_tui, true, &regs_box, "Registers", "", 0);
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
-  if (!better_debug_tui) {
+  if (legacy_debug_tui) {
     handle_heading(false, true, &eprom_box, "EPROM", "", 0);
   }
-  handle_heading(better_debug_tui, false, &eprom_box, "EPROM: %s (%lu)",
+
+  handle_heading(legacy_debug_tui, false, &eprom_box, "EPROM: %s (%lu)",
                  register_or_address_to_identifier[eprom_watchobject],
                  eprom_watchobject_int);
   print_eprom_watchobject(eprom_watchobject_int);
 
-  handle_heading(better_debug_tui, true, &uart_box, "UART", "", 0);
+  handle_heading(legacy_debug_tui, true, &uart_box, "UART", "", 0);
   print_array_with_idcs(UART, NUM_UART_ADDRESSES, false);
   print_uart_meta_data();
 
@@ -694,33 +693,33 @@ bool draw_tui(void) {
   sram_watchobject_stack_int =
       sram_watchobject_stack_int +
       (uint64_t)((sram_watchobject_stack == ADDRESS) ? (uint32_t)(1 << 31) : 0);
-  if (!better_debug_tui) {
+  if (legacy_debug_tui) {
     handle_heading(false, true, &regs_box, "SRAM", "", 0);
   }
-  handle_heading(better_debug_tui, false, &sram_c_box,
+  handle_heading(legacy_debug_tui, false, &sram_c_box,
                  "SRAM Codesegment: %s (%lu)",
                  register_or_address_to_identifier[sram_watchobject_cs],
                  sram_watchobject_cs_int);
   print_sram_watchobject(sram_watchobject_cs_int, SRAM_C);
 
-  handle_heading(better_debug_tui, false, &sram_d_box,
+  handle_heading(legacy_debug_tui, false, &sram_d_box,
                  "SRAM Datasegment: %s (%lu)",
                  register_or_address_to_identifier[sram_watchobject_ds],
                  sram_watchobject_ds_int);
   print_sram_watchobject(sram_watchobject_ds_int, SRAM_D);
 
-  handle_heading(better_debug_tui, false, &sram_s_box, "SRAM Stack: %s (%lu)",
+  handle_heading(legacy_debug_tui, false, &sram_s_box, "SRAM Stack: %s (%lu)",
                  register_or_address_to_identifier[sram_watchobject_stack],
                  sram_watchobject_stack_int);
   print_sram_watchobject(sram_watchobject_stack_int, SRAM_S);
 
-  if (better_debug_tui) {
-    draw_boxes();
-  } else {
+  if (legacy_debug_tui) {
     printf("%s\n", create_heading('=', "Possible actions", LINEWIDTH));
     printf("(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, \n");
-    printf("(r)estart, (a)ssign watchobject reg or addr, \n");
-    printf("(t)rigger isr, (q)uit\n");
+    printf("(f)inalize isr, (t)rigger isr, (r)estart, \n");
+    printf("(a)ssign watchobject reg or addr, (q)uit\n");
+  } else {
+    draw_boxes();
   }
 
   return true;

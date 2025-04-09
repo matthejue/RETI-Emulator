@@ -1,8 +1,8 @@
 #include "../include/input_output.h"
+#include "../include/debug.h"
 #include "../include/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"
-#include "../include/debug.h"
 #include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -154,10 +154,10 @@ void display_input_message(char *input, const char *message,
 }
 
 void ask_for_user_input(char *input, char *message, uint8_t max_num_digits) {
-  if (better_debug_tui) {
-    display_input_box(input, message, max_num_digits);
-  } else {
+  if (legacy_debug_tui) {
     display_input_message(input, message, max_num_digits);
+  } else {
+    display_input_box(input, message, max_num_digits);
   }
 }
 
@@ -165,9 +165,7 @@ uint8_t ask_for_user_decision(const Menu_Entry menu_entries[],
                               const Menu_Entry identifier_to_obj[],
                               uint8_t num_entries, char *message,
                               uint8_t max_num_digits) {
-  if (better_debug_tui) {
-    return display_popup_menu(menu_entries, num_entries);
-  } else {
+  if (legacy_debug_tui) {
     while (true) {
       char *identifier = malloc(MAX_CHARS_BOX_IDENTIFIER + 1);
       display_input_message(identifier, message, max_num_digits);
@@ -180,14 +178,16 @@ uint8_t ask_for_user_decision(const Menu_Entry menu_entries[],
       display_error_notification(
           "Error: Input is not the identifier of any register\n");
     }
+  } else {
+    return display_popup_menu(menu_entries, num_entries);
   }
 }
 
 void display_input_error(const char *message) {
-  if (better_debug_tui) {
-    display_notification_box("Error", message);
-  } else {
+  if (legacy_debug_tui) {
     display_error_notification(message);
+  } else {
+    display_notification_box("Error", message);
   }
 }
 

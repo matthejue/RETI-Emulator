@@ -3,9 +3,9 @@
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <ncurses.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdbool.h>
 
 Box regs_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box eprom_box = {"", 0, 0, 0, 0, 1, 1, NULL};
@@ -14,8 +14,8 @@ Box sram_c_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_d_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 Box info_box = {
-    "(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, "
-    "(r)estart, (a)ssign watchobject reg or addr, (t)rigger isr, (q)uit",
+    "(n)ext instruction, (c)ontinue to breakpoint, (s)tep into isr, (f)inalize "
+    "isr, (t)rigger isr, (r)estart, (a)ssign watchobject reg or addr, (q)uit",
     0,
     0,
     0,
