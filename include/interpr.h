@@ -1,4 +1,5 @@
 #include "../include/assemble.h"
+#include "../include/parse_args.h"
 
 #ifndef INTERPRET_H
 #define INTERPRET_H
@@ -8,6 +9,8 @@
 extern bool is_hardware_interrupt;
 
 extern uint8_t current_isr;
+
+#define visibility_condition debug_mode && breakpoint_encountered && isr_finished && (!isr_active || step_into_activated)
 
 void interpr_instr(Instruction *assembly_instr);
 void interpr_prgrm();

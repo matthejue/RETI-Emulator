@@ -172,7 +172,7 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
       isr_of_timer_interrupt = isr_num - 1;
       break;
     case KEYPRESS:
-      keypress_interrupt_active = true;
+      keypress_interrupt_activatable = true;
       break;
     default:
       fprintf(stderr, "Error: Invalid device\n");
