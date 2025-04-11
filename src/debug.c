@@ -1,5 +1,6 @@
 #include "../include/debug.h"
 #include "../include/assemble.h"
+#include "../include/interrupt.h"
 #include "../include/input_output.h"
 #include "../include/interrupt.h"
 #include "../include/parse_args.h"
@@ -519,6 +520,7 @@ void evaluate_keyboard_input(void) {
       write_array(regs, BAF, 0, false);
       write_array(regs, CS, 0, false);
       write_array(regs, DS, 0, false);
+      timer_cnt = 0;
       draw_tui();
     } else if (key == 's') {
       if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
@@ -533,7 +535,10 @@ void evaluate_keyboard_input(void) {
         return;
       }
     } else if (key == 't') {
-      keypress_interrupt_trigger();
+      bool res = keypress_interrupt_trigger();
+      if (res) {
+        return;
+      }
     } else if (key == 'a') {
       if (legacy_debug_tui) {
         printf("\033[A\033[K");

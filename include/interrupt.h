@@ -8,8 +8,14 @@ extern uint32_t interrupt_timer_interval;
 extern bool interrupt_timer_active;
 
 extern bool keypress_interrupt_active;
+extern bool keypress_interrupt_activatable;
+
+extern uint32_t timer_cnt;
+
+extern bool restore_isr_active;
+extern bool restore_step_into_activated;
 
 void timer_interrupt_check();
-void keypress_interrupt_trigger();
+bool keypress_interrupt_trigger();
 
 #endif // INTERRUPT_H

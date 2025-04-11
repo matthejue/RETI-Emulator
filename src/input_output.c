@@ -1,5 +1,6 @@
 #include "../include/input_output.h"
 #include "../include/debug.h"
+#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"
@@ -8,7 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void display_notification_box(const char *title, const char *message) {
+bool display_notification_box_with_action(const char *title,
+                                          const char *message, const char key,
+                                          void (*action)(void)) {
   const uint8_t LEN_ERROR = strlen(title);
   const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to continue");
   const uint8_t LEN_MESSAGE = strlen(message);
@@ -17,20 +20,42 @@ void display_notification_box(const char *title, const char *message) {
   uint16_t startx = (term_width - box_width) / 2;
   uint16_t starty = (term_height - box_height) / 2;
 
-  WINDOW *error_box = newwin(box_height, box_width, starty, startx);
-  box(error_box, 0, 0);
-  mvwprintw(error_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ", title);
-  mvwprintw(error_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
-  mvwprintw(error_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
+  WINDOW *notification_box = newwin(box_height, box_width, starty, startx);
+  box(notification_box, 0, 0);
+  mvwprintw(notification_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ",
+            title);
+  mvwprintw(notification_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
+  mvwprintw(notification_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
             "Press Enter to continue");
-  wrefresh(error_box);
+  wrefresh(notification_box);
+
+  bool should_cont = true;
   int ch;
-  while ((ch = wgetch(error_box)) != '\n' && ch != '\r') {
-    // Wait for Enter key (newline or carriage return)
+  if (action == NULL) {
+    while ((ch = wgetch(notification_box)) != '\n' &&
+           ch != '\r') { // Wait for Enter key (newline or carriage return)
+    }
+  } else {
+    while (true) {
+      ch = wgetch(notification_box);
+      if (ch == '\n' || ch == '\r') {
+        break;
+      } else if (ch == key) {
+        action();
+        should_cont = false;
+        break;
+      }
+    }
   }
 
-  delwin(error_box);
+  delwin(notification_box);
   draw_boxes();
+
+  return should_cont;
+}
+
+void display_notification_box(const char *title, const char *message) {
+  display_notification_box_with_action(title, message, '\0', NULL);
 }
 
 void display_input_box(char *input, const char *message,

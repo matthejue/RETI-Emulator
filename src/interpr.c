@@ -18,6 +18,11 @@ bool is_hardware_interrupt = false;
 
 uint8_t current_isr;
 
+void restore_state() {
+  isr_active = restore_isr_active;
+  step_into_activated = restore_step_into_activated;
+}
+
 void setup_interrupt(uint32_t ivt_table_addr) {
   write_array(regs, SP, read_array(regs, SP, false) - 1, false);
   write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
@@ -328,7 +333,12 @@ void interpr_instr(Instruction *assembly_instr) {
     break;
   case RTI:
     return_from_interrupt();
-    if (!is_hardware_interrupt) {
+    if (is_hardware_interrupt) {
+      keypress_interrupt_active = false;
+      stack_top--;
+      is_hardware_interrupt = false;
+      restore_state();
+    } else {
       isr_active = false;
       step_into_activated = false;
     }
@@ -338,10 +348,6 @@ void interpr_instr(Instruction *assembly_instr) {
       if (ret_val.has_higher_prio) {
         setup_interrupt(ret_val.isr);
       }
-    }
-    if (is_hardware_interrupt) {
-      stack_top--;
-      is_hardware_interrupt = false;
     }
     if (current_isr == isr_of_timer_interrupt) {
       interrupt_timer_active = true;
@@ -411,8 +417,7 @@ no_pc_increase:;
 
 void interpr_prgrm() {
   while (true) {
-    if (debug_mode && breakpoint_encountered && isr_finished &&
-        (!isr_active || step_into_activated)) {
+    if (visibility_condition) {
       update_term_and_box_sizes();
       draw_tui();
       evaluate_keyboard_input();
