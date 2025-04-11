@@ -54,6 +54,16 @@ void step_into_activation_and_draw_tui() { step_into_activated = true; }
 
 bool keypress_interrupt_trigger() {
   if (keypress_interrupt_active || !keypress_interrupt_activatable) {
+    if (keypress_interrupt_active) {
+      display_notification_box(
+          "Error",
+          "Interrupt can't be interrupted by Interrupt of same type");
+    }
+    if (!keypress_interrupt_activatable) {
+      display_notification_box(
+          "Error",
+          "Keyboard Interrupt has no assigned Interrupt Service Routine");
+    }
     return false;
   }
   bool should_cont = false;
@@ -63,9 +73,9 @@ bool keypress_interrupt_trigger() {
     save_state();
     uint8_t isr = device_to_isr[KEYPRESS - START_DEVICES];
     if (visibility_condition) {
-      should_cont = display_notification_box_with_action("Keyboard Interrupt",
-                                           "Press 's' to enter", 's',
-                                           step_into_activation_and_draw_tui);
+      should_cont = display_notification_box_with_action(
+          "Keyboard Interrupt", "Press 's' to enter", 's',
+          step_into_activation_and_draw_tui);
       isr_active = true;
     }
     write_array(regs, PC, read_array(regs, PC, false) - 1, false);
