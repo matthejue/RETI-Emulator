@@ -44,13 +44,6 @@ void timer_interrupt_check() {
         draw_tui();
       }
 
-      log_variable("variables.log", "debug_mode", debug_mode);
-      log_variable("variables.log", "breakpoint_encountered",
-                   breakpoint_encountered);
-      log_variable("variables.log", "isr_finished", isr_finished);
-      log_variable("variables.log", "isr_active", isr_active);
-      log_variable("variables.log", "step_into_activated", step_into_activated);
-
       if (visibility_condition) {
         display_notification_box_with_action(
             "Interrupt Timer", "Press 's' to enter", 's', step_into_deactivation, step_into_activation);
