@@ -2,6 +2,7 @@
 #include "../include/debug.h"
 #include "../include/interpr.h"
 #include "../include/interrupt_controller.h"
+#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include <stdint.h>
@@ -15,12 +16,16 @@ bool keypress_interrupt_activatable = false;
 
 bool restore_isr_active;
 bool restore_step_into_activated;
+bool restore_isr_finished;
+
+void step_into_deactivation() { step_into_activated = false; }
 
 void step_into_activation() { step_into_activated = true; }
 
 void save_state() {
   restore_isr_active = isr_active;
   restore_step_into_activated = step_into_activated;
+  restore_isr_finished = isr_finished;
 }
 
 void timer_interrupt_check() {
@@ -38,9 +43,17 @@ void timer_interrupt_check() {
       if (debug_mode) {
         draw_tui();
       }
+
+      log_variable("variables.log", "debug_mode", debug_mode);
+      log_variable("variables.log", "breakpoint_encountered",
+                   breakpoint_encountered);
+      log_variable("variables.log", "isr_finished", isr_finished);
+      log_variable("variables.log", "isr_active", isr_active);
+      log_variable("variables.log", "step_into_activated", step_into_activated);
+
       if (visibility_condition) {
         display_notification_box_with_action(
-            "Interrupt Timer", "Press 's' to enter", 's', step_into_activation);
+            "Interrupt Timer", "Press 's' to enter", 's', step_into_deactivation, step_into_activation);
         isr_active = true;
       }
       write_array(regs, PC, read_array(regs, PC, false) - 1, false);
@@ -50,14 +63,12 @@ void timer_interrupt_check() {
   }
 }
 
-void step_into_activation_and_draw_tui() { step_into_activated = true; }
-
 bool keypress_interrupt_trigger() {
   if (keypress_interrupt_active || !keypress_interrupt_activatable) {
     if (keypress_interrupt_active) {
-      display_notification_box(
-          "Error",
-          "Interrupt can't be interrupted by Interrupt of same type");
+      display_notification_box("Error",
+                               "Interrupt can't be interrupted by interrupt "
+                               "that was triggered by same signal");
     }
     if (!keypress_interrupt_activatable) {
       display_notification_box(
@@ -75,7 +86,8 @@ bool keypress_interrupt_trigger() {
     if (visibility_condition) {
       should_cont = display_notification_box_with_action(
           "Keyboard Interrupt", "Press 's' to enter", 's',
-          step_into_activation_and_draw_tui);
+          step_into_deactivation,
+          step_into_activation);
       isr_active = true;
     }
     write_array(regs, PC, read_array(regs, PC, false) - 1, false);

@@ -14,6 +14,7 @@ extern uint32_t timer_cnt;
 
 extern bool restore_isr_active;
 extern bool restore_step_into_activated;
+extern bool restore_isr_finished;
 
 void timer_interrupt_check();
 bool keypress_interrupt_trigger();
