@@ -21,6 +21,7 @@ uint8_t current_isr;
 void restore_state() {
   isr_active = restore_isr_active;
   step_into_activated = restore_step_into_activated;
+  isr_finished = restore_isr_finished;
 }
 
 void setup_interrupt(uint32_t ivt_table_addr) {
@@ -341,8 +342,8 @@ void interpr_instr(Instruction *assembly_instr) {
     } else {
       isr_active = false;
       step_into_activated = false;
+      isr_finished = true;
     }
-    isr_finished = true;
     if (heap_size > 0) {
       struct prio_isr ret_val = handle_next_hardware_interrupt();
       if (ret_val.has_higher_prio) {

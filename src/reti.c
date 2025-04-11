@@ -2,6 +2,7 @@
 #include "../include/assemble.h"
 #include "../include/debug.h"
 #include "../include/parse_args.h"
+#include "../include/uart.h"
 #include "../include/utils.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -9,7 +10,6 @@
 #include <string.h>
 
 uint32_t *regs, *eprom;
-uint8_t *uart;
 
 // FILE *sram, *hdd;
 FILE *sram;
@@ -28,10 +28,9 @@ void init_reti() {
   } else {
     eprom = NULL;
   }
-  uart = malloc(sizeof(uint32_t) * NUM_UART_ADDRESSES);
 
   memset(regs, 0, sizeof(uint32_t) * NUM_REGISTERS);
-  memset(uart, 0, sizeof(uint32_t) * NUM_UART_ADDRESSES);
+  init_uart();
 
   // TODO: Tobias: Die ganzen Speicher nicht mit 0 initialisiert
   char *file_path = proper_str_cat(peripherals_dir, "/sram.bin");
@@ -45,8 +44,6 @@ void init_reti() {
     fprintf(stderr, "Failed to open storage files\n");
     exit(EXIT_FAILURE);
   }
-
-  uart[2] = 0b00000011;
 }
 
 void load_adjusted_eprom_prgrm() {

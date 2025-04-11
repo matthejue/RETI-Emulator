@@ -1,6 +1,5 @@
 #include "../include/input_output.h"
 #include "../include/debug.h"
-#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"
@@ -9,9 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool display_notification_box_with_action(const char *title,
-                                          const char *message, const char key,
-                                          void (*action)(void)) {
+bool display_notification_box_with_action(const char *title, const char *message, const char key, void (*action)(void), void (*action2)(void)) {
   const uint8_t LEN_ERROR = strlen(title);
   const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to continue");
   const uint8_t LEN_MESSAGE = strlen(message);
@@ -39,9 +36,10 @@ bool display_notification_box_with_action(const char *title,
     while (true) {
       ch = wgetch(notification_box);
       if (ch == '\n' || ch == '\r') {
+        action();
         break;
       } else if (ch == key) {
-        action();
+        action2();
         should_cont = false;
         break;
       }
@@ -55,7 +53,7 @@ bool display_notification_box_with_action(const char *title,
 }
 
 void display_notification_box(const char *title, const char *message) {
-  display_notification_box_with_action(title, message, '\0', NULL);
+  display_notification_box_with_action(title, message, '\0', NULL, NULL);
 }
 
 void display_input_box(char *input, const char *message,

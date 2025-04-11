@@ -1,6 +1,5 @@
 #include "../include/debug.h"
 #include "../include/assemble.h"
-#include "../include/interrupt.h"
 #include "../include/input_output.h"
 #include "../include/interrupt.h"
 #include "../include/parse_args.h"
@@ -520,6 +519,9 @@ void evaluate_keyboard_input(void) {
       write_array(regs, BAF, 0, false);
       write_array(regs, CS, 0, false);
       write_array(regs, DS, 0, false);
+
+      reset_uart();
+
       timer_cnt = 0;
       draw_tui();
     } else if (key == 's') {
