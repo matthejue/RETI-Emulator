@@ -2,7 +2,6 @@
 #include "../include/debug.h"
 #include "../include/interpr.h"
 #include "../include/interrupt_controller.h"
-#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include <stdint.h>
@@ -46,7 +45,8 @@ void timer_interrupt_check() {
 
       if (visibility_condition) {
         display_notification_box_with_action(
-            "Interrupt Timer", "Press 's' to enter", 's', step_into_deactivation, step_into_activation);
+            "Interrupt Timer", "Press 's' to enter", 's',
+            step_into_deactivation, step_into_activation);
         isr_active = true;
       }
       write_array(regs, PC, read_array(regs, PC, false) - 1, false);
@@ -79,8 +79,7 @@ bool keypress_interrupt_trigger() {
     if (visibility_condition) {
       should_cont = display_notification_box_with_action(
           "Keyboard Interrupt", "Press 's' to enter", 's',
-          step_into_deactivation,
-          step_into_activation);
+          step_into_deactivation, step_into_activation);
       isr_active = true;
     }
     write_array(regs, PC, read_array(regs, PC, false) - 1, false);
@@ -88,6 +87,9 @@ bool keypress_interrupt_trigger() {
     if (step_into_activated) {
       draw_tui();
     }
+  } else {
+    display_notification_box("Error", "Keyboard interrupt has lower priority "
+                                      "than current hardware interrupt");
   }
   return should_cont;
 }

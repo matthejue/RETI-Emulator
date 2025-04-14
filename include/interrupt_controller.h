@@ -6,7 +6,14 @@
 
 #define START_DEVICES 0b1000
 
-typedef enum { INTERRUPT_TIMER = 0b1000, UART_RECIEVE, UART_SEND, KEYPRESS } Device;
+#define MAX_STACK_SIZE UINT8_MAX
+
+typedef enum {
+  INTERRUPT_TIMER = 0b1000,
+  UART_RECIEVE,
+  UART_SEND,
+  KEYPRESS
+} Device;
 
 #define NUM_DEVICES 4
 
@@ -17,13 +24,8 @@ extern int8_t stack_top;
 
 extern uint8_t isr_heap[];
 
-struct prio_isr {
-  bool has_higher_prio;
-  uint8_t isr;
-};
-
 void assign_isr_and_prio(Device device, uint8_t isr, uint8_t priority);
 bool handle_hardware_interrupt(uint8_t device);
-struct prio_isr handle_next_hardware_interrupt();
+uint8_t handle_next_hardware_interrupt();
 
 #endif // INTERRRUPT_CONTROLLER_H
