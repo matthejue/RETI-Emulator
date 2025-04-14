@@ -344,14 +344,15 @@ void interpr_instr(Instruction *assembly_instr) {
       step_into_activated = false;
       isr_finished = true;
     }
-    if (heap_size > 0) {
-      struct prio_isr ret_val = handle_next_hardware_interrupt();
-      if (ret_val.has_higher_prio) {
-        setup_interrupt(ret_val.isr);
-      }
-    }
     if (current_isr == isr_of_timer_interrupt) {
       interrupt_timer_active = true;
+    }
+    if (heap_size > 0) {
+      uint8_t isr_or_error = handle_next_hardware_interrupt();
+      if (isr_or_error != MAX_STACK_SIZE) {
+        setup_interrupt(isr_or_error);
+        goto no_pc_increase;
+      }
     }
     break;
   case JUMPGT:

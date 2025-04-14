@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <time.h>
 
-#define MAX_STACK_SIZE UINT8_MAX
-
 uint8_t device_to_isr[NUM_DEVICES];
 uint8_t *isr_to_prio = NULL;
 
@@ -39,8 +37,7 @@ bool handle_hardware_interrupt(uint8_t device) {
   return handle_interrupt(isr);
 }
 
-struct prio_isr handle_next_hardware_interrupt() {
+uint8_t handle_next_hardware_interrupt() {
   uint8_t isr = pop_highest_prio(isr_heap, isr_to_prio);
-  return (struct prio_isr){.has_higher_prio = handle_interrupt(isr),
-                           .isr = isr};
+  return handle_interrupt(isr) ? isr : MAX_STACK_SIZE;
 }
