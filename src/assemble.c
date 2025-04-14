@@ -12,6 +12,7 @@
 #include <string.h>
 
 uint8_t isr_of_timer_interrupt = MAX_VAL_ISR; // unreachable value
+uint8_t isr_of_keypress_interrupt = MAX_VAL_ISR;
 
 // TODO: wrong name
 const char *register_code_to_name[] = {
@@ -173,6 +174,7 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
       break;
     case KEYPRESS:
       keypress_interrupt_activatable = true;
+      isr_of_keypress_interrupt = isr_num - 1;
       break;
     default:
       fprintf(stderr, "Error: Invalid device\n");
