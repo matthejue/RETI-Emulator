@@ -351,6 +351,9 @@ void interpr_instr(Instruction *assembly_instr) {
       uint8_t isr_or_error = handle_next_hardware_interrupt();
       if (isr_or_error != MAX_STACK_SIZE) {
         setup_interrupt(isr_or_error);
+        if (isr_or_error == isr_of_keypress_interrupt) {
+          keypress_interrupt_active = true;
+        }
         goto no_pc_increase;
       }
     }
