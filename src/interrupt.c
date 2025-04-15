@@ -44,10 +44,10 @@ void timer_interrupt_check() {
       }
 
       if (visibility_condition) {
+        isr_active = true;
         display_notification_box_with_action(
             "Interrupt Timer", "Press 's' to enter", 's',
             step_into_deactivation, step_into_activation);
-        isr_active = true;
       }
       write_array(regs, PC, read_array(regs, PC, false) - 1, false);
       setup_interrupt(isr);

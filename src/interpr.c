@@ -5,9 +5,9 @@
 #include "../include/error.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
+#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
-#include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <ncurses.h>
@@ -351,6 +351,11 @@ void interpr_instr(Instruction *assembly_instr) {
       uint8_t isr_or_error = handle_next_hardware_interrupt();
       if (isr_or_error != MAX_STACK_SIZE) {
         setup_interrupt(isr_or_error);
+        isr_active = true;
+        display_notification_box_with_action(
+            "Interrupt Timer",
+            "Press 's' to enter next interrupt service routine", 's',
+            step_into_deactivation, step_into_activation);
         if (isr_or_error == isr_of_keypress_interrupt) {
           keypress_interrupt_active = true;
         }

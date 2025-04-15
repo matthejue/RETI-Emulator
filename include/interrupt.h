@@ -16,6 +16,9 @@ extern bool restore_isr_active;
 extern bool restore_step_into_activated;
 extern bool restore_isr_finished;
 
+void step_into_deactivation();
+void step_into_activation();
+
 void timer_interrupt_check();
 bool keypress_interrupt_trigger();
 
