@@ -1,6 +1,7 @@
 #include "../include/interrupt_controller.h"
 #include "../include/datastructures.h"
 #include "../include/interrupt.h"
+#include "../include/log.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

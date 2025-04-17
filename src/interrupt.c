@@ -34,7 +34,6 @@ void timer_interrupt_check() {
   timer_cnt++;
   if (timer_cnt == interrupt_timer_interval) {
     if (handle_hardware_interrupt(INTERRUPT_TIMER - START_DEVICES)) {
-      is_hardware_interrupt = true;
       interrupt_timer_active = false;
       save_state();
       uint8_t isr = device_to_isr[INTERRUPT_TIMER - START_DEVICES];
@@ -72,7 +71,6 @@ bool keypress_interrupt_trigger() {
   }
   bool should_cont = false;
   if (handle_hardware_interrupt(KEYPRESS - START_DEVICES)) {
-    is_hardware_interrupt = true;
     keypress_interrupt_active = true;
     save_state();
     uint8_t isr = device_to_isr[KEYPRESS - START_DEVICES];
@@ -88,7 +86,7 @@ bool keypress_interrupt_trigger() {
       draw_tui();
     }
   } else {
-    display_notification_box("Error", "Keyboard interrupt has lower priority "
+    display_notification_box("Error", "Keyboard Interrupt has lower priority "
                                       "than current hardware interrupt");
   }
   return should_cont;
