@@ -1,0 +1,27 @@
+digraph G {
+  ranksep=2; // Increase vertical spacing between ranks
+  nodesep=2; // Increase horizontal spacing between nodes
+  "Start" [shape=point]; // Mark the initial node as a point
+  "Start" -> "NB";
+
+  "NB" -> "SI" [label="INT_I | | isr_active=true; si_happened=true; setup_interrupt();"]
+  "NB" -> "SI" [label="STEP_INTO_ACTION | check_if_int_i() | step_into_activated=true; stepped_into_here=stack_top; isr_active=true; si_happened=true; setup_interrupt();"]
+  "NB" -> "HI" [label="INT | stack_top==-1 | isr_active=true; display_notification_box_with_action(); setup_interrupt();"]
+  "HI" -> "NB" [label="RTI | !si_happened && stack_top==0 && heap_size==0 | isr_active=false; stack_top--; return_from_interrupt(); finish_if_finished_here(); step_out_if_stepped_into_here();"]
+  "SI" -> "NB" [label="RTI | | isr_active=false; si_happened=false; return_from_interrupt(); finish_if_finished_here(); step_out_if_stepped_into_here();"]
+  "SI" -> "HI" [label="INT | stack_top==-1 | stack_top++; display_notification_box_with_action(); setup_interrupt();"]
+  "HI" -> "HI" [label="INT | check_prio_hi() | stack_top++; display_notification_box_with_action(); setup_interrupt();"]
+  "HI" -> "HI" [label="RTI | heap_size>1 && !check_prio_heap() | stack_top--; return_from_interrupt();finish_if_finished_here(); step_out_if_stepped_into_here();"]
+  "HI" -> "SI" [label="RTI | si_happened && stack_top==0 && heap_size==0 | stack_top--; return_from_interrupt(); finish_if_finished_here(); step_out_if_stepped_into_here();"]
+
+  "HI" -> "HI" [label="INT | !check_prio_hi() | heap_size++; insert_into_heap();"]
+  "HI" -> "HI" [label="RTI | heap_size>1 && check_prio_heap() | return_from_interrupt(); heap_size--; step_out_if_stepped_into_here(); handle_next_hi();"]
+  "HI" -> "HI" [label="FINALIZE | isr_finished && isr_active | finished_here=stack_top; isr_finished=false;"]
+
+  "HI" -> "SI" [label="RTI | si_happened && stack_top==-1 && heap_size==1 | heap_size--; return_from_interrupt(); finish_if_finished_here(); step_out_if_stepped_into_here();"]
+  "HI" -> "NB" [label="RTI | !si_happened && stack_top==-1 && heap_size==1 | isr_active=false; heap_size--; return_from_interrupt(); finish_if_finished_here(); step_out_if_stepped_into_here();"]
+"HI" -> "HI" [label="INT i | | no_si_inside_hi_error();"]
+}
+
+// "HI" -> "HI" [label="INT i | stack_top>-1 | si_happened_here(); setup_interrupt();"]
+// "HI" -> "HI" [label="RTI | check_if_si_happened_here() | return_from_interrupt()"]
