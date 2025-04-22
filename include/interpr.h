@@ -8,10 +8,13 @@
 
 extern uint8_t current_isr;
 
-#define visibility_condition debug_mode && breakpoint_encountered && isr_finished && (!isr_active || step_into_activated)
+#define visibility_condition                                                   \
+  debug_mode &&breakpoint_encountered &&isr_finished &&                        \
+      (!isr_active || step_into_activated)
 
 void interpr_instr(Instruction *assembly_instr);
 void interpr_prgrm();
-void setup_interrupt(uint32_t ivt_table_addr) ;
+void setup_interrupt(uint32_t ivt_table_addr);
+void return_from_interrupt();
 
 #endif // INTERPRET_H

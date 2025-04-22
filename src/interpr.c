@@ -29,7 +29,7 @@ void setup_interrupt(uint32_t ivt_table_addr) {
   write_array(regs, PC, read_storage_sram_constant_fill(ivt_table_addr), false);
 }
 
-static void return_from_interrupt() {
+void return_from_interrupt() {
   write_array(regs, PC, read_storage(read_array(regs, SP, false) + 1), false);
   write_array(regs, SP, read_array(regs, SP, false) + 1, false);
 }

@@ -11,3 +11,4 @@ sram.bin
 *.error
 *.cast
 test_results
+*.pdf

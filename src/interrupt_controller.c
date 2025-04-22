@@ -19,7 +19,13 @@ void assign_isr_and_prio(Device device, uint8_t isr, uint8_t priority) {
   isr_to_prio[isr] = priority;
 }
 
-static bool handle_interrupt(uint8_t isr) {
+bool check_prio_hi() {
+  if (stack_top == -1 || (prio > isr_priority_stack[stack_top] &&
+                          (uint8_t)stack_top < MAX_STACK_SIZE - 1)) {
+  }
+}
+
+bool handle_interrupt(uint8_t isr) {
   uint8_t prio = isr_to_prio[isr];
   if (stack_top == -1 || (prio > isr_priority_stack[stack_top] &&
                           (uint8_t)stack_top < MAX_STACK_SIZE - 1)) {
