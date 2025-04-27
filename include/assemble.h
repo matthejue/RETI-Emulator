@@ -12,7 +12,7 @@
 extern uint8_t isr_of_timer_interrupt;
 extern uint8_t isr_of_keypress_interrupt;
 
-#define MAX_VAL_ISR UINT8_MAX
+#define INVALID_ISR_NUM UINT8_MAX
 
 typedef enum {
   PC,
