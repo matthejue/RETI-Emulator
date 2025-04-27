@@ -13,14 +13,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-uint8_t current_isr;
-
-void restore_state() {
-  isr_active = restore_isr_active;
-  step_into_activated = restore_step_into_activated;
-  isr_finished = restore_isr_finished;
-}
-
 void setup_interrupt(uint32_t ivt_table_addr) {
   write_array(regs, SP, read_array(regs, SP, false) - 1, false);
   write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
@@ -325,7 +317,6 @@ void interpr_instr(Instruction *assembly_instr) {
     break;
   case INT:
     setup_interrupt(assembly_instr->opd1);
-    current_isr = assembly_instr->opd1;
     isr_active = true;
     goto no_pc_increase;
     break;
@@ -337,15 +328,11 @@ void interpr_instr(Instruction *assembly_instr) {
       if (stack_top == -1) {
         goto normal_finished;
       }
-      restore_state();
     } else {
     normal_finished:
       isr_active = false;
       step_into_activated = false;
       isr_finished = true;
-    }
-    if (current_isr == isr_of_timer_interrupt) {
-      interrupt_timer_active = true;
     }
     if (heap_size > 0) {
       uint8_t isr_or_no_next = handle_next_hardware_interrupt();
