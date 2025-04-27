@@ -611,8 +611,8 @@ void evaluate_keyboard_input(void) {
         break;
       }
     } else if (key == 'D') {
-#ifdef __linux__
-      __asm__("int3"); // ../.gdbinit
+#if defined(__linux__) && !defined(__ANDROID__) && defined(__x86_64__)
+    __asm__("int3");
 #endif
     } else if (key == 'q') {
       finalize();
