@@ -23,13 +23,13 @@ struct StateOutput {
   bool retbool2;
 };
 
-extern uint8_t finished_here;
+extern uint8_t started_finish_here;
 extern bool interrupt_timer_active;
 extern bool isr_active;
 extern bool isr_finished;
 extern int8_t stack_top;
 extern bool si_happened;
-extern bool step_into_activated;
+extern bool execute_every_step;
 extern uint8_t not_stepped_into_here;
 extern uint8_t heap_size;
 
@@ -38,15 +38,16 @@ extern uint8_t isr_priority_stack[];
 
 bool check_if_int_i(void);
 void check_prio_heap(void);
-void insert_into_heap(uint8_t isr) ;
+void insert_into_heap(uint8_t isr);
 bool check_prio_isr(uint8_t isr);
-void finish_if_finished_here(void);
+void again_exec_steps_if_finished_here(void);
 void handle_next_hi(void);
 void no_si_inside_hi_error(void);
 void return_from_interrupt(void);
 void setup_interrupt_for_hi(uint8_t isr, bool *should_cont);
 void si_happened_here(void);
-void step_out_if_stepped_into_here(void);
+void again_exec_steps_if_stopped_here(void);
+void stop_exec_every_step();
 
 void update_state(Event event);
 void update_state_with_io(Event event, struct StateInput *input,

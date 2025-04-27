@@ -9,6 +9,7 @@
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include "../include/interpr.h"
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdlib.h>
