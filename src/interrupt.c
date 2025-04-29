@@ -6,6 +6,7 @@
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include <stdint.h>
+#include <stdlib.h>
 
 uint32_t timer_cnt = 0;
 uint32_t interrupt_timer_interval = 100;
@@ -20,10 +21,13 @@ void timer_interrupt_check() {
   }
   timer_cnt++;
   if (timer_cnt == interrupt_timer_interval) {
-    bool *success = NULL;
+    bool *ignore = malloc(sizeof(bool));
+    bool *success = malloc(sizeof(bool));
     update_state_with_io(
-        HARDWARE_INTERRUPT, &(struct StateInput){.arg8 = device_to_isr[INTERRUPT_TIMER - START_DEVICES]},
-        &(struct StateOutput){.retbool1 = success, .retbool2 = NULL});
+        HARDWARE_INTERRUPT,
+        &(struct StateInput){
+            .arg8 = device_to_isr[INTERRUPT_TIMER - START_DEVICES]},
+        &(struct StateOutput){.retbool1 = success, .retbool2 = ignore});
     if (*success) {
       interrupt_timer_active = false;
       if (debug_mode) {
@@ -51,19 +55,20 @@ bool keypress_interrupt_trigger() {
     }
     return false;
   }
-  bool *success = NULL;
+  bool *should_cont = malloc(sizeof(bool));
+  bool *success = malloc(sizeof(bool));
   update_state_with_io(
-      HARDWARE_INTERRUPT, &(struct StateInput){.arg8 = isr},
-      &(struct StateOutput){.retbool1 = success, .retbool2 = NULL});
+      HARDWARE_INTERRUPT,
+      &(struct StateInput){.arg8 = device_to_isr[KEYPRESS - START_DEVICES]},
+      &(struct StateOutput){.retbool1 = success, .retbool2 = should_cont});
   if (*success) {
     keypress_interrupt_active = true;
     if (step_into_activated) {
       draw_tui();
     }
-    return true;
   } else {
     display_notification_box("Error", "Keypress Interrupt has lower priority "
                                       "than current hardware interrupt");
-    return false;
   }
+  return should_cont;
 }
