@@ -3,7 +3,6 @@
 
 #ifndef DATASTRUCTURES_H
 #define DATASTRUCTURES_H
-#define HEAP_SIZE UINT8_MAX
 
 void heapify_up(uint8_t idx, uint8_t heap[], uint8_t prio_map[]);
 

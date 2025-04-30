@@ -5,6 +5,7 @@
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
+#include "../include/statemachine.h"
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
@@ -55,9 +56,6 @@ const uint8_t NUM_REGISTER_ENTRIES =
     sizeof(register_entries) / sizeof(register_entries[0]);
 
 bool breakpoint_encountered = true;
-bool isr_finished = true;
-bool step_into_activated = false;
-bool isr_active = false;
 
 const uint8_t LINEWIDTH = 54;
 
@@ -525,20 +523,22 @@ void evaluate_keyboard_input(void) {
       timer_cnt = 0;
       draw_tui();
     } else if (key == 's') {
-      if (machine_to_assembly(read_storage(read_array(regs, PC, false)))->op !=
-          INT) {
-        continue;
-      }
-      step_into_activated = true;
-      return;
-    } else if (key == 'f') {
-      if (isr_active) {
-        isr_finished = false;
+      update_state(STEP_INTO_ACTION);
+      bool success = out.retbool1;
+      if (success) {
         return;
       }
+      continue;
+    } else if (key == 'f') {
+      update_state(FINALIZE);
+      bool success = out.retbool1;
+      if (success) {
+        return;
+      }
+      continue;
     } else if (key == 't') {
-      bool res = keypress_interrupt_trigger();
-      if (res) {
+      bool success = keypress_interrupt_trigger();
+      if (success) {
         return;
       }
     } else if (key == 'a') {

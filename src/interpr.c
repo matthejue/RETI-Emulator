@@ -3,13 +3,14 @@
 #include "../include/datastructures.h"
 #include "../include/debug.h"
 #include "../include/error.h"
+#include "../include/interpr.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include "../include/interpr.h"
+#include "../include/statemachine.h"
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -317,39 +318,11 @@ void interpr_instr(Instruction *assembly_instr) {
   case NOP:
     break;
   case INT:
-    setup_interrupt(assembly_instr->opd1);
-    isr_active = true;
+    in.arg8 = assembly_instr->opd1;
+    update_state(SOFTWARE_INTERRUPT);
     goto no_pc_increase;
-    break;
   case RTI:
-    return_from_interrupt();
-    if (stack_top > -1) { // means a hardware interupt is active
-      keypress_interrupt_active = false;
-      stack_top--;
-      if (stack_top == -1) {
-        goto normal_finished;
-      }
-    } else {
-    normal_finished:
-      isr_active = false;
-      step_into_activated = false;
-      isr_finished = true;
-    }
-    if (heap_size > 0) {
-      uint8_t isr_or_no_next = handle_next_hardware_interrupt();
-      if (isr_or_no_next != MAX_STACK_SIZE) {
-        setup_interrupt(isr_or_no_next);
-        isr_active = true;
-        display_notification_box_with_action(
-            "Interrupt Timer",
-            "Press 's' to enter next interrupt service routine", 's',
-            step_into_deactivation, step_into_activation);
-        if (isr_or_no_next == isr_of_keypress_interrupt) {
-          keypress_interrupt_active = true;
-        }
-        goto no_pc_increase;
-      }
-    }
+    update_state(RETURN_FROM_INTERRUPT);
     break;
   case JUMPGT:
     if ((int32_t)read_array(regs, ACC, false) > 0) {

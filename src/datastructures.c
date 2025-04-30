@@ -1,7 +1,6 @@
 #include "../include/datastructures.h"
+#include "../include/statemachine.h"
 #include <stdint.h>
-
-uint8_t heap_size = 0;
 
 void heapify_up(uint8_t idx, uint8_t heap[], uint8_t prio_map[]) {
   while (idx > 0) {

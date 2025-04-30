@@ -1,1 +1,1 @@
--E -v -d -m -r 2 -f /tmp -i ./run/isrs.reti -w 10 -I 10
+-E -v -d -m -r 2 -f /tmp -i ./run/isrs.reti -w 10 -I 1000
