@@ -201,7 +201,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case ADDM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) +
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                    (int32_t)read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -210,7 +210,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case SUBM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) -
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                    (int32_t)read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -219,14 +219,14 @@ void interpr_instr(Instruction *assembly_instr) {
   case MULTM:
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) *
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                    (int32_t)read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
     break;
   case DIVM:
-    if (read_storage_ds_fill(assembly_instr->opd2) == 0) {
+    if (read_storage_fill(assembly_instr->opd2) == 0) {
       char *addr_str = malloc(MAX_DIGITS_ADDR_DEC);
       sprintf(addr_str, "%d", assembly_instr->opd2);
       display_error_message(
@@ -237,7 +237,7 @@ void interpr_instr(Instruction *assembly_instr) {
     }
     write_array(regs, assembly_instr->opd1,
                 (int32_t)read_array(regs, assembly_instr->opd1, false) /
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2),
+                    (int32_t)read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -246,7 +246,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case MODM:
     write_array(regs, assembly_instr->opd1,
                 mod((int32_t)read_array(regs, assembly_instr->opd1, false),
-                    (int32_t)read_storage_ds_fill(assembly_instr->opd2)),
+                    (int32_t)read_storage_fill(assembly_instr->opd2)),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -255,7 +255,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case OPLUSM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) ^
-                    read_storage_ds_fill(assembly_instr->opd2),
+                    read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -264,7 +264,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case ORM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) |
-                    read_storage_ds_fill(assembly_instr->opd2),
+                    read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -273,7 +273,7 @@ void interpr_instr(Instruction *assembly_instr) {
   case ANDM:
     write_array(regs, assembly_instr->opd1,
                 read_array(regs, assembly_instr->opd1, false) &
-                    read_storage_ds_fill(assembly_instr->opd2),
+                    read_storage_fill(assembly_instr->opd2),
                 false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
@@ -281,7 +281,7 @@ void interpr_instr(Instruction *assembly_instr) {
     break;
   case LOAD:
     write_array(regs, assembly_instr->opd1,
-                read_storage_ds_fill(assembly_instr->opd2), false);
+                read_storage_fill(assembly_instr->opd2), false);
     if (assembly_instr->opd1 == PC) {
       goto no_pc_increase;
     }
