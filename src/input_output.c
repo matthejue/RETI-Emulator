@@ -28,7 +28,7 @@ bool display_notification_box_with_action(const char *title, const char *message
 
   bool should_cont = true;
   int ch;
-  if (action == NULL) {
+  if (action == NULL && action2 == NULL) {
     while ((ch = wgetch(notification_box)) != '\n' &&
            ch != '\r') { // Wait for Enter key (newline or carriage return)
     }
@@ -36,10 +36,14 @@ bool display_notification_box_with_action(const char *title, const char *message
     while (true) {
       ch = wgetch(notification_box);
       if (ch == '\n' || ch == '\r') {
-        action();
+        if (action != NULL) {
+          action();
+        }
         break;
       } else if (ch == key) {
-        action2();
+        if (action2 != NULL) {
+          action2();
+        }
         should_cont = false;
         break;
       }

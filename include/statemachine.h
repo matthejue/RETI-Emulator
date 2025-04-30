@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef enum { HI, NB, SI } State;
+typedef enum { NORMAL_OPERATION, INTERRUPT_HANDLING } State;
 
 typedef enum {
   FINALIZE,
@@ -19,26 +19,30 @@ typedef enum {
 struct StateInput {
   uint8_t arg8;
 };
+extern struct StateOutput out;
 
 struct StateOutput {
   bool retbool1;
   bool retbool2;
 };
+extern struct StateInput in;
 
-extern uint8_t started_finish_here;
-extern bool interrupt_timer_active;
-extern bool isr_active;
+#define MAX_VAL_ISR UINT8_MAX
+#define HEAP_SIZE UINT8_MAX
+
+extern bool si_happened;
+extern int8_t started_finish_here;
 extern bool isr_finished;
 extern int8_t stack_top;
-extern bool si_happened;
 extern bool execute_every_step;
 extern uint8_t not_stepped_into_here;
 extern uint8_t heap_size;
 extern uint8_t current_isr;
+extern bool step_into_activated;
 
 #define MAX_STACK_SIZE UINT8_MAX
 extern uint8_t isr_priority_stack[];
-extern uint8_t isr_heap[HEAP_SIZE];
+extern uint8_t isr_heap[];
 
 bool check_if_int_i(void);
 bool check_prio_heap(void);
@@ -46,7 +50,8 @@ void insert_into_heap(uint8_t isr);
 bool check_prio_isr(uint8_t isr);
 void again_exec_steps_if_finished_here(void);
 void handle_next_hi(void);
-void no_si_inside_hi_error(void);
+void error_no_si_inside_interrupt(void);
+void error_too_many_hardware_interrupts(void);
 void return_from_interrupt(void);
 bool setup_hardware_interrupt(uint8_t isr);
 void si_happened_here(void);
@@ -54,6 +59,4 @@ void again_exec_steps_if_stopped_here(void);
 void stop_exec_every_step();
 
 void update_state(Event event);
-void update_state_with_io(Event event, struct StateInput *input,
-                          struct StateOutput *output);
 #endif // STATEMACHINE_H

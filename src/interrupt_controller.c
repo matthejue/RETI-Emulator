@@ -10,8 +10,6 @@
 uint8_t device_to_isr[NUM_DEVICES];
 uint8_t *isr_to_prio = NULL;
 
-int8_t stack_top = -1;
-
 void assign_isr_and_prio(Device device, uint8_t isr, uint8_t priority) {
   device_to_isr[device - START_DEVICES] = isr;
   isr_to_prio[isr] = priority;

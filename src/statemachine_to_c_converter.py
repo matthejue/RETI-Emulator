@@ -37,22 +37,23 @@ def parse_dot_edge(line):
 def generate_state_machine_code(transitions, states):
     lines = []
     lines.append("void update_state(Event event) {")
-    lines.append("    update_state_with_io(event, NULL, NULL);")
-    lines.append("}\n")
-    lines.append("void update_state_with_io(Event event, struct StateInput* in, struct StateOutput* out) {")
     lines.append("    switch (current_state) {")
     for state in sorted(states):
         lines.append(f"        case {state}:")
+        first = True
         for trans in transitions.get(state, []):
+            prefix = "if" if first else "} else if"
+            first = False
             lines.append(f"            // {trans['src']} -> {trans['dst']} (event = {trans['event']} | {trans['condition']} | {' '.join(trans['actions'])})")
             cond = trans['condition'].strip()
             if cond and cond.lower() != "true":
-                lines.append(f"            if (event == {trans['event_enum']} && {cond}) {{")
+                lines.append(f"            {prefix} (event == {trans['event_enum']} && {cond}) {{")
             else:
-                lines.append(f"            if (event == {trans['event_enum']}) {{")
+                lines.append(f"            {prefix} (event == {trans['event_enum']}) {{")
             lines.append(f"                current_state = {trans['dst']};")
             for act in trans['actions']:
                 lines.append(f"                {act}")
+        if not first:
             lines.append("            }")
         lines.append("            break;\n")
     lines.append("    }")
@@ -106,7 +107,6 @@ def generate_header_if_missing(header_path, states, events, variables, functions
         lines.append(f"void {func}(void);")
 
     lines.append("\nvoid update_state(Event event);")
-    lines.append("void update_state_with_io(Event event, struct StateInput* in, struct StateOutput* out);")
     lines.append(f"#endif // {guard}\n")
 
     os.makedirs(os.path.dirname(header_path), exist_ok=True)
@@ -169,6 +169,342 @@ if __name__ == "__main__":
         print("Usage: python dot_to_c_converter.py <input.dot>")
         sys.exit(1)
     convert_dot_to_code(sys.argv[1])
+
+# import os
+# import re
+# import sys
+# from collections import defaultdict
+#
+# def sanitize_enum_name(name):
+#     return re.sub(r'[^A-Za-z0-9_]', '_', name.strip().upper())
+#
+# def extract_identifiers(expression):
+#     return set(re.findall(r'\b[a-zA-Z_]\w*\b', expression))
+#
+# def extract_functions(expression):
+#     return set(re.findall(r'\b([a-zA-Z_]\w*)\s*\(', expression))
+#
+# def parse_dot_edge(line):
+#     match = re.search(r'"([^"]+)"\s*->\s*"([^"]+)"\s*\[label="(.+?)"\]', line.strip())
+#     if not match:
+#         return None
+#     src, dst, label = match.groups()
+#     parts = [part.strip() for part in label.split('|')]
+#     event = parts[0] if len(parts) > 0 else "UNKNOWN_EVENT"
+#     condition = parts[1] if len(parts) > 1 else ""
+#     actions = parts[2] if len(parts) > 2 else ""
+#     action_lines = [act.strip() + ";" for act in actions.split(';') if act.strip()]
+#     return {
+#         "src": src,
+#         "dst": dst,
+#         "label": label,
+#         "event": event,
+#         "event_enum": sanitize_enum_name(event),
+#         "condition": condition,
+#         "actions": action_lines
+#     }
+#
+# def generate_state_machine_code(transitions, states):
+#     lines = []
+#     lines.append("void update_state(Event event) {")
+#     lines.append("    switch (current_state) {")
+#     for state in sorted(states):
+#         lines.append(f"        case {state}:")
+#         for trans in transitions.get(state, []):
+#             lines.append(f"            // {trans['src']} -> {trans['dst']} (event = {trans['event']} | {trans['condition']} | {' '.join(trans['actions'])})")
+#             cond = trans['condition'].strip()
+#             if cond and cond.lower() != "true":
+#                 lines.append(f"            if (event == {trans['event_enum']} && {cond}) {{")
+#             else:
+#                 lines.append(f"            if (event == {trans['event_enum']}) {{")
+#             lines.append(f"                current_state = {trans['dst']};")
+#             for act in trans['actions']:
+#                 lines.append(f"                {act}")
+#             lines.append("            }")
+#         lines.append("            break;\n")
+#     lines.append("    }")
+#     lines.append("}")
+#     return '\n'.join(lines)
+#
+# def overwrite_code_after_marker(file_path, marker, new_code):
+#     if os.path.exists(file_path):
+#         with open(file_path, 'r') as f:
+#             content = f.read()
+#         parts = content.split(marker)
+#         if len(parts) > 1:
+#             updated = parts[0] + marker + "\n" + new_code + "\n"
+#         else:
+#             updated = content + "\n" + marker + "\n" + new_code + "\n"
+#     else:
+#         updated = marker + "\n" + new_code + "\n"
+#     with open(file_path, 'w') as f:
+#         f.write(updated)
+#     print(f"\u2705 Generated .c code inserted into: {file_path}")
+#
+# def generate_header_if_missing(header_path, states, events, variables, functions):
+#     if os.path.exists(header_path):
+#         print(f"\u2139\ufe0f Header file already exists: {header_path}")
+#         return
+#
+#     guard = os.path.basename(header_path).replace('.', '_').upper()
+#     lines = [
+#         f"#ifndef {guard}",
+#         f"#define {guard}",
+#         "",
+#         "#include <stdbool.h>",
+#         "",
+#         "typedef enum {"
+#     ]
+#     lines += [f"    {s}," for s in sorted(states)]
+#     if lines[-1].endswith(','):
+#         lines[-1] = lines[-1][:-1]
+#     lines.append("} State;\n")
+#
+#     lines.append("typedef enum {")
+#     lines += [f"    {sanitize_enum_name(e)}," for e in sorted(events)]
+#     if lines[-1].endswith(','):
+#         lines[-1] = lines[-1][:-1]
+#     lines.append("} Event;\n")
+#
+#     for var in sorted(variables):
+#         lines.append(f"extern bool {var};")
+#
+#     for func in sorted(functions):
+#         lines.append(f"void {func}(void);")
+#
+#     lines.append("\nvoid update_state(Event event);")
+#     lines.append(f"#endif // {guard}\n")
+#
+#     os.makedirs(os.path.dirname(header_path), exist_ok=True)
+#     with open(header_path, 'w') as f:
+#         f.write("\n".join(lines))
+#     print(f"\u2705 Header file created: {header_path}")
+#
+# def convert_dot_to_code(dot_file):
+#     if not os.path.exists(dot_file):
+#         print(f"\u274c Error: '{dot_file}' not found.")
+#         sys.exit(1)
+#
+#     base = os.path.splitext(os.path.basename(dot_file))[0]
+#     c_path = base + ".c"
+#     h_path = f"../include/{base}.h"
+#     marker = "// Code generated from statemachine"
+#
+#     transitions = defaultdict(list)
+#     all_states = set()
+#     all_events = set()
+#     variables = set()
+#     functions = set()
+#
+#     inside_graph = False
+#
+#     with open(dot_file, 'r') as f:
+#         for line in f:
+#             if "digraph G {" in line:
+#                 inside_graph = True
+#                 continue
+#             if inside_graph and "}" in line:
+#                 inside_graph = False
+#                 continue
+#             if not inside_graph:
+#                 continue
+#             parsed = parse_dot_edge(line)
+#             if parsed:
+#                 transitions[parsed["src"]].append(parsed)
+#                 all_states.add(parsed["src"])
+#                 all_states.add(parsed["dst"])
+#                 all_events.add(parsed["event"])
+#
+#                 ids = extract_identifiers(parsed["condition"])
+#                 for act in parsed["actions"]:
+#                     ids |= extract_identifiers(act)
+#                 funcs = extract_functions(parsed["condition"])
+#                 for act in parsed["actions"]:
+#                     funcs |= extract_functions(act)
+#
+#                 ids -= {"true", "false"}
+#                 variables |= (ids - funcs)
+#                 functions |= funcs
+#
+#     c_code = generate_state_machine_code(transitions, all_states)
+#     overwrite_code_after_marker(c_path, marker, c_code)
+#     generate_header_if_missing(h_path, all_states, all_events, variables, functions)
+#
+# if __name__ == "__main__":
+#     if len(sys.argv) != 2:
+#         print("Usage: python dot_to_c_converter.py <input.dot>")
+#         sys.exit(1)
+#     convert_dot_to_code(sys.argv[1])
+
+# import os
+# import re
+# import sys
+# from collections import defaultdict
+#
+# def sanitize_enum_name(name):
+#     return re.sub(r'[^A-Za-z0-9_]', '_', name.strip().upper())
+#
+# def extract_identifiers(expression):
+#     return set(re.findall(r'\b[a-zA-Z_]\w*\b', expression))
+#
+# def extract_functions(expression):
+#     return set(re.findall(r'\b([a-zA-Z_]\w*)\s*\(', expression))
+#
+# def parse_dot_edge(line):
+#     match = re.search(r'"([^"]+)"\s*->\s*"([^"]+)"\s*\[label="(.+?)"\]', line.strip())
+#     if not match:
+#         return None
+#     src, dst, label = match.groups()
+#     parts = [part.strip() for part in label.split('|')]
+#     event = parts[0] if len(parts) > 0 else "UNKNOWN_EVENT"
+#     condition = parts[1] if len(parts) > 1 else ""
+#     actions = parts[2] if len(parts) > 2 else ""
+#     action_lines = [act.strip() + ";" for act in actions.split(';') if act.strip()]
+#     return {
+#         "src": src,
+#         "dst": dst,
+#         "label": label,
+#         "event": event,
+#         "event_enum": sanitize_enum_name(event),
+#         "condition": condition,
+#         "actions": action_lines
+#     }
+#
+# def generate_state_machine_code(transitions, states):
+#     lines = []
+#     lines.append("void update_state(Event event) {")
+#     lines.append("    update_state_with_io(event, NULL, NULL);")
+#     lines.append("}\n")
+#     lines.append("void update_state_with_io(Event event, struct StateInput* in, struct StateOutput* out) {")
+#     lines.append("    switch (current_state) {")
+#     for state in sorted(states):
+#         lines.append(f"        case {state}:")
+#         for trans in transitions.get(state, []):
+#             lines.append(f"            // {trans['src']} -> {trans['dst']} (event = {trans['event']} | {trans['condition']} | {' '.join(trans['actions'])})")
+#             cond = trans['condition'].strip()
+#             if cond and cond.lower() != "true":
+#                 lines.append(f"            if (event == {trans['event_enum']} && {cond}) {{")
+#             else:
+#                 lines.append(f"            if (event == {trans['event_enum']}) {{")
+#             lines.append(f"                current_state = {trans['dst']};")
+#             for act in trans['actions']:
+#                 lines.append(f"                {act}")
+#             lines.append("            }")
+#         lines.append("            break;\n")
+#     lines.append("    }")
+#     lines.append("}")
+#     return '\n'.join(lines)
+#
+# def overwrite_code_after_marker(file_path, marker, new_code):
+#     if os.path.exists(file_path):
+#         with open(file_path, 'r') as f:
+#             content = f.read()
+#         parts = content.split(marker)
+#         if len(parts) > 1:
+#             updated = parts[0] + marker + "\n" + new_code + "\n"
+#         else:
+#             updated = content + "\n" + marker + "\n" + new_code + "\n"
+#     else:
+#         updated = marker + "\n" + new_code + "\n"
+#     with open(file_path, 'w') as f:
+#         f.write(updated)
+#     print(f"\u2705 Generated .c code inserted into: {file_path}")
+#
+# def generate_header_if_missing(header_path, states, events, variables, functions):
+#     if os.path.exists(header_path):
+#         print(f"\u2139\ufe0f Header file already exists: {header_path}")
+#         return
+#
+#     guard = os.path.basename(header_path).replace('.', '_').upper()
+#     lines = [
+#         f"#ifndef {guard}",
+#         f"#define {guard}",
+#         "",
+#         "#include <stdbool.h>",
+#         "",
+#         "typedef enum {"
+#     ]
+#     lines += [f"    {s}," for s in sorted(states)]
+#     if lines[-1].endswith(','):
+#         lines[-1] = lines[-1][:-1]
+#     lines.append("} State;\n")
+#
+#     lines.append("typedef enum {")
+#     lines += [f"    {sanitize_enum_name(e)}," for e in sorted(events)]
+#     if lines[-1].endswith(','):
+#         lines[-1] = lines[-1][:-1]
+#     lines.append("} Event;\n")
+#
+#     for var in sorted(variables):
+#         lines.append(f"extern bool {var};")
+#
+#     for func in sorted(functions):
+#         lines.append(f"void {func}(void);")
+#
+#     lines.append("\nvoid update_state(Event event);")
+#     lines.append("void update_state_with_io(Event event, struct StateInput* in, struct StateOutput* out);")
+#     lines.append(f"#endif // {guard}\n")
+#
+#     os.makedirs(os.path.dirname(header_path), exist_ok=True)
+#     with open(header_path, 'w') as f:
+#         f.write("\n".join(lines))
+#     print(f"\u2705 Header file created: {header_path}")
+#
+# def convert_dot_to_code(dot_file):
+#     if not os.path.exists(dot_file):
+#         print(f"\u274c Error: '{dot_file}' not found.")
+#         sys.exit(1)
+#
+#     base = os.path.splitext(os.path.basename(dot_file))[0]
+#     c_path = base + ".c"
+#     h_path = f"../include/{base}.h"
+#     marker = "// Code generated from statemachine"
+#
+#     transitions = defaultdict(list)
+#     all_states = set()
+#     all_events = set()
+#     variables = set()
+#     functions = set()
+#
+#     inside_graph = False
+#
+#     with open(dot_file, 'r') as f:
+#         for line in f:
+#             if "digraph G {" in line:
+#                 inside_graph = True
+#                 continue
+#             if inside_graph and "}" in line:
+#                 inside_graph = False
+#                 continue
+#             if not inside_graph:
+#                 continue
+#             parsed = parse_dot_edge(line)
+#             if parsed:
+#                 transitions[parsed["src"]].append(parsed)
+#                 all_states.add(parsed["src"])
+#                 all_states.add(parsed["dst"])
+#                 all_events.add(parsed["event"])
+#
+#                 ids = extract_identifiers(parsed["condition"])
+#                 for act in parsed["actions"]:
+#                     ids |= extract_identifiers(act)
+#                 funcs = extract_functions(parsed["condition"])
+#                 for act in parsed["actions"]:
+#                     funcs |= extract_functions(act)
+#
+#                 ids -= {"true", "false"}
+#                 variables |= (ids - funcs)
+#                 functions |= funcs
+#
+#     c_code = generate_state_machine_code(transitions, all_states)
+#     overwrite_code_after_marker(c_path, marker, c_code)
+#     generate_header_if_missing(h_path, all_states, all_events, variables, functions)
+#
+# if __name__ == "__main__":
+#     if len(sys.argv) != 2:
+#         print("Usage: python dot_to_c_converter.py <input.dot>")
+#         sys.exit(1)
+#     convert_dot_to_code(sys.argv[1])
 
 # import os
 # import re
