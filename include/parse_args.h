@@ -17,6 +17,7 @@ extern uint8_t max_waiting_instrs;
 extern bool verbose;
 extern bool legacy_debug_tui;
 extern bool ds_vals_unsigned;
+extern bool ds_address_extension;
 
 extern char *peripherals_dir;
 extern char *eprom_prgrm_path;

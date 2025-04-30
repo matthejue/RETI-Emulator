@@ -21,6 +21,7 @@ uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool legacy_debug_tui = false;
 bool ds_vals_unsigned = false;
+bool ds_address_extension = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -30,7 +31,7 @@ char *isrs_prgrm_path = "";
 void print_help(char *bin_name) {
   fprintf(
       stderr,
-      "Usage: %s -r ram_size -p page_size -d (daemon mode) "
+      "Usage: %s -r ram_size -p page_size -d (debug mode) -D (ds address extension)"
       "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata) -v (verbose) "
       "-b (binary mode) -E (extended features) -a (all) -l (legacy debug TUI) "
@@ -42,7 +43,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEaulI:")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdDvtmbEaulI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -81,6 +82,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       break;
     case 'd':
       debug_mode = true;
+      break;
+    case 'D':
+      ds_address_extension = true;
       break;
     case 'r':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -174,6 +178,7 @@ void print_args() {
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
   printf("Interrupt timer interval: %u\n", interrupt_timer_interval);
   printf("Debug mode: %s\n", debug_mode ? "true" : "false");
+  printf("DS address extension: %s\n", ds_address_extension ? "true" : "false");
   printf("Read metadata: %s\n", read_metadata ? "true" : "false");
   printf("Test mode: %s\n", test_mode ? "true" : "false");
   printf("Binary mode: %s\n", binary_mode ? "true" : "false");

@@ -59,8 +59,8 @@ void load_adjusted_eprom_prgrm() {
   str_instr = (String_Instruction){
       .op = "MULTI", .opd1 = "SP", .opd2 = "1024", .opd3 = ""};
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
-  str_instr = (String_Instruction){
-      .op = "ORI", .opd1 = "SP", .opd2 = "", .opd3 = ""};
+  str_instr =
+      (String_Instruction){.op = "ORI", .opd1 = "SP", .opd2 = "", .opd3 = ""};
   strcpy(str_instr.opd2, mem_value_to_str(num_lower, true));
   write_array(eprom, i++, assembly_to_machine(&str_instr), false);
 
@@ -123,7 +123,8 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
     if (!(uart[2] & 0b00000010) && addr == 1) {
       fprintf(stderr, "Warning: No new data in the receive register\n");
     } else if (addr == 0) {
-      fprintf(stderr, "Warning: Reading from the send register of the UART makes no sense\n");
+      fprintf(stderr, "Warning: Reading from the send register of the UART "
+                      "makes no sense\n");
     }
     // uart[2] = uart[2] & 0b11111101; has to be done by the programmer
     return ((uint8_t *)stor)[addr];
@@ -140,9 +141,11 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
     } else if (!(uart[2] & 0b00000001) && addr == 2 && (buffer & 0b00000001)) {
       fprintf(stderr, "Warning: Only the UART should allow sending again\n");
     } else if (!(uart[2] & 0b00000010) && addr == 2 && (buffer & 0b00000010)) {
-      fprintf(stderr, "Warning: Only the UART itself should tell that it received something\n");
+      fprintf(stderr, "Warning: Only the UART itself should tell that it "
+                      "received something\n");
     } else if (addr == 1) {
-      fprintf(stderr, "Warning: Writing to the receive register of the UART makes no sense\n");
+      fprintf(stderr, "Warning: Writing to the receive register of the UART "
+                      "makes no sense\n");
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
   } else {
@@ -164,8 +167,12 @@ void write_file(FILE *dev, uint64_t addr, uint32_t buffer) {
   fflush(dev);
 }
 
-uint32_t read_storage_ds_fill(uint32_t addr) {
-  addr = addr | (read_array(regs, DS, false) & 0xffc00000);
+uint32_t read_storage_fill(uint32_t addr) {
+  if (ds_address_extension) {
+    addr = addr | (read_array(regs, DS, false) & 0xffc00000);
+  } else {
+    addr = addr + read_array(regs, DS, false);
+  }
   return read_storage(addr);
 }
 
