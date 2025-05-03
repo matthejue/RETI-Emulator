@@ -7,9 +7,12 @@
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include "../include/debug.h"
 #include <string.h>
 
 int main(int argc, char *argv[]) {
+  gargv = argv;
+
   parse_args(argc, argv);
   if (verbose) {
     print_args();

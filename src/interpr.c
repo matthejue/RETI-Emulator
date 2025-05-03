@@ -8,9 +8,9 @@
 #include "../include/interrupt_controller.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
+#include "../include/statemachine.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include "../include/statemachine.h"
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -323,6 +323,9 @@ void interpr_instr(Instruction *assembly_instr) {
     goto no_pc_increase;
   case RTI:
     update_state(RETURN_FROM_INTERRUPT);
+    if (keypress_activated_here == stack_top) {
+      keypress_interrupt_active = false;
+    }
     break;
   case JUMPGT:
     if ((int32_t)read_array(regs, ACC, false) > 0) {

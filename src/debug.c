@@ -9,6 +9,7 @@
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
+#include "../include/log.h"
 #include <limits.h>
 #include <ncurses.h>
 #include <stdbool.h>
@@ -16,6 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+char **gargv;
 
 #ifdef _WIN32
 #define clrscr() system("cls")
@@ -509,19 +513,7 @@ void evaluate_keyboard_input(void) {
       breakpoint_encountered = false;
       return;
     } else if (key == 'r') {
-      write_array(regs, PC, 0, false);
-      write_array(regs, IN1, 0, false);
-      write_array(regs, IN2, 0, false);
-      write_array(regs, ACC, 0, false);
-      write_array(regs, SP, 0, false);
-      write_array(regs, BAF, 0, false);
-      write_array(regs, CS, 0, false);
-      write_array(regs, DS, 0, false);
-
-      reset_uart();
-
-      timer_cnt = 0;
-      draw_tui();
+      execv(gargv[0], gargv);
     } else if (key == 's') {
       update_state(STEP_INTO_ACTION);
       bool success = out.retbool1;
@@ -611,9 +603,7 @@ void evaluate_keyboard_input(void) {
         break;
       }
     } else if (key == 'D') {
-#ifdef __linux__
-      __asm__("int3"); // ../.gdbinit
-#endif
+      debug_activated = !debug_activated;
     } else if (key == 'q') {
       finalize();
       exit(EXIT_SUCCESS);
