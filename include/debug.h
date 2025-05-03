@@ -3,6 +3,8 @@
 #include "../include/tui.h"
 #include <stdio.h>
 
+extern char **gargv;
+
 #ifndef DEBUG_H
 #define DEBUG_H
 

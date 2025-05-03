@@ -9,10 +9,11 @@
 #include <stdlib.h>
 
 uint32_t timer_cnt = 0;
-uint32_t interrupt_timer_interval = 100;
+uint32_t interrupt_timer_interval = 1000;
 bool interrupt_timer_active = false;
 
 bool keypress_interrupt_active = false;
+uint8_t keypress_activated_here = MAX_STACK_SIZE;
 bool keypress_interrupt_activatable = false;
 
 void timer_interrupt_check() {
@@ -57,7 +58,8 @@ bool keypress_interrupt_trigger() {
   bool should_cont = out.retbool2;
   if (success) {
     keypress_interrupt_active = true;
-    if (step_into_activated) {
+    keypress_activated_here = stack_top;
+    if (execute_every_step) {
       draw_tui();
     }
   } else {

@@ -32,7 +32,6 @@ extern uint8_t *uart;
 void uart_send();
 void uart_receive();
 uint32_t get_user_input();
-void reset_uart();
 void init_uart() ;
 
 #endif // UART_H

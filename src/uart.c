@@ -2,6 +2,7 @@
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
+#include "../include/statemachine.h"
 #include "../include/utils.h"
 #include <limits.h>
 #include <stdint.h>
@@ -41,33 +42,6 @@ void init_uart() {
   uart = malloc(sizeof(uint32_t) * NUM_UART_ADDRESSES);
   memset(uart, 0, sizeof(uint8_t) * NUM_UART_ADDRESSES);
   uart[2] = 0b00000011;
-}
-
-void reset_uart() {
-  uart[0] = 0;
-  uart[1] = 0;
-  uart[2] = 0b00000011;
-  remaining_bytes = 0;
-  num_bytes = 0;
-  send_idx = 0;
-
-  uart_input = NULL;
-  input_len = 0;
-  input_idx = 0;
-
-  received_num_part = '\0';
-  received_num_idx = -1;
-
-  sending_waiting_time = 0;
-  receiving_waiting_time = 0;
-
-  sending_finished = false;
-  receiving_finished = false;
-
-  init_finished = false;
-
-  all_send_data = NULL;
-  current_send_data = NULL;
 }
 
 void uart_send() {
