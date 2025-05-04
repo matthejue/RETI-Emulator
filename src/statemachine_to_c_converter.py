@@ -37,6 +37,7 @@ def parse_dot_edge(line):
 def generate_state_machine_code(transitions, states):
     lines = []
     lines.append("void update_state(Event event) {")
+    lines.append("    // debug();")
     lines.append("    switch (current_state) {")
     for state in sorted(states):
         lines.append(f"        case {state}:")

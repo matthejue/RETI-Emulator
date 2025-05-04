@@ -43,7 +43,7 @@ extern bool step_into_activated;
 extern bool si_happened;
 
 #define MAX_STACK_SIZE UINT8_MAX
-extern uint8_t isr_priority_stack[];
+extern uint8_t isr_stack[];
 extern uint8_t isr_heap[];
 
 bool check_if_int_i(void);
