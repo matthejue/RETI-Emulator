@@ -11,13 +11,13 @@ digraph G {
   "INTERRUPT_HANDLING" -> "INTERRUPT_HANDLING" [label="FINALIZE | isr_finished | started_finish_here=stack_top; isr_finished=false;"]
 
 
-  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | si_happened && stack_top==-1 && heap_size==0 | si_happened=false; return_from_interrupt(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here();"]
+  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | si_happened && stack_top==-1 && heap_size==0 | si_happened=false; return_from_interrupt(); set_keypress_interrupt_inactive(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here();"]
 
-  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | !si_happened && stack_top==0 && heap_size==0 | return_from_interrupt(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here(); stack_top--; "]
-  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | !si_happened && stack_top==-1 && heap_size==0 | heap_size--; return_from_interrupt(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here();"]
+  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | !si_happened && stack_top==0 && heap_size==0 | return_from_interrupt(); set_keypress_interrupt_inactive(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here(); stack_top--; current_isr=MAX_VAL_ISR;"]
+  "INTERRUPT_HANDLING" -> "NORMAL_OPERATION" [label="RETURN_FROM_INTERRUPT | !si_happened && stack_top==-1 && heap_size==0 | heap_size--; return_from_interrupt();  set_keypress_interrupt_inactive(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here(); current_isr=MAX_VAL_ISR;"]
 
-  "INTERRUPT_HANDLING" -> "INTERRUPT_HANDLING" [label="RETURN_FROM_INTERRUPT | heap_size>0 && check_prio_heap() | return_from_interrupt(); heap_size--; check_reactivation_interrupt_timer(); again_exec_steps_if_stopped_here(); handle_next_hi();"]
-  "INTERRUPT_HANDLING" -> "INTERRUPT_HANDLING" [label="RETURN_FROM_INTERRUPT | heap_size>0 && !check_prio_heap() | return_from_interrupt(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here(); stack_top--;"]
+  "INTERRUPT_HANDLING" -> "INTERRUPT_HANDLING" [label="RETURN_FROM_INTERRUPT | heap_size>0 && check_prio_heap() | return_from_interrupt(); heap_size--; set_keypress_interrupt_inactive(); check_reactivation_interrupt_timer(); again_exec_steps_if_stopped_here(); handle_next_hi();"]
+  "INTERRUPT_HANDLING" -> "INTERRUPT_HANDLING" [label="RETURN_FROM_INTERRUPT | heap_size>0 && !check_prio_heap() | return_from_interrupt(); set_keypress_interrupt_inactive(); check_reactivation_interrupt_timer(); again_exec_steps_if_finished_here(); again_exec_steps_if_stopped_here(); stack_top--; current_isr=isr_stack[stack_top];"]
 
 
   "NORMAL_OPERATION" -> "INTERRUPT_HANDLING" [label="HARDWARE_INTERRUPT | (out.retbool1=(stack_top==-1)) | current_isr=in.arg8; check_deactivation_interrupt_timer(); out.retbool2=setup_hardware_interrupt(in.arg8);"]
