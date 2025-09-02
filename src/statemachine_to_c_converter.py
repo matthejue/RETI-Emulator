@@ -58,6 +58,7 @@ def generate_state_machine_code(transitions, states):
             lines.append("            }")
         lines.append("            break;\n")
     lines.append("    }")
+    lines.append("    // log_statemachine(event);")
     lines.append("}")
     return '\n'.join(lines)
 

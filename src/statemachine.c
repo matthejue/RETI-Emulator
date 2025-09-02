@@ -108,7 +108,7 @@ void insert_into_heap(uint8_t isr) {
 
 void handle_next_hi(void) {
   uint8_t isr = pop_highest_prio(isr_heap, isr_to_prio);
-  current_isr=isr;
+  current_isr = isr;
   setup_hardware_interrupt(isr);
 }
 
@@ -177,7 +177,8 @@ void update_state(Event event) {
       // set_keypress_interrupt_inactive();
       // check_reactivation_interrupt_timer();
       // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here(); stack_top--;)
+      // again_exec_steps_if_stopped_here(); stack_top--;
+      // current_isr=MAX_VAL_ISR;)
     } else if (event == RETURN_FROM_INTERRUPT && !si_happened &&
                stack_top == 0 && heap_size == 0) {
       current_state = NORMAL_OPERATION;
@@ -187,12 +188,13 @@ void update_state(Event event) {
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
       stack_top--;
+      current_isr = MAX_VAL_ISR;
       // INTERRUPT_HANDLING -> NORMAL_OPERATION (event = RETURN_FROM_INTERRUPT |
       // !si_happened && stack_top==-1 && heap_size==0 | heap_size--;
       // return_from_interrupt(); set_keypress_interrupt_inactive();
       // check_reactivation_interrupt_timer();
       // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here();)
+      // again_exec_steps_if_stopped_here(); current_isr=MAX_VAL_ISR;)
     } else if (event == RETURN_FROM_INTERRUPT && !si_happened &&
                stack_top == -1 && heap_size == 0) {
       current_state = NORMAL_OPERATION;
@@ -202,6 +204,7 @@ void update_state(Event event) {
       check_reactivation_interrupt_timer();
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
+      current_isr = MAX_VAL_ISR;
       // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = RETURN_FROM_INTERRUPT
       // | heap_size>0 && check_prio_heap() | return_from_interrupt();
       // heap_size--; set_keypress_interrupt_inactive();
@@ -221,7 +224,8 @@ void update_state(Event event) {
       // set_keypress_interrupt_inactive();
       // check_reactivation_interrupt_timer();
       // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here(); stack_top--;)
+      // again_exec_steps_if_stopped_here(); stack_top--;
+      // current_isr=isr_stack[stack_top];)
     } else if (event == RETURN_FROM_INTERRUPT && heap_size > 0 &&
                !check_prio_heap()) {
       current_state = INTERRUPT_HANDLING;
@@ -231,6 +235,7 @@ void update_state(Event event) {
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
       stack_top--;
+      current_isr = isr_stack[stack_top];
       // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = HARDWARE_INTERRUPT |
       // (out.retbool1=check_prio_isr(in.arg8)) | current_isr=in.arg8;
       // check_deactivation_interrupt_timer();
@@ -291,4 +296,5 @@ void update_state(Event event) {
     }
     break;
   }
+  log_statemachine(event);
 }
