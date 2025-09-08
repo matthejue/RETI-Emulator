@@ -11,6 +11,7 @@
 
 extern uint8_t isr_of_timer_interrupt;
 extern uint8_t isr_of_keypress_interrupt;
+extern uint8_t isr_num;
 
 #define INVALID_ISR_NUM UINT8_MAX
 

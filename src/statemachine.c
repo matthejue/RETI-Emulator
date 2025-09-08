@@ -15,10 +15,12 @@
 uint8_t isr_stack[MAX_STACK_SIZE];
 uint8_t isr_heap[HEAP_SIZE];
 
+bool breakpoint_encountered = true;
+bool isr_finished = true;
+bool exec_every_step = true;
+
 State current_state = NORMAL_OPERATION;
 bool si_happened = false;
-bool isr_finished = true;
-bool execute_every_step = true;
 int8_t started_finish_here;
 int8_t stopped_exec_steps_here;
 int8_t stack_top = -1;
@@ -42,16 +44,16 @@ void stop_exec_every_step() {
     return;
   }
   stopped_exec_steps_here = stack_top;
-  execute_every_step = false;
+  exec_every_step = false;
 }
 
 void again_exec_steps_if_stopped_here(void) {
   if (stopped_exec_steps_here == stack_top) {
-    execute_every_step = true;
+    exec_every_step = true;
   }
 }
 
-void set_keypress_interrupt_inactive() {
+void check_inactivation_keypress_interrupt() {
   if (current_isr == isr_of_keypress_interrupt) {
     keypress_interrupt_active = false;
   }
@@ -65,22 +67,26 @@ void set_timer_interrupt_inactive() {
 
 void step_into_deactivation() {
   stopped_exec_steps_here = stack_top;
-  execute_every_step = false;
+  exec_every_step = false;
 }
-
-// void step_into_activation() {
-// execute_every_step = true;
-// }
 
 bool setup_hardware_interrupt(uint8_t isr) {
   stack_top++;
   isr_stack[stack_top] = isr;
   bool should_cont = false;
-  if (visibility_condition) {
-    should_cont = display_notification_box_with_action(
-        "Keyboard Interrupt", "Press 's' to enter", 's', step_into_deactivation,
-        NULL);
+
+  const char *title = NULL;
+  if (isr == isr_of_keypress_interrupt) {
+    title = "Keyboard Interrupt";
+  } else if (isr == isr_of_timer_interrupt) {
+    title = "Timer Interrupt";
   }
+
+  if (visibility_condition && title != NULL) {
+    should_cont = display_notification_box_with_action(
+        title, "Press 's' to enter", 's', step_into_deactivation, NULL);
+  }
+
   write_array(regs, PC, read_array(regs, PC, false) - 1, false);
   setup_interrupt(isr);
   return should_cont;
@@ -88,9 +94,13 @@ bool setup_hardware_interrupt(uint8_t isr) {
 
 bool check_prio_isr(uint8_t isr) {
   uint8_t prio_current_isr = isr_to_prio[isr];
-  uint8_t prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
-  return (prio_current_isr > prio_isr_stack &&
-          (uint8_t)stack_top < MAX_STACK_SIZE - 1);
+  uint8_t prio_isr_stack;
+  if (stack_top == -1) {
+    prio_isr_stack = 0;
+  } else {
+    prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
+  }
+  return prio_current_isr > prio_isr_stack;
 }
 
 bool check_prio_heap(void) {
@@ -141,158 +151,108 @@ bool check_if_int_i() {
          INT;
 }
 
-// Code generated from statemachine
 void update_state(Event event) {
   debug();
   switch (current_state) {
   case INTERRUPT_HANDLING:
-    // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = SOFTWARE_INTERRUPT |  |
-    // error_no_si_inside_interrupt();)
     if (event == SOFTWARE_INTERRUPT) {
-      current_state = INTERRUPT_HANDLING;
       error_no_si_inside_interrupt();
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = FINALIZE |
-      // isr_finished | started_finish_here=stack_top; isr_finished=false;)
     } else if (event == FINALIZE && isr_finished) {
-      current_state = INTERRUPT_HANDLING;
       started_finish_here = stack_top;
       isr_finished = false;
-      // INTERRUPT_HANDLING -> NORMAL_OPERATION (event = RETURN_FROM_INTERRUPT |
-      // si_happened && stack_top==-1 && heap_size==0 | si_happened=false;
-      // return_from_interrupt(); set_keypress_interrupt_inactive();
-      // check_reactivation_interrupt_timer();
-      // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here();)
     } else if (event == RETURN_FROM_INTERRUPT && si_happened &&
                stack_top == -1 && heap_size == 0) {
       current_state = NORMAL_OPERATION;
       si_happened = false;
       return_from_interrupt();
-      set_keypress_interrupt_inactive();
+      check_inactivation_keypress_interrupt();
       check_reactivation_interrupt_timer();
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
-      // INTERRUPT_HANDLING -> NORMAL_OPERATION (event = RETURN_FROM_INTERRUPT |
-      // !si_happened && stack_top==0 && heap_size==0 | return_from_interrupt();
-      // set_keypress_interrupt_inactive();
-      // check_reactivation_interrupt_timer();
-      // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here(); stack_top--;
-      // current_isr=MAX_VAL_ISR;)
     } else if (event == RETURN_FROM_INTERRUPT && !si_happened &&
                stack_top == 0 && heap_size == 0) {
       current_state = NORMAL_OPERATION;
       return_from_interrupt();
-      set_keypress_interrupt_inactive();
+      check_inactivation_keypress_interrupt();
       check_reactivation_interrupt_timer();
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
       stack_top--;
       current_isr = MAX_VAL_ISR;
-      // INTERRUPT_HANDLING -> NORMAL_OPERATION (event = RETURN_FROM_INTERRUPT |
-      // !si_happened && stack_top==-1 && heap_size==0 | heap_size--;
-      // return_from_interrupt(); set_keypress_interrupt_inactive();
-      // check_reactivation_interrupt_timer();
-      // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here(); current_isr=MAX_VAL_ISR;)
+    } else if (event == RETURN_FROM_INTERRUPT && si_happened &&
+               stack_top == 0 && heap_size == 0) {
+      current_state = NORMAL_OPERATION;
+      return_from_interrupt();
+      check_inactivation_keypress_interrupt();
+      check_reactivation_interrupt_timer();
+      again_exec_steps_if_finished_here();
+      again_exec_steps_if_stopped_here();
+      stack_top--;
+      current_isr = MAX_VAL_ISR;
     } else if (event == RETURN_FROM_INTERRUPT && !si_happened &&
                stack_top == -1 && heap_size == 0) {
       current_state = NORMAL_OPERATION;
       heap_size--;
       return_from_interrupt();
-      set_keypress_interrupt_inactive();
+      check_inactivation_keypress_interrupt();
       check_reactivation_interrupt_timer();
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
       current_isr = MAX_VAL_ISR;
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = RETURN_FROM_INTERRUPT
-      // | heap_size>0 && check_prio_heap() | return_from_interrupt();
-      // heap_size--; set_keypress_interrupt_inactive();
-      // check_reactivation_interrupt_timer();
-      // again_exec_steps_if_stopped_here(); handle_next_hi();)
     } else if (event == RETURN_FROM_INTERRUPT && heap_size > 0 &&
                check_prio_heap()) {
-      current_state = INTERRUPT_HANDLING;
       return_from_interrupt();
       heap_size--;
-      set_keypress_interrupt_inactive();
+      check_inactivation_keypress_interrupt();
       check_reactivation_interrupt_timer();
       again_exec_steps_if_stopped_here();
       handle_next_hi();
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = RETURN_FROM_INTERRUPT
-      // | heap_size>0 && !check_prio_heap() | return_from_interrupt();
-      // set_keypress_interrupt_inactive();
-      // check_reactivation_interrupt_timer();
-      // again_exec_steps_if_finished_here();
-      // again_exec_steps_if_stopped_here(); stack_top--;
-      // current_isr=isr_stack[stack_top];)
     } else if (event == RETURN_FROM_INTERRUPT && heap_size > 0 &&
                !check_prio_heap()) {
-      current_state = INTERRUPT_HANDLING;
       return_from_interrupt();
-      set_keypress_interrupt_inactive();
+      check_inactivation_keypress_interrupt();
       check_reactivation_interrupt_timer();
       again_exec_steps_if_finished_here();
       again_exec_steps_if_stopped_here();
       stack_top--;
       current_isr = isr_stack[stack_top];
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = HARDWARE_INTERRUPT |
-      // (out.retbool1=check_prio_isr(in.arg8)) | current_isr=in.arg8;
-      // check_deactivation_interrupt_timer();
-      // out.retbool2=setup_hardware_interrupt(in.arg8);)
     } else if (event == HARDWARE_INTERRUPT &&
                (out.retbool1 = check_prio_isr(in.arg8))) {
-      current_state = INTERRUPT_HANDLING;
       current_isr = in.arg8;
       check_deactivation_interrupt_timer();
       out.retbool2 = setup_hardware_interrupt(in.arg8);
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = HARDWARE_INTERRUPT |
-      // !(out.retbool1=check_prio_isr(in.arg8)) && heap_size <= HEAP_SIZE |
-      // current_isr=in.arg8; check_deactivation_interrupt_timer();
-      // insert_into_heap(in.arg8);)
     } else if (event == HARDWARE_INTERRUPT &&
                !(out.retbool1 = check_prio_isr(in.arg8)) &&
                heap_size <= HEAP_SIZE) {
-      current_state = INTERRUPT_HANDLING;
       current_isr = in.arg8;
       check_deactivation_interrupt_timer();
       insert_into_heap(in.arg8);
-      // INTERRUPT_HANDLING -> INTERRUPT_HANDLING (event = HARDWARE_INTERRUPT |
-      // !(out.retbool1=check_prio_isr(in.arg8)) && heap_size > HEAP_SIZE |
-      // error_too_many_hardware_interrupts();)
     } else if (event == HARDWARE_INTERRUPT &&
                !(out.retbool1 = check_prio_isr(in.arg8)) &&
                heap_size > HEAP_SIZE) {
-      current_state = INTERRUPT_HANDLING;
       error_too_many_hardware_interrupts();
+    } else if (event == CONTINUE) {
+      breakpoint_encountered = false;
     }
     break;
 
   case NORMAL_OPERATION:
-    // NORMAL_OPERATION -> INTERRUPT_HANDLING (event = SOFTWARE_INTERRUPT |  |
-    // si_happened=true; current_isr=in.arg8; stop_exec_every_step();
-    // setup_interrupt(in.arg8);)
     if (event == SOFTWARE_INTERRUPT) {
       current_state = INTERRUPT_HANDLING;
       si_happened = true;
       current_isr = in.arg8;
       stop_exec_every_step();
       setup_interrupt(in.arg8);
-      // NORMAL_OPERATION -> NORMAL_OPERATION (event = STEP_INTO_ACTION |
-      // (out.retbool1=check_if_int_i()) | step_into_activated=true;)
     } else if (event == STEP_INTO_ACTION && (out.retbool1 = check_if_int_i())) {
-      current_state = NORMAL_OPERATION;
       step_into_activated = true;
-      // NORMAL_OPERATION -> INTERRUPT_HANDLING (event = HARDWARE_INTERRUPT |
-      // (out.retbool1=(stack_top==-1)) | current_isr=in.arg8;
-      // check_deactivation_interrupt_timer();
-      // out.retbool2=setup_hardware_interrupt(in.arg8);)
     } else if (event == HARDWARE_INTERRUPT &&
                (out.retbool1 = (stack_top == -1))) {
       current_state = INTERRUPT_HANDLING;
       current_isr = in.arg8;
       check_deactivation_interrupt_timer();
       out.retbool2 = setup_hardware_interrupt(in.arg8);
+    } else if (event == CONTINUE) {
+      breakpoint_encountered = false;
     }
     break;
   }

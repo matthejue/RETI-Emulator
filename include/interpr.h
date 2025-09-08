@@ -7,7 +7,7 @@
 
 #define MAX_DIGITS_ADDR_DEC 10
 
-#define visibility_condition debug_mode && breakpoint_encountered && isr_finished && execute_every_step
+#define visibility_condition debug_mode && breakpoint_encountered && isr_finished && exec_every_step
 
 void interpr_instr(Instruction *assembly_instr);
 void interpr_prgrm();
