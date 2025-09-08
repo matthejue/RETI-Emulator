@@ -18,7 +18,8 @@ uint8_t isr_of_keypress_interrupt = INVALID_ISR_NUM;
 const char *register_code_to_name[] = {
     "PC", "IN1", "IN2",      "ACC",     "SP",       "BAF",
     "CS", "DS",  "INTTIMER", "UARTREC", "UARTSEND", "KEYPRESS"};
-static uint8_t isr_num = 0;
+
+uint8_t isr_num = 0;
 
 String_to_Mnemonic mnemonic_to_opcode[] = {
     {"ADDI", ADDI},     {"SUBI", SUBI},     {"MULTI", MULTI},

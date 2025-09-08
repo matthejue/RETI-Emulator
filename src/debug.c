@@ -59,8 +59,6 @@ const char *register_or_address_to_identifier[] = {
 const uint8_t NUM_REGISTER_ENTRIES =
     sizeof(register_entries) / sizeof(register_entries[0]);
 
-bool breakpoint_encountered = true;
-
 const uint8_t LINEWIDTH = 54;
 
 Register eprom_watchobject = PC;
@@ -510,7 +508,7 @@ void evaluate_keyboard_input(void) {
     if (key == 'n') {
       return;
     } else if (key == 'c') {
-      breakpoint_encountered = false;
+      update_state(CONTINUE);
       return;
     } else if (key == 'r') {
       execv(gargv[0], gargv);

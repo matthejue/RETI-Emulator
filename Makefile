@@ -93,13 +93,19 @@ clean-files:
 	find . -type f -name "test_results" -delete
 
 DEB_BIN := reti_emulator_main
+run_send_keypresses:
+	./send_keypresses.py ./bin/$(DEB_BIN) $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+
 debug: $(BIN_SRC) $(BIN_TEST)
 	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./run/deb_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+
+debug_send_keypresses:
+	./send_keypresses.py --input ./run/debug_input.txt make debug DEB_BIN=$(DEB_BIN) EXTRA_ARGS=$(EXTRA_ARGS) RUN_PRGRM=$(RUN_PRGRM)
 
 install-linux-local:
 	if [ -f ~/.local/bin/reti_emulator ]; then rm ~/.local/bin/reti_emulator; fi
 	mkdir -p ~/.local/bin
-	wget https://github.com/matthejue/RETI-Interpreter/releases/latest/download/reti_emulator-linux -O ~/.local/bin/reti_emulator
+	wget https://github.com/matthejue/RETI-Emulator/releases/latest/download/reti_emulator-linux -O ~/.local/bin/reti_emulator
 	chmod 700 ~/.local/bin/reti_emulator
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 

@@ -41,8 +41,6 @@ extern const char *register_or_address_to_identifier[];
 
 extern const uint8_t NUM_REGISTER_ENTRIES;
 
-extern bool breakpoint_encountered;
-
 extern Register eprom_watchobject;
 extern Register sram_watchobject_cs;
 extern Register sram_watchobject_ds;

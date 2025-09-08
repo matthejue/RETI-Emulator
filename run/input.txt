@@ -1,0 +1,14 @@
+t<sleep:0.1>
+s
+n
+n
+n
+n
+n
+n
+n
+n
+n
+n<sleep:0.1>
+s
+n
