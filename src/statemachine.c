@@ -121,21 +121,24 @@ bool setup_hardware_interrupt(uint8_t isr) {
 }
 
 bool check_prio_isr(uint8_t isr) {
-  uint8_t prio_current_isr = isr_to_prio[isr];
-  uint8_t prio_isr_stack;
   if (stack_top == -1) {
-    prio_isr_stack = 0;
-  } else {
-    prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
+    return true;
   }
+  uint8_t prio_current_isr = isr_to_prio[isr];
+  uint8_t prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
   return prio_current_isr > prio_isr_stack;
 }
 
 bool check_prio_heap(void) {
-  uint8_t prio_current_isr = isr_to_prio[isr_heap[0]];
+  if (heap_size == 0) {
+    return false;
+  }
+  if (stack_top == -1) {
+    return true;
+  }
+  uint8_t prio_waiting_highest_prio_isr = isr_to_prio[isr_heap[0]];
   uint8_t prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
-  return stack_top == -1 || (prio_current_isr > prio_isr_stack &&
-                             (uint8_t)stack_top < MAX_STACK_SIZE - 1);
+  return prio_waiting_highest_prio_isr > prio_isr_stack;
 }
 
 void insert_into_heap(uint8_t isr) {
@@ -166,7 +169,6 @@ void update_state(Event event) {
   debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
-    stacked_isrs_cnt++;
     decide_if_software_int_skipped();
     setup_interrupt(in.arg8);
     break;
@@ -174,16 +176,14 @@ void update_state(Event event) {
     check_activation_step_into();
     break;
   case HARDWARE_INTERRUPT:
-    stacked_isrs_cnt++;
     check_deactivation_keypress_interrupt();
     check_deactivation_interrupt_timer();
-    if ((out.retbool1 = (stack_top == -1))) {
+    if (check_prio_isr(in.arg8)) {
+      out.retbool1 = true;
       latest_isr = in.arg8;
       out.retbool2 = setup_hardware_interrupt(in.arg8);
-    } else if ((out.retbool1 = check_prio_isr(in.arg8))) {
-      latest_isr = in.arg8;
-      out.retbool2 = setup_hardware_interrupt(in.arg8);
-    } else if (!(out.retbool1 = check_prio_isr(in.arg8))) {
+    } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {
+      out.retbool1 = false;
       if (heap_size <= HEAP_SIZE) {
         insert_into_heap(in.arg8);
       } else {
@@ -204,20 +204,16 @@ void update_state(Event event) {
     }
     break;
   case RETURN_FROM_INTERRUPT:
-    stacked_isrs_cnt--;
     return_from_interrupt();
     check_reactivation_keypress_interrupt();
     check_reactivation_interrupt_timer();
     check_finished_isr_completed();
     check_not_stepped_into_isr_completed();
-    if (heap_size == 0) {
-      stack_top--;
-      latest_isr = MAX_VAL_ISR;
-    } else if (heap_size > 0 && check_prio_heap()) {
-      stack_top--;
+    // TODO: check stack_top--; if hardware interrupt
+    if (check_prio_heap()) {
       heap_size--;
       handle_next_hi();
-      latest_isr = MAX_VAL_ISR;
+      // latest_isr = MAX_VAL_ISR; TODO: ist das nötig?
     }
     break;
   default:
