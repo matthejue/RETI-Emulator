@@ -12,8 +12,7 @@ extern bool keypress_interrupt_activatable;
 
 extern uint32_t timer_cnt;
 
-void step_into_deactivation();
-void step_into_activation();
+void do_step_into_isr();
 
 void timer_interrupt_check();
 bool keypress_interrupt_trigger();

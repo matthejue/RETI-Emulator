@@ -57,7 +57,7 @@ bool keypress_interrupt_trigger() {
   bool should_cont = out.retbool2;
   if (success) {
     keypress_interrupt_active = true;
-    if (exec_every_step) {
+    if (isr_not_step_into) {
       draw_tui();
     }
   } else {

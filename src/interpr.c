@@ -402,7 +402,7 @@ void interpr_prgrm() {
       free(assembly_instr);
       break;
     } else if (assembly_instr->op == INT && assembly_instr->opd1 == 3) {
-      breakpoint_encountered = true;
+      update_state(BREAKPOINT_ENCOUNTERED);
       write_array(regs, PC, read_array(regs, PC, false) + 1, false);
     } else {
       interpr_instr(assembly_instr);

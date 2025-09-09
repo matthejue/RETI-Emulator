@@ -1,7 +1,7 @@
-#include "../include/statemachine.h"
 #include "../include/assemble.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
+#include "../include/statemachine.h"
 #include <errno.h>
 #include <fcntl.h> // open()
 #include <inttypes.h>
@@ -60,17 +60,19 @@ void log_variable(const char *file_name, const char *var_name,
   }
 }
 
-#define LOG_U8(FILEPATH, KEY, VAL) do {                         \
-  char _buf[4]; /* "255" + NUL */                               \
-  snprintf(_buf, sizeof(_buf), "%hhu", (unsigned char)(VAL));   \
-  log_variable((FILEPATH), (KEY), _buf);                        \
-} while (0)
+#define LOG_U8(FILEPATH, KEY, VAL)                                             \
+  do {                                                                         \
+    char _buf[4]; /* "255" + NUL */                                            \
+    snprintf(_buf, sizeof(_buf), "%hhu", (unsigned char)(VAL));                \
+    log_variable((FILEPATH), (KEY), _buf);                                     \
+  } while (0)
 
-#define LOG_I8(FILEPATH, KEY, VAL) do {                         \
-  char _buf[5]; /* "-128" + NUL */                              \
-  snprintf(_buf, sizeof(_buf), "%hhd", (signed char)(VAL));     \
-  log_variable((FILEPATH), (KEY), _buf);                        \
-} while (0)
+#define LOG_I8(FILEPATH, KEY, VAL)                                             \
+  do {                                                                         \
+    char _buf[5]; /* "-128" + NUL */                                           \
+    snprintf(_buf, sizeof(_buf), "%hhd", (signed char)(VAL));                  \
+    log_variable((FILEPATH), (KEY), _buf);                                     \
+  } while (0)
 
 #define LOG_BOOL(FILEPATH, KEY, VAL)                                           \
   log_variable((FILEPATH), (KEY), (VAL) ? "true" : "false")
@@ -168,16 +170,23 @@ void log_statemachine(Event event) {
                event_to_string(event)); // enum as identifier string
 
   // Adjust these based on your real types; here are typical choices:
-  LOG_U8(s_logfile, "current_state", current_state);
-  LOG_BOOL(s_logfile, "si_happened", si_happened);
+  LOG_U8(s_logfile, "stacked_isrs_count", stacked_isrs_cnt);
+
   LOG_BOOL(s_logfile, "breakpoint_encountered", breakpoint_encountered);
   LOG_BOOL(s_logfile, "isr_finished", isr_finished);
-  LOG_BOOL(s_logfile, "exec_every_step", exec_every_step);
-  LOG_BOOL(s_logfile, "started_finish_here", started_finish_here);
-  LOG_BOOL(s_logfile, "stopped_exec_steps_here", stopped_exec_steps_here);
+  LOG_BOOL(s_logfile, "isr_not_step_into", isr_not_step_into);
+
+  LOG_BOOL(s_logfile, "started_finish_here", finished_isr_here);
+  LOG_BOOL(s_logfile, "not_stepped_into_isr_here", not_stepped_into_isr_here);
+
+  LOG_U8(s_logfile, "deactivated_keypress_interrupt_here",
+         deactivated_keypress_interrupt_here);
+  LOG_U8(s_logfile, "deactivated_timer_interrupt_here",
+
+         deactivated_timer_interrupt_here);
   LOG_I8(s_logfile, "stack_top", stack_top);
   LOG_U8(s_logfile, "heap_size", heap_size);
-  LOG_U8(s_logfile, "current_isr", current_isr);
+  LOG_U8(s_logfile, "latest_isr", latest_isr);
   LOG_BOOL(s_logfile, "step_into_activated", step_into_activated);
   LOG_BOOL(s_logfile, "keypress_interrupt_active", keypress_interrupt_active);
   LOG_BOOL(s_logfile, "interrupt_timer_active", interrupt_timer_active);
@@ -192,7 +201,7 @@ void log_statemachine(Event event) {
   log_variable(s_logfile, "isr_heap", heap_str);
   free(heap_str);
 
-  size_t prio_len = (size_t)isr_num;            // number of entries
+  size_t prio_len = (size_t)isr_num; // number of entries
   if (isr_to_prio && prio_len > 0) {
     char *prio_str = u8_array_to_space_separated(isr_to_prio, prio_len);
     log_variable(s_logfile, "isr_to_prio", prio_str);
