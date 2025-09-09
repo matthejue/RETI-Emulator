@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 void setup_interrupt(uint32_t ivt_table_addr) {
+  stacked_isrs_cnt++;
   write_array(regs, SP, read_array(regs, SP, false) - 1, false);
   write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
   // TODO: Tobias, wird mit DS ausgefüllt?
@@ -25,6 +26,7 @@ void setup_interrupt(uint32_t ivt_table_addr) {
 }
 
 void return_from_interrupt() {
+  stacked_isrs_cnt--;
   write_array(regs, PC, read_storage(read_array(regs, SP, false) + 1), false);
   write_array(regs, SP, read_array(regs, SP, false) + 1, false);
 }

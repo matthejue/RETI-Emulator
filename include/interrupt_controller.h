@@ -19,6 +19,5 @@ extern uint8_t device_to_isr[NUM_DEVICES];
 extern uint8_t *isr_to_prio;
 
 void assign_isr_and_prio(Device device, uint8_t isr, uint8_t priority);
-bool check_prio_isr(uint8_t isr);
 
 #endif // INTERRRUPT_CONTROLLER_H
