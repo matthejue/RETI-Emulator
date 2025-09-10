@@ -111,8 +111,6 @@ void check_reactivation_interrupt_timer() {
   }
 }
 
-void update_latest_isr(uint8_t isr) { latest_isr = isr; }
-
 void update_hardware_interrupt_stack(uint8_t isr) {
   hardware_isr_stack_top++;
   hardware_isr_stack[hardware_isr_stack_top] = isr;
@@ -181,10 +179,10 @@ void insert_into_heap(uint8_t isr) {
   heap_size++;
 }
 
-void handle_next_hi(void) {
+void handle_next_hi() {
   uint8_t isr = pop_highest_prio(isr_heap, isr_to_prio);
-  latest_isr = isr;
-  setup_hardware_interrupt(isr);
+  in.arg8 = isr;
+  update_state(HARDWARE_INTERRUPT);
 }
 
 void error_no_si_inside_interrupt(void) {
@@ -211,16 +209,16 @@ void update_state(Event event) {
   debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
-    remember_was_software_int();
     decide_if_software_int_skipped();
     setup_interrupt(in.arg8);
+    remember_was_software_int();
     break;
   case STEP_INTO_ACTION:
     check_activation_step_into();
     break;
   case HARDWARE_INTERRUPT:
     if (decide_prio_higher_stack(in.arg8)) {
-      update_latest_isr(in.arg8);
+      latest_isr = in.arg8;
       check_deactivation_keypress_interrupt();
       check_deactivation_interrupt_timer();
       update_hardware_interrupt_stack(in.arg8);
@@ -252,8 +250,6 @@ void update_state(Event event) {
     if (decide_prio_higher_heap()) {
       heap_size--;
       handle_next_hi();
-      remember_was_hardware_int();
-      // latest_isr = MAX_VAL_ISR; TODO: ist das nötig?
     }
     break;
   default:
