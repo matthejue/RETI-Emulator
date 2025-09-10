@@ -31,6 +31,13 @@ extern struct StateInput in;
 #define HEAP_SIZE UINT8_MAX
 
 extern uint8_t stacked_isrs_cnt;
+extern int8_t hardware_isr_stack_top;
+extern uint8_t heap_size;
+
+extern uint8_t stacked_isrs_cnt;
+extern int8_t hardware_isr_stack_top;
+extern int8_t is_hardware_int_stack_top;
+extern uint8_t heap_size;
 
 extern bool breakpoint_encountered;
 extern bool isr_finished;
@@ -42,13 +49,13 @@ extern uint8_t not_stepped_into_isr_here;
 extern uint8_t deactivated_keypress_interrupt_here;
 extern uint8_t deactivated_timer_interrupt_here;
 
-extern int8_t stack_top;
-extern uint8_t heap_size;
 extern uint8_t latest_isr;
 extern bool step_into_activated;
 
 #define MAX_STACK_SIZE UINT8_MAX
-extern uint8_t isr_stack[];
+
+extern uint8_t is_hardware_int_stack[];
+extern uint8_t hardware_isr_stack[];
 extern uint8_t isr_heap[];
 
 void update_state(Event event);

@@ -182,17 +182,19 @@ void log_statemachine(Event event) {
   LOG_U8(s_logfile, "deactivated_keypress_interrupt_here",
          deactivated_keypress_interrupt_here);
   LOG_U8(s_logfile, "deactivated_timer_interrupt_here",
-
          deactivated_timer_interrupt_here);
-  LOG_I8(s_logfile, "stack_top", stack_top);
+
+  LOG_I8(s_logfile, "hardware_isr_stack_top", hardware_isr_stack_top);
+  LOG_I8(s_logfile, "is_hardware_int_stack_top", is_hardware_int_stack_top);
   LOG_U8(s_logfile, "heap_size", heap_size);
+
   LOG_U8(s_logfile, "latest_isr", latest_isr);
   LOG_BOOL(s_logfile, "step_into_activated", step_into_activated);
   LOG_BOOL(s_logfile, "keypress_interrupt_active", keypress_interrupt_active);
   LOG_BOOL(s_logfile, "interrupt_timer_active", interrupt_timer_active);
 
   size_t stack_len = MIN((size_t)MAX_STACK_SIZE, (size_t)MAX_STACK_INDEX + 1);
-  char *stack_str = u8_array_to_space_separated(isr_stack, stack_len);
+  char *stack_str = u8_array_to_space_separated(hardware_isr_stack, stack_len);
   log_variable(s_logfile, "isr_stack", stack_str);
   free(stack_str);
 

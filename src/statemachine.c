@@ -13,8 +13,12 @@
 #include <stdlib.h>
 
 uint8_t stacked_isrs_cnt = 0;
+int8_t hardware_isr_stack_top = -1;
+int8_t is_hardware_int_stack_top = -1;
+uint8_t heap_size = 0;
 
-uint8_t isr_stack[MAX_STACK_SIZE];
+uint8_t is_hardware_int_stack[MAX_STACK_SIZE];
+uint8_t hardware_isr_stack[MAX_STACK_SIZE];
 uint8_t isr_heap[HEAP_SIZE];
 
 bool breakpoint_encountered = true;
@@ -27,14 +31,22 @@ uint8_t not_stepped_into_isr_here;
 uint8_t deactivated_keypress_interrupt_here;
 uint8_t deactivated_timer_interrupt_here;
 
-int8_t stack_top = -1;
-uint8_t heap_size = 0;
 uint8_t latest_isr;
 bool step_into_activated = false;
 
 struct StateInput in = {.arg8 = MAX_VAL_ISR};
 
 struct StateOutput out = {.retbool1 = false, .retbool2 = false};
+
+void remember_was_hardware_int() {
+  is_hardware_int_stack_top++;
+  is_hardware_int_stack[is_hardware_int_stack_top] = true;
+}
+
+void remember_was_software_int() {
+  is_hardware_int_stack_top++;
+  is_hardware_int_stack[is_hardware_int_stack_top] = false;
+}
 
 void decide_if_software_int_skipped() {
   if (step_into_activated) {
@@ -51,13 +63,13 @@ void check_not_stepped_into_isr_completed(void) {
   }
 }
 
-bool check_if_int_i() {
+bool decide_if_int_i() {
   return machine_to_assembly(read_storage(read_array(regs, PC, false)))->op ==
          INT;
 }
 
 void check_activation_step_into() {
-  if ((out.retbool1 = check_if_int_i())) {
+  if ((out.retbool1 = decide_if_int_i())) {
     step_into_activated = true;
   }
 }
@@ -72,6 +84,7 @@ void do_step_into_isr() {
   not_stepped_into_isr_here = stacked_isrs_cnt;
   isr_not_step_into = false;
 }
+
 void check_deactivation_keypress_interrupt() {
   if (latest_isr == isr_of_timer_interrupt) {
     deactivated_keypress_interrupt_here = stacked_isrs_cnt;
@@ -98,9 +111,14 @@ void check_reactivation_interrupt_timer() {
   }
 }
 
+void update_latest_isr(uint8_t isr) { latest_isr = isr; }
+
+void update_hardware_interrupt_stack(uint8_t isr) {
+  hardware_isr_stack_top++;
+  hardware_isr_stack[hardware_isr_stack_top] = isr;
+}
+
 bool setup_hardware_interrupt(uint8_t isr) {
-  stack_top++;
-  isr_stack[stack_top] = isr;
   bool should_cont = false;
 
   const char *title = NULL;
@@ -108,36 +126,52 @@ bool setup_hardware_interrupt(uint8_t isr) {
     title = "Keyboard Interrupt";
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
+  } else {
+    fprintf(stderr, "Error: unknown interrupt type\n");
+    exit(EXIT_FAILURE);
   }
 
-  if (visibility_condition && title != NULL) {
+  if (visibility_condition) {
     should_cont = display_notification_box_with_action(
         title, "Press 's' to enter", 's', do_step_into_isr, NULL);
   }
 
   write_array(regs, PC, read_array(regs, PC, false) - 1, false);
   setup_interrupt(isr);
+  out.retbool2 = should_cont;
   return should_cont;
 }
 
-bool check_prio_isr(uint8_t isr) {
-  if (stack_top == -1) {
+void check_hardware_int_completed() {
+  if (is_hardware_int_stack[is_hardware_int_stack_top]) {
+    is_hardware_int_stack_top--;
+    hardware_isr_stack_top--;
+  }
+}
+
+bool decide_prio_higher_stack(uint8_t isr) {
+  if (hardware_isr_stack_top == -1) {
     return true;
   }
   uint8_t prio_current_isr = isr_to_prio[isr];
-  uint8_t prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
-  return prio_current_isr > prio_isr_stack;
+  uint8_t prio_isr_stack =
+      isr_to_prio[hardware_isr_stack[hardware_isr_stack_top]];
+
+  bool success = prio_current_isr > prio_isr_stack;
+  out.retbool1 = success;
+  return success;
 }
 
-bool check_prio_heap(void) {
+bool decide_prio_higher_heap(void) {
   if (heap_size == 0) {
     return false;
   }
-  if (stack_top == -1) {
+  if (hardware_isr_stack_top == -1) {
     return true;
   }
   uint8_t prio_waiting_highest_prio_isr = isr_to_prio[isr_heap[0]];
-  uint8_t prio_isr_stack = isr_to_prio[isr_stack[stack_top]];
+  uint8_t prio_isr_stack =
+      isr_to_prio[hardware_isr_stack[hardware_isr_stack_top]];
   return prio_waiting_highest_prio_isr > prio_isr_stack;
 }
 
@@ -165,10 +199,19 @@ void error_too_many_hardware_interrupts(void) {
   exit(EXIT_FAILURE);
 }
 
+void check_heap_size_before_insert_into_heap(uint8_t isr) {
+  if (heap_size <= HEAP_SIZE) {
+    insert_into_heap(isr);
+  } else {
+    error_too_many_hardware_interrupts();
+  }
+}
+
 void update_state(Event event) {
   debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
+    remember_was_software_int();
     decide_if_software_int_skipped();
     setup_interrupt(in.arg8);
     break;
@@ -176,19 +219,15 @@ void update_state(Event event) {
     check_activation_step_into();
     break;
   case HARDWARE_INTERRUPT:
-    check_deactivation_keypress_interrupt();
-    check_deactivation_interrupt_timer();
-    if (check_prio_isr(in.arg8)) {
-      out.retbool1 = true;
-      latest_isr = in.arg8;
-      out.retbool2 = setup_hardware_interrupt(in.arg8);
+    if (decide_prio_higher_stack(in.arg8)) {
+      update_latest_isr(in.arg8);
+      check_deactivation_keypress_interrupt();
+      check_deactivation_interrupt_timer();
+      update_hardware_interrupt_stack(in.arg8);
+      setup_hardware_interrupt(in.arg8);
+      remember_was_hardware_int();
     } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {
-      out.retbool1 = false;
-      if (heap_size <= HEAP_SIZE) {
-        insert_into_heap(in.arg8);
-      } else {
-        error_too_many_hardware_interrupts();
-      }
+      check_heap_size_before_insert_into_heap(in.arg8);
     }
     break;
   case CONTINUE:
@@ -199,7 +238,7 @@ void update_state(Event event) {
     break;
   case FINALIZE:
     if (isr_finished) {
-      finished_isr_here = stack_top;
+      finished_isr_here = hardware_isr_stack_top;
       isr_finished = false;
     }
     break;
@@ -209,10 +248,11 @@ void update_state(Event event) {
     check_reactivation_interrupt_timer();
     check_finished_isr_completed();
     check_not_stepped_into_isr_completed();
-    // TODO: check stack_top--; if hardware interrupt
-    if (check_prio_heap()) {
+    check_hardware_int_completed();
+    if (decide_prio_higher_heap()) {
       heap_size--;
       handle_next_hi();
+      remember_was_hardware_int();
       // latest_isr = MAX_VAL_ISR; TODO: ist das nötig?
     }
     break;
