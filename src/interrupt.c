@@ -2,6 +2,7 @@
 #include "../include/debug.h"
 #include "../include/interpr.h"
 #include "../include/interrupt_controller.h"
+#include "../include/log.h"
 #include "../include/parse_args.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
@@ -26,7 +27,7 @@ void timer_interrupt_check() {
     bool success = out.retbool1;
     if (success) {
       interrupt_timer_active = false;
-      if (debug_mode) {
+      if (visibility_condition) {
         draw_tui();
       }
     } else {
@@ -57,7 +58,7 @@ bool keypress_interrupt_trigger() {
   bool should_cont = out.retbool2;
   if (success) {
     keypress_interrupt_active = true;
-    if (isr_not_step_into) {
+    if (isr_step_into) {
       draw_tui();
     }
   } else {
