@@ -91,6 +91,8 @@ static const char *event_to_string(Event e) {
     return "CONTINUE";
   case FINALIZE:
     return "FINALIZE";
+  case BREAKPOINT_ENCOUNTERED:
+    return "BREAKPOINT_ENCOUNTERED";
   case HARDWARE_INTERRUPT:
     return "HARDWARE_INTERRUPT";
   case RETURN_FROM_INTERRUPT:
@@ -174,9 +176,9 @@ void log_statemachine(Event event) {
 
   LOG_BOOL(s_logfile, "breakpoint_encountered", breakpoint_encountered);
   LOG_BOOL(s_logfile, "isr_finished", isr_finished);
-  LOG_BOOL(s_logfile, "isr_not_step_into", isr_not_step_into);
+  LOG_BOOL(s_logfile, "isr_step_into", isr_step_into);
 
-  LOG_BOOL(s_logfile, "started_finish_here", finished_isr_here);
+  LOG_U8(s_logfile, "finished_isr_here", finished_isr_here);
   LOG_BOOL(s_logfile, "not_stepped_into_isr_here", not_stepped_into_isr_here);
 
   LOG_U8(s_logfile, "deactivated_keypress_interrupt_here",
@@ -190,8 +192,10 @@ void log_statemachine(Event event) {
 
   LOG_U8(s_logfile, "latest_isr", latest_isr);
   LOG_BOOL(s_logfile, "step_into_activated", step_into_activated);
-  LOG_BOOL(s_logfile, "keypress_interrupt_active", keypress_interrupt_active);
+
+  LOG_U8(s_logfile, "timer_cnt", timer_cnt);
   LOG_BOOL(s_logfile, "interrupt_timer_active", interrupt_timer_active);
+  LOG_BOOL(s_logfile, "keypress_interrupt_active", keypress_interrupt_active);
 
   size_t stack_len = MIN((size_t)MAX_STACK_SIZE, (size_t)MAX_STACK_INDEX + 1);
   char *stack_str = u8_array_to_space_separated(hardware_isr_stack, stack_len);

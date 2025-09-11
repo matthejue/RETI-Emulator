@@ -23,7 +23,7 @@ uint8_t isr_heap[HEAP_SIZE];
 
 bool breakpoint_encountered = true;
 bool isr_finished = true;
-bool isr_not_step_into = true;
+bool isr_step_into = true;
 
 uint8_t finished_isr_here;
 uint8_t not_stepped_into_isr_here;
@@ -54,12 +54,12 @@ void decide_if_software_int_skipped() {
     return;
   }
   not_stepped_into_isr_here = stacked_isrs_cnt;
-  isr_not_step_into = false;
+  isr_step_into = false;
 }
 
 void check_not_stepped_into_isr_completed(void) {
   if (not_stepped_into_isr_here == stacked_isrs_cnt) {
-    isr_not_step_into = true;
+    isr_step_into = true;
   }
 }
 
@@ -74,7 +74,15 @@ void check_activation_step_into() {
   }
 }
 
-void check_finished_isr_completed(void) {
+void do_finalize_isr() {
+  if (stacked_isrs_cnt > 0) {
+    finished_isr_here = stacked_isrs_cnt - 1;
+    isr_finished = false;
+    out.retbool1 = true;
+  }
+}
+
+void check_finished_isr_completed() {
   if (finished_isr_here == stacked_isrs_cnt) {
     isr_finished = true;
   }
@@ -82,7 +90,7 @@ void check_finished_isr_completed(void) {
 
 void do_step_into_isr() {
   not_stepped_into_isr_here = stacked_isrs_cnt;
-  isr_not_step_into = false;
+  isr_step_into = false;
 }
 
 void check_deactivation_keypress_interrupt() {
@@ -136,15 +144,14 @@ bool setup_hardware_interrupt(uint8_t isr) {
 
   write_array(regs, PC, read_array(regs, PC, false) - 1, false);
   setup_interrupt(isr);
-  out.retbool2 = should_cont;
   return should_cont;
 }
 
 void check_hardware_int_completed() {
   if (is_hardware_int_stack[is_hardware_int_stack_top]) {
-    is_hardware_int_stack_top--;
     hardware_isr_stack_top--;
   }
+  is_hardware_int_stack_top--;
 }
 
 bool decide_prio_higher_stack(uint8_t isr) {
@@ -155,9 +162,7 @@ bool decide_prio_higher_stack(uint8_t isr) {
   uint8_t prio_isr_stack =
       isr_to_prio[hardware_isr_stack[hardware_isr_stack_top]];
 
-  bool success = prio_current_isr > prio_isr_stack;
-  out.retbool1 = success;
-  return success;
+  return prio_current_isr > prio_isr_stack;
 }
 
 bool decide_prio_higher_heap(void) {
@@ -206,24 +211,25 @@ void check_heap_size_before_insert_into_heap(uint8_t isr) {
 }
 
 void update_state(Event event) {
-  debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
     decide_if_software_int_skipped();
     setup_interrupt(in.arg8);
     remember_was_software_int();
+    stacked_isrs_cnt++;
     break;
   case STEP_INTO_ACTION:
     check_activation_step_into();
     break;
   case HARDWARE_INTERRUPT:
-    if (decide_prio_higher_stack(in.arg8)) {
+    if ((out.retbool1 = decide_prio_higher_stack(in.arg8))) {
       latest_isr = in.arg8;
       check_deactivation_keypress_interrupt();
       check_deactivation_interrupt_timer();
       update_hardware_interrupt_stack(in.arg8);
-      setup_hardware_interrupt(in.arg8);
+      out.retbool2 = setup_hardware_interrupt(in.arg8);
       remember_was_hardware_int();
+      stacked_isrs_cnt++;
     } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {
       check_heap_size_before_insert_into_heap(in.arg8);
     }
@@ -235,12 +241,10 @@ void update_state(Event event) {
     breakpoint_encountered = true;
     break;
   case FINALIZE:
-    if (isr_finished) {
-      finished_isr_here = hardware_isr_stack_top;
-      isr_finished = false;
-    }
+    do_finalize_isr();
     break;
   case RETURN_FROM_INTERRUPT:
+    stacked_isrs_cnt--;
     return_from_interrupt();
     check_reactivation_keypress_interrupt();
     check_reactivation_interrupt_timer();

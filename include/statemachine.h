@@ -41,7 +41,7 @@ extern uint8_t heap_size;
 
 extern bool breakpoint_encountered;
 extern bool isr_finished;
-extern bool isr_not_step_into;
+extern bool isr_step_into;
 
 extern uint8_t finished_isr_here;
 extern uint8_t not_stepped_into_isr_here;
