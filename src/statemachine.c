@@ -79,6 +79,8 @@ void do_finalize_isr() {
     finished_isr_here = stacked_isrs_cnt - 1;
     isr_finished = false;
     out.retbool1 = true;
+  } else {
+    out.retbool1 = false;
   }
 }
 
