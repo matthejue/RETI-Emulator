@@ -96,13 +96,13 @@ void do_step_into_isr() {
 void check_deactivation_keypress_interrupt() {
   if (latest_isr == isr_of_timer_interrupt) {
     deactivated_keypress_interrupt_here = stacked_isrs_cnt;
-    keypress_interrupt_active = false;
+    keypress_interrupt_active = true;
   }
 }
 
 void check_reactivation_keypress_interrupt() {
   if (deactivated_keypress_interrupt_here == stacked_isrs_cnt) {
-    keypress_interrupt_active = true;
+    keypress_interrupt_active = false;
   }
 }
 
@@ -162,7 +162,13 @@ bool decide_prio_higher_stack(uint8_t isr) {
   uint8_t prio_isr_stack =
       isr_to_prio[hardware_isr_stack[hardware_isr_stack_top]];
 
-  return prio_current_isr > prio_isr_stack;
+  bool success = prio_current_isr > prio_isr_stack;
+  if (!success) {
+    display_notification_box("Notice", "Newly arrived hardware interrupt has lower priority "
+                                      "than current hardware interrupt");
+  }
+
+  return success;
 }
 
 bool decide_prio_higher_heap(void) {
@@ -210,7 +216,14 @@ void check_heap_size_before_insert_into_heap(uint8_t isr) {
   }
 }
 
+void check_draw_tui() {
+  if (visibility_condition) {
+    draw_tui();
+  }
+}
+
 void update_state(Event event) {
+  debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
     decide_if_software_int_skipped();
@@ -228,6 +241,7 @@ void update_state(Event event) {
       check_deactivation_interrupt_timer();
       update_hardware_interrupt_stack(in.arg8);
       out.retbool2 = setup_hardware_interrupt(in.arg8);
+      check_draw_tui();
       remember_was_hardware_int();
       stacked_isrs_cnt++;
     } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {

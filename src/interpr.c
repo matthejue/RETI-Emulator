@@ -394,6 +394,9 @@ void interpr_prgrm() {
       draw_tui();
       evaluate_keyboard_input();
     }
+    if (timer_interrupt_check()) {
+      continue;
+    };
 
     uint32_t machine_instr = read_storage(read_array(regs, PC, false));
     Instruction *assembly_instr = machine_to_assembly(machine_instr);
@@ -409,7 +412,6 @@ void interpr_prgrm() {
       free(assembly_instr);
     }
 
-    timer_interrupt_check();
     uart_receive();
     uart_send();
   }
