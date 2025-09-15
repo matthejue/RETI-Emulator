@@ -8,9 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool display_notification_box_with_action(const char *title, const char *message, const char key, void (*action)(void), void (*action2)(void)) {
+bool display_notification_box_with_action(const char *title,
+                                          const char *message, const char key,
+                                          void (*action)(void),
+                                          void (*action2)(void)) {
   const uint8_t LEN_ERROR = strlen(title);
-  const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to continue");
+  const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to skip");
   const uint8_t LEN_MESSAGE = strlen(message);
   uint8_t box_width = max(LEN_MESSAGE + 4, LEN_PRESS_ENTER + 4);
   uint8_t box_height = 4;
@@ -23,7 +26,7 @@ bool display_notification_box_with_action(const char *title, const char *message
             title);
   mvwprintw(notification_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
   mvwprintw(notification_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
-            "Press Enter to continue");
+            "Press Enter to skip");
   wrefresh(notification_box);
 
   bool should_cont = true;
@@ -144,90 +147,16 @@ uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
   return entries[choice].object;
 }
 
-void display_error_notification(const char *message) {
-  fprintf(stderr, "%s\n", message);
-  printf("Press Enter to continue");
-  // wait until the Enter key is pressed
-  while (getchar() != '\n') {
-  }
-  printf("\033[A\033[K\033[A\033[K\033[A\033[K");
-  fflush(stdout);
-}
-
-void display_input_message(char *input, const char *message,
-                           uint8_t max_num_digits) {
-  while (true) {
-    printf("%s ", message);
-    if (fgets((char *)input, max_num_digits + 2, stdin) == NULL) {
-      fprintf(stderr, "Error: Couldn't read input\n");
-    } else {
-      // Find the position of the newline character
-      uint8_t idx_of_newline = strcspn((char *)input, "\n");
-      // If the newline character is not found, it means the input was too
-      // long
-      if (input[idx_of_newline] != '\n') {
-        // Clear the input buffer
-        uint32_t c;
-        while ((c = getchar()) != '\n' && c != EOF)
-          ;
-        display_error_notification("Error: Input too long\n");
-      } else {
-        // Replace the newline character with a null terminator
-        input[idx_of_newline] = '\0';
-        return;
-      }
-    }
-  }
-}
-
-void ask_for_user_input(char *input, char *message, uint8_t max_num_digits) {
-  if (legacy_debug_tui) {
-    display_input_message(input, message, max_num_digits);
-  } else {
-    display_input_box(input, message, max_num_digits);
-  }
-}
-
-uint8_t ask_for_user_decision(const Menu_Entry menu_entries[],
-                              const Menu_Entry identifier_to_obj[],
-                              uint8_t num_entries, char *message,
-                              uint8_t max_num_digits) {
-  if (legacy_debug_tui) {
-    while (true) {
-      char *identifier = malloc(MAX_CHARS_BOX_IDENTIFIER + 1);
-      display_input_message(identifier, message, max_num_digits);
-      for (uint8_t i = 0; i < num_entries; i++) {
-        if (strncmp(identifier, identifier_to_obj[i].text,
-                    MAX_CHARS_BOX_IDENTIFIER) == 0) {
-          return identifier_to_obj[i].object;
-        }
-      }
-      display_error_notification(
-          "Error: Input is not the identifier of any register\n");
-    }
-  } else {
-    return display_popup_menu(menu_entries, num_entries);
-  }
-}
-
-void display_input_error(const char *message) {
-  if (legacy_debug_tui) {
-    display_error_notification(message);
-  } else {
-    display_notification_box("Error", message);
-  }
-}
-
 uint32_t get_user_input() {
   char input[MAX_NUM_DIGITS_INTEGER + 2]; // null terminator + newline character
   while (true) {
-    ask_for_user_input(
+    display_input_box(
         input, "Number between -2147483648 and 2147483647 or a character:",
         MAX_NUM_DIGITS_INTEGER);
 
     if (isalpha(input[0])) {
       if (strlen((char *)input) > 1) {
-        display_input_error("Error: Only one character allowed");
+        display_notification_box("Error", "Only one character allowed");
       } else {
         return *(uint32_t *)input;
       }
@@ -246,7 +175,7 @@ uint32_t get_user_input() {
         return tmp_num;
       }
     } else {
-      display_input_error("Error: Invalid input");
+      display_notification_box("Error", "Invalid input");
     }
   }
 }

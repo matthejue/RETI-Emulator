@@ -64,7 +64,7 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
-void handle_heading(bool legacy_debug_tui, bool simple_debug_tui, Box *box,
+void handle_heading(bool simple_debug_tui, Box *box,
                     char *format_str, const char *watchobject,
                     uint64_t watchobject_int);
 

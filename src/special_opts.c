@@ -2,8 +2,8 @@
 #include "../include/debug.h"
 #include "../include/error.h"
 #include "../include/parse_args.h"
-#include "../include/utils.h"
 #include "../include/reti.h"
+#include "../include/utils.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -155,10 +155,9 @@ void close_out_and_err_file() {
 
 void finalize() {
   fin_reti();
-  if (!legacy_debug_tui) {
-    fin_tui();
-  }
   if (test_mode) {
     close_out_and_err_file();
+  } else {
+    fin_tui();
   }
 }
