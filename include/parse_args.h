@@ -12,10 +12,8 @@ extern bool test_mode;
 extern bool binary_mode;
 extern bool extended_features;
 extern bool read_metadata;
-extern uint8_t radius;
 extern uint8_t max_waiting_instrs;
 extern bool verbose;
-extern bool legacy_debug_tui;
 extern bool ds_vals_unsigned;
 
 extern char *peripherals_dir;

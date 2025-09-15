@@ -16,10 +16,8 @@ bool test_mode = false;
 bool binary_mode = false;
 bool extended_features = false;
 bool read_metadata = false;
-uint8_t radius = 2;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
-bool legacy_debug_tui = false;
 bool ds_vals_unsigned = false;
 
 char *peripherals_dir = ".";
@@ -31,10 +29,10 @@ void print_help(char *bin_name) {
   fprintf(
       stderr,
       "Usage: %s -r ram_size -p page_size -d (daemon mode) "
-      "-r radius -f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
+      "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata) -v (verbose) "
-      "-b (binary mode) -E (extended features) -a (all) -l (legacy debug TUI) "
-      "-u (ds vals unsigned) -I timer_interrupt_interval -h (help page) "
+      "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
+      "-I timer_interrupt_interval -h (help page) "
       "prgrm_path\n",
       bin_name);
 }
@@ -42,7 +40,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:r:f:e:i:w:hdvtmbEaulI:")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEauI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -82,18 +80,6 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'd':
       debug_mode = true;
       break;
-    case 'r':
-      tmp_val = strtol(optarg, &endptr, 10);
-      if (endptr == optarg || *endptr != '\0') {
-        fprintf(stderr, "Error: Invalid radius size\n");
-        exit(EXIT_FAILURE);
-      }
-      if (tmp_val < 0 || tmp_val > UINT8_MAX) {
-        fprintf(stderr, "Error: Radius must be between 0 and 255\n");
-        exit(EXIT_FAILURE);
-      }
-      radius = tmp_val;
-      break;
     case 'f':
       peripherals_dir = optarg;
       break;
@@ -130,9 +116,6 @@ void parse_args(uint8_t argc, char *argv[]) {
       break;
     case 'E':
       extended_features = true;
-      break;
-    case 'l':
-      legacy_debug_tui = true;
       break;
     case 'u':
       ds_vals_unsigned = true;
@@ -181,8 +164,6 @@ void print_args() {
   printf("Datasegment values unsigned: %s\n",
          ds_vals_unsigned ? "true" : "false");
   printf("Extended features: %s\n", extended_features ? "true" : "false");
-  printf("Legacy debug TUI: %s\n", legacy_debug_tui ? "true" : "false");
-  printf("Radius: %u\n", radius);
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);

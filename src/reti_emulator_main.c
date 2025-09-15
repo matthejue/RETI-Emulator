@@ -19,14 +19,13 @@ int main(int argc, char *argv[]) {
   }
   if (test_mode) {
     create_out_and_err_file();
-    legacy_debug_tui = true;
   }
   if (read_metadata) {
     uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
   }
 
   init_reti();
-  if (!legacy_debug_tui) {
+  if (!test_mode) {
     init_tui();
   }
 
