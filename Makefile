@@ -70,14 +70,12 @@ $(OBJ_TEST_DIR)/%.o: $(TEST_DIR)/%.c | $(OBJ_TEST_DIR)
 $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR):
 	mkdir -p $@
 
-TEST_CLASS := all
 sys-test: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
-	./run_sys_tests.sh $${COLUMNS} $(TEST_CLASS) $(EXTRA_ARGS);
+	./run_sys_tests.sh $${COLUMNS} $(shell cat ./opts/test_pattern.txt) $(EXTRA_ARGS);
 
-RUN_PRGRM := ./run/prgrm.reti
 run: $(BIN_SRC)
-	./bin/reti_emulator_main $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+	./bin/reti_emulator_main $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
 
 clean: clean-files clean-directories
 clean-directories:
@@ -89,18 +87,17 @@ clean-files:
 	find . -type f -wholename "./sys_test/*.expected_output" -delete
 	find . -type f -wholename "./sys_test/*.error" -delete
 	find . -type f -name "sram.bin" -delete
-	# find . -type f -name "hdd.bin" -delete
 	find . -type f -name "test_results" -delete
 
 DEB_BIN := reti_emulator_main
 run_send_keypresses:
-	./send_keypresses.py ./bin/$(DEB_BIN) $(shell cat ./run/run_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+	./send_keypresses.py --input ./opts/input.txt ./bin/$(DEB_BIN) $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
 
 debug: $(BIN_SRC) $(BIN_TEST)
-	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./run/deb_opts.txt) $(EXTRA_ARGS) $(RUN_PRGRM)
+	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./opts/deb_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/debug_path.txt)
 
 debug_send_keypresses:
-	./send_keypresses.py --input ./run/debug_input.txt make debug DEB_BIN=$(DEB_BIN) EXTRA_ARGS=$(EXTRA_ARGS) RUN_PRGRM=$(RUN_PRGRM)
+	./send_keypresses.py --input ./opts/debug_input.txt make debug DEB_BIN=$(DEB_BIN) EXTRA_ARGS=$(EXTRA_ARGS)
 
 install-linux-local:
 	if [ -f ~/.local/bin/reti_emulator ]; then rm ~/.local/bin/reti_emulator; fi

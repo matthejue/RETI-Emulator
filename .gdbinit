@@ -5,8 +5,8 @@ define S
   #info locals
   #info args
   #info variables
-  display *str_instr
-  display/t machine_instr
+  # display *str_instr
+  # display/t machine_instr
 end
 
 define N
@@ -14,8 +14,8 @@ define N
   #info locals
   #info args
   #info variables
-  display *str_instr
-  display/t machine_instr
+  # display *str_instr
+  # display/t machine_instr
 end
 
 set pagination off

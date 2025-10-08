@@ -116,7 +116,7 @@ void check_deactivation_interrupt_timer() {
 }
 
 void check_reactivation_interrupt_timer() {
-  if (deactivated_timer_interrupt_here == stacked_isrs_cnt) {
+  if (latest_isr == isr_of_timer_interrupt && deactivated_timer_interrupt_here == stacked_isrs_cnt) {
     interrupt_timer_active = true;
   }
 }
@@ -135,7 +135,8 @@ bool setup_hardware_interrupt(uint8_t isr) {
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
   } else {
-    fprintf(stderr, "Error: unknown interrupt type\n");
+    debug();
+    fprintf(stderr, "Error: Unknown interrupt type\n");
     exit(EXIT_FAILURE);
   }
 
@@ -225,7 +226,7 @@ void check_draw_tui() {
 }
 
 void update_state(Event event) {
-  debug();
+  // debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
     decide_if_software_int_skipped();

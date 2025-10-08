@@ -486,7 +486,8 @@ void evaluate_keyboard_input(void) {
       update_state(CONTINUE);
       return;
     } else if (key == 'r') {
-      execv(gargv[0], gargv);
+      finalize();
+      execvp(gargv[0], gargv);
     } else if (key == 's') {
       update_state(STEP_INTO_ACTION);
       bool success = out.retbool1;

@@ -1,0 +1,45 @@
+#include "../include/memory_managment_unit.h"
+#include "../include/parse_args.h"
+#include <stddef.h>
+#include <stdint.h>
+
+extern uint32_t page_table_base;
+
+static inline uint32_t ilog2_u32(uint32_t x) {
+  uint32_t r = 0;
+  while (x >>= 1)
+    ++r;
+  return r;
+}
+
+static inline uint32_t ceil_div_u32(uint32_t a, uint32_t b) {
+  return (a + b - 1u) / b;
+}
+
+uint32_t mmu_translate(uint32_t virtual_address) {
+  uintptr_t root = (uintptr_t)&page_table_base;
+
+  uint32_t b_off = ilog2_u32(page_size);
+  uint32_t b_idx = ilog2_u32(page_size) /* - 0 i.e.  - log(1)*/;
+  uint32_t b_va = sram_size;
+
+  // E^L >= V/p <=> L >= log(V/p)/log(E) = log(V/p)/log(p/s) = (log(V) - log(p))/(log(p) - log(s)) = (#bits_va - #bits_page)/(#bits_page - #bits_entry))
+  uint32_t L = ceil_div_u32(b_va - b_off, b_idx);
+
+  uint32_t mask_idx = (1u << b_idx) - 1u;
+  uint32_t offset_mask = page_size - 1u;
+  uint32_t offset = virtual_address & offset_mask;
+
+  uintptr_t node = root;
+  for (uint32_t i = 0; i < L; ++i) {
+    uint32_t shift = b_off + b_idx * (L - 1u - i);
+    uint32_t idx = (virtual_address >> shift) & mask_idx;
+    uint32_t *tbl = (uint32_t *)node;
+    uint32_t entry = tbl[idx];
+    node = (uintptr_t)entry;
+  }
+
+  uint32_t phys_base = ((uint32_t)node) & ~offset_mask;
+  uint32_t phys_addr = phys_base + offset;
+  return phys_addr;
+}

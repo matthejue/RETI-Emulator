@@ -4,7 +4,7 @@
 Launch a TUI in a visible terminal window and replay keypresses (xdotool-style) via Python.
 
 Defaults:
-  - Reads steps from ./run/input.txt  (override with --input)
+  - Reads steps from ./opts/input.txt  (override with --input)
   - Opens alacritty by default        (override with --terminal)
   - Activates/focuses the terminal window, then types keys
   - After replay: prints a done message in THIS shell and waits for you to press 'q' (global)
@@ -43,7 +43,7 @@ except Exception:
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.02
 
-DEFAULT_INPUT = "./run/input.txt"
+DEFAULT_INPUT = "./opts/input.txt"
 
 SPECIAL_KEYS = {
     "<ENTER>": "enter",
