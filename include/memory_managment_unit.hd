@@ -1,0 +1,10 @@
+#ifndef MEMORY_MANAGEMENT_UNIT_H
+#define MEMORY_MANAGEMENT_UNIT_H
+
+#include <stdint.h>
+
+extern uint32_t page_table_base;
+
+uint32_t mmu_translate(uint32_t virtual_address);
+
+#endif

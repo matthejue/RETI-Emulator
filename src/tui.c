@@ -23,6 +23,7 @@ Box info_box = {"(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
                 1,
                 1,
                 NULL};
+// Box paging_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 
 uint16_t term_width, term_height;
 
