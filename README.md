@@ -16,7 +16,7 @@ Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**, **RE
 - **Simulator:** Ein Simulator modelliert ein System oder dessen Verhalten auf höherer Abstraktionsebene, um Analysen, Tests oder Training durchzuführen, ohne jede Funktionalität notwendigerweise exakt nachzubilden.
   - *Beispiel:* Flugsimulator für Pilotentraining.
 
-Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Betriebssystem läuft, dass in PicoC geschrieben ist. Der Branch https://github.com/matthejue/RETI-Emulator/tree/statemachine enthält die aktuellste Version des RETI-Emulators, welche noch nicht für den Übungsbetrieb geeignet ist. Ein weiteres Ziel des RETI-Emulators ist es im Übungsbetrieb die Studenten dabei beim Schreiben von RETI Programmen zu unterstützen, daher zeigt der RETI-Emulator auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und Features, welche die Verwendung für Studenten angenehmer gestalten.
+Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Betriebssystem läuft, dass in PicoC geschrieben ist. Im Branch https://github.com/matthejue/RETI-Emulator/tree/statemachine befindet sich die aktuellste Version des RETI-Emulators, welche noch nicht für den Übungsbetrieb geeignet ist. Ein weiteres Ziel des RETI-Emulators ist es im Übungsbetrieb die Studenten beim Schreiben von RETI Programmen zu unterstützen, daher zeigt der RETI-Emulator auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und Features, welche die Verwendung für Studenten angenehmer gestalten.
 
 # Übersicht
 ## Kommandozeilenoptionen
