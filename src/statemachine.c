@@ -135,7 +135,6 @@ bool setup_hardware_interrupt(uint8_t isr) {
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
   } else {
-    debug();
     fprintf(stderr, "Error: Unknown interrupt type\n");
     exit(EXIT_FAILURE);
   }
@@ -226,7 +225,7 @@ void check_draw_tui() {
 }
 
 void update_state(Event event) {
-  // debug();
+  debug();
   switch (event) {
   case SOFTWARE_INTERRUPT:
     decide_if_software_int_skipped();
