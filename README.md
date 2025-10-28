@@ -21,8 +21,8 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 # Übersicht
 ## Kommandozeilenoptionen
 - `-r ram_size`: Setzt Größe des SRAM (Stadardwert: `2^16=65536`)
-- `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`)
-- `-d`: Zeigt Debug TUI an
+- `-d`: Zeigt zweckmäßige Legacy Debug TUI an
+- `-T`: Wenn zusammen mit `-d` aufgerufen zeigt es die viel bessere Ncurses Debug TUI an
 - `-D`: Verwendet DS-ADDRESS-Extension anstelle der Addition des DS-Registers
 - `-r radius`: Setzt Radius an Speicherzellen, die in der Legacy Debug TUI um einen observierten Addresspointer herum angezeigt werden sollen
 - `-f file_dir`: Gibt an, wo die Datei `sram.bin` erzeugt werden soll
@@ -34,11 +34,13 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
 - `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
-- `-a`: Aktiviert die Kommandozeilenoptionen, welche für die meisten Verwendungszwecke nützlich sind
-- `-l`: Zeigt das Legacy Debug Interface anstelle
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts
-- `-h`: Zeigt Hilfsseite an
+- `-h`: Zeigt Verwendungshinweise an
+
+<!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
+<!-- - `-a`: Aktiviert die Kommandozeilenoptionen, welche für die meisten Verwendungszwecke nützlich sind -->
+<!-- - `-l`: Zeigt das Legacy Debug Interface anstelle -->
 
 ## TUI Aktionen
 - `n` ext
