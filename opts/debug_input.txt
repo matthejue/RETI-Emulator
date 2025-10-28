@@ -1,0 +1,27 @@
+<sleep:0.5>
+<enter>
+<sleep:0.2>
+# start here
+n
+n
+n
+n
+n
+n
+n
+n
+n
+n
+<sleep:0.1>
+<enter>
+<sleep:0.1>
+n 
+n
+n
+n
+n
+<sleep:0.1>
+s 
+n 
+n 
+D
