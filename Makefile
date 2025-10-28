@@ -102,7 +102,7 @@ debug_send_keypresses:
 install-linux-local:
 	if [ -f ~/.local/bin/reti_emulator ]; then rm ~/.local/bin/reti_emulator; fi
 	mkdir -p ~/.local/bin
-	wget https://github.com/matthejue/RETI-Emulator/releases/latest/download/reti_emulator-linux -O ~/.local/bin/reti_emulator
+	wget https://github.com/matthejue/RETI-Emulator/releases/latest/download/reti_interpreter-linux -O ~/.local/bin/reti_emulator
 	chmod 700 ~/.local/bin/reti_emulator
 	grep -qxF 'export PATH="~/.local/bin:$$PATH"' ~/.bashrc || echo 'export PATH="~/.local/bin:$$PATH"' >> ~/.bashrc
 

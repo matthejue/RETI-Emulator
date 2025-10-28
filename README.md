@@ -136,7 +136,7 @@ Momentan wird mit `-E` nur aktiviert, dass eine beliebige Interrupt Service Rout
 
 > *Tipp:* Mit der Kommandozeilenoption `-b` (binary) werden alle Registerinhalte, Speicherinhalte und Immediates im Binärsystem angezeigt, damit lässt sich beim debuggen z.B. leichter Shiften nachvollziehen.
 
-> *Tipp:* Um beim Debugging direkt zur Startadresse Ihres in den SRAM geladenen Programmes zu springen setzen man am besten einen Breakpoint `INT 3` an den Anfang des Programmes und führen dann direkt am Anfang nach Ausführen von `reti_interpreter -d prgrm.reti` das Kommando `c` aus.
+> *Tipp:* Um beim Debugging direkt zur Startadresse Ihres in den SRAM geladenen Programmes zu springen setzen man am besten einen Breakpoint `INT 3` an den Anfang des Programmes und führen dann direkt am Anfang nach Ausführen von `reti_emulator -d prgrm.reti` das Kommando `c` aus.
 
 ## UART
 *Die Kommunikation mit der UART ist wie folgt umgesetzt:*
