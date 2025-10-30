@@ -63,6 +63,12 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 git clone -b main https://github.com/matthejue/RETI-Emulator.git ~/RETI-Emulator --depth 1
 cd ~/RETI-Emulator
 make install-linux-local
+
+# kleiner Testlauf des RETI-Emulators 
+# (funktioniert auf Rechnern, die Ncurses installiert haben, 
+# z.B. auf Poolrechnern aber nicht den Rechnern des Rechenzentrums):
+cd ~; reti_emulator -d -T -m -i ./RETI-Emulator/opts/isrs.reti \
+  ./RETI-Emulator/sys_test/special_several_uart_receive_and_print_string_and_int.reti
 ```
 
 <!-- ## Installation auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung -->
