@@ -1,42 +1,98 @@
-# Installation auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
+ [![asciicast](https://asciinema.org/a/693086.svg)](https://asciinema.org/a/693086)
+
+# Was ist der RETI-Emulator?
+Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**, **RETI-Debugger** und **Visualizer** für die Speicherinhalte der Peripheriegeräte der RETI während der Ausführung
+
+- **Interpreter:** Ein Interpreter führt Anweisungen einer Programmiersprache direkt aus, ohne sie vorher in Maschinencode zu übersetzen. Die Ausführung erfolgt zeilenweise oder schrittweise.
+  - *Beispiel:* Python-Interpreter.
+- **Assembler:** Ein Assembler übersetzt Code in Assemblersprache in ausführbaren Maschinencode, der von einer dafür spezfischen CPU verstanden wird.
+  - *Beispiel:* Übersetzung von MOV AX, BX in Maschinencode für eine spezifische Architektur.
+- **Emulator:** Ein Emulator ahmt die Funktionalität eines Systems (z.B. Hardware oder Software) nach, sodass Programme für das originale System unverändert darauf laufen können.
+  - *Beispiele:* QEMU, der die Funktionalität verschiedener CPU-Architekturen nachahmt oder SNES-Emulatoren, welche alte Konsolenspiele auf einem PC ausführen.
+- **Debugger:** Ein Debugger ist ein Tool, das die Ausführung eines Programms erlaubt, mit dem Ziel Fehler (Bugs) zu finden, zu analysieren und zu beheben. Es bietet Funktionen wie Breakpoints, Schritt-für-Schritt-Ausführung und Inspektion von Variablen, Registerwerten und Speicherbereichen. Das Programm kann in verschiedenen Formen spezifiziert sein, einschließlich Quellcode, Bytecode oder ausführbarem Maschinencode.
+  - *Beispiel:* GDB (GNU Debugger) für C/C++-Programme.
+- **Visualizer:** Ein Visualizer stellt Daten, Abläufe oder Systeme visuell dar, um deren Struktur, Verhalten oder Ergebnisse leichter verständlich zu machen.
+  - *Beispiel:* Ein Graph-Visualizer, der Knoten und Verbindungen eines Netzwerks grafisch darstellt.
+- **Simulator:** Ein Simulator modelliert ein System oder dessen Verhalten auf höherer Abstraktionsebene, um Analysen, Tests oder Training durchzuführen, ohne jede Funktionalität notwendigerweise exakt nachzubilden.
+  - *Beispiel:* Flugsimulator für Pilotentraining.
+
+Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Betriebssystem läuft, dass in PicoC geschrieben ist. Ein weiteres Ziel des RETI-Emulators ist es im Übungsbetrieb die Studenten beim Schreiben von RETI Programmen zu unterstützen, daher zeigt der RETI-Emulator auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und Features, welche die Verwendung für Studenten angenehmer gestalten.
+
+# Übersicht
+## Kommandozeilenoptionen
+- `-r ram_size`: Setzt Größe des SRAM (Stadardwert: `2^16=65536`)
+- `-d`: Zeigt das Ncurses Debug TUI an
+- `-D`: Verwendet DS-ADDRESS-Extension anstelle der Addition des DS-Registers
+- `-f file_dir`: Gibt an, wo die Datei `sram.bin` erzeugt werden soll
+- `-e eprom_prgrm_path`: Parst und lädt Eprom-Startprogramm aus Datei, die über Dateipfad gefunden werden kann
+- `-i isrs_prgrm_path`: Parst und lädt Interrupt-Service Routinen aus Datei, die über Dateipfad gefunden werden kann
+- `-w max_waiting_instrs`: Setzt raximale Wartezeit der UART für das Senden und Empfangen von Daten (Anzahle Befehle)
+- `-t`: Aktiviert Testmode für Systemtests
+- `-m`: Liest Eingaben aus Kommentar `# input: ...` raus
+- `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
+- `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
+- `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
+- `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
+- `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts
+- `-h`: Zeigt Verwendungshinweise an
+
+<!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
+<!-- - `-r radius`: Setzt Radius an Speicherzellen, die in der Legacy Debug TUI um einen observierten Addresspointer herum angezeigt werden sollen -->
+<!-- - `-a`: Aktiviert die Kommandozeilenoptionen, welche für die meisten Verwendungszwecke nützlich sind -->
+<!-- - `-l`: Zeigt das Legacy Debug Interface anstelle -->
+
+## TUI Aktionen
+- `n` ext
+- `c` ontinue bis zu Breakpoint `INT 3` 
+- `r` estart
+- `s` step into
+- `f` inalize
+- `t` rigger isr
+- `a` ssign (Adresse oder Regisgter)
+  - Decision Menu und jederzeit mit `q` abbrechbar
+- `q` uit
+
+# Installation und Updates
+## Installation auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
 ```bash
 git clone -b main https://github.com/matthejue/RETI-Emulator.git ~/RETI-Emulator --depth 1
 cd ~/RETI-Emulator
 make install-linux-local
 ```
 
-# Installation auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
+## Installation auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
 ```bash
 git clone -b main https://github.com/matthejue/RETI-Emulator.git ~/RETI-Emulator --depth 1
 cd ~/RETI-Emulator
 make install-linux-global
 ```
 
-# Deinstallation auf Linux Systemen, wenn vorher lokal installiert wurde
+## Deinstallation auf Linux Systemen, wenn vorher lokal installiert wurde
 ```bash
 cd ~/RETI-Emulator
 make uninstall-linux-local
 ```
 
-# Deinstallation auf Linux Systemen, wenn vorher global installiert wurde
+## Deinstallation auf Linux Systemen, wenn vorher global installiert wurde
 ```bash
 cd ~/RETI-Emulator
 make uninstall-linux-global
 ```
 
-# Updaten auf Linux Systemen, wenn vorher lokal installiert wurde
+## Updaten auf Linux Systemen, wenn vorher lokal installiert wurde
 ```bash
 cd ~/RETI-Emulator
 make update-linux-local
 ```
 
-# Updaten auf Linux Systemen, wenn vorher global installiert wurde
+## Updaten auf Linux Systemen, wenn vorher global installiert wurde
 ```bash
 cd ~/RETI-Emulator
 make update-linux-global
 ```
 
 > Bitte lokale und globale Installationen nicht mischen, beim Wechsel zur jeweils anderen Installationsart vorher eine Deinstallation für die zuvor verwendete Installationsart durchführen.
+
 
 # Verwendung
 Der RETI-Emulator ist dazu in der Lage, die RETI-Befehle eines in einer `.reti`-Datei angebenen RETI-Programms zu interpretieren. D.h. er kann das RETI-Programm **ausführen**, indem er die RETI-Befehle aus einer Datei `prgrm.reti` herausliest und in den simulierten SRAM schreibt und mithilfe eines autogenerierten EPROM-Startprogramms, dass zu Beginn ausgeführt wird an den Start dieses Programmes springt. Zum Ausführen eines Programmes muss der RETI-Emulator mit dem Pfad zum RETI-Programm als Argument aufgerufen werden, z.B.:
@@ -62,7 +118,7 @@ JUMP 0
 
 RETI-Emulator speichert alle Memory-Inhalte des SRAM in einer Datei `sram.bin` ab. Die aus der Datei `prgrm.reti` geparsten Assembly-Befehle werden realitätsgetreu als 32-Bit (4 Byte)  Maschinenbefehle in einer Datei `sram.bin` abgespeichert, weil dies am speichereffizientesten ist und die RETI möglichst realistisch simuliert werden soll.
 
-> Die Datei `sram.bin` ist zwar in der Ausgabe von `ls -alh /tmp/sram.bin` 8GiB groß, aber in Wirklichkeit verbraucht die Datei bei einem kleinen RETI-Programm nur wenige KibiBytes, weil Sparse Files verwendet werden. Das sieht man z.B. mit `du -h /tmp/sram.bin`.
+> Die Datei `sram.bin` ist zwar in der Ausgabe von `ls -lh ./sram.bin` 256KB groß (mit dem default Wert von `-r 65536`, also $2^{16}$), aber in Wirklichkeit verbraucht die Datei bei einem kleinen RETI-Programm nur wenige KibiBytes, weil Sparse Files verwendet werden. Das sieht man z.B. mit `du -h ./sram.bin`.
 
 > *Tipp:* Mittels `-f /tmp` (files) lässt sich das `/tmp` Verzeichnis unter Linux für die Speicherung von `sram.bin` nutzen. Das Verzeichnis `\tmp` ist häufig als **tmpfs**-Partition, welche im Arbeitsspeicher gemounted ist umgesetzt. Dadurch existiert der Inhalt des Verzeichnis nach dem Herunterfahren nicht mehr und das Verzeichnis, indem der RETI-Emulator ausgeführt wird, wird nicht mit unnützen Dateien vollgemüllt.
 
@@ -71,9 +127,9 @@ Mithilfe der Kommandozeilenoption `-i` (isr code) ist der RETI-Emulator in der L
 Mittels der Direktive `IVTE i` (**I**nterrupt **V**ector **T**able **E**ntry) können **Einträge einer Interrupt Vector Tabelle** mit der korrekten Startadresse einer Interrupt-Sevice-Routine erstellt werden. Die SRAM Konstante wird automatisch auf `i` draufaddiert.
 
 ## Debugging
-Mittels der Kommandozeilenoption -d (Debug-Mode) ist der RETI-Emulator in der Lage, ein Programm zu debuggen, d. h. er zeigt die Speicher- und Registerinhalte nach der Ausführung jedes Befehls an. Zwischen diesen kann sich der Benutzer mit n (next) vorwärts bewegen. Wird INT 3 in das RETI-Programm geschrieben, stellt dies einen Breakpoint dar. Zum jeweils nächsten Breakpoint gelangt man mit c (continue). In der untersten Zeile des Text-User-Interfaces (TUI) sind alle im Debug-Modus verfügbaren Aktionen aufgeführt.
+Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils näcsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. In der untersten Zeile des Text-User-Interfaces (TUI) stehen alle Aktionen, die Sie in diesem Debug-Modus ausführen können.
 
-Für die Analyse stehen im Debug-Interface verschiedene Funktionen zur Verfügung, etwa das Anzeigen von Speicherbereichen, Registern und ausgeführten Instruktionen. Über die Taste a (assign) kann ein Menü geöffnet werden, in dem sich auf einfache und selbsterklärende Weise Beobachtungspunkte (z. B. Speicher- oder Registeransichten) konfigurieren lassen.
+Mithilfe sogenannter **Watchbojects** wird ein mittels `-r i` (radius) bestimmter Radius von `i` (default ist 2) sichtbaren Instructions bzw. Speicherinhalten über und unter einer von diesem Watchobject betrachteten Speicheradresse angezeigt. Die Speicheradresse ist hierbei entweder über den Inhalt eines vorher dem Watchobject zugewiesenen Registers bestimmt oder einfach direkt durch eine vorher an das Watchobject zugewiesene Speicheradresse. Die verschiedenen verfügbaren Wachpointer in dem TUI für das Debuggen sind `ew` (EPROM Watchobject), `swc` (SRAM Watchobject für das Codesegment), `swd` (SRAM Watchobject für das Datensegment) und `sws` (SRAM Watchobject für den Stack). Die Zuweisung einer Speicheradresse oder eines Registers erfolgt dabei über das Kommando `a` (`a`ssign), z.B. in Form von `a<enter>ew<enter>10`, `a<enter>sws<enter>BAF` usw.
 
 <!-- Damit die Studenten sich immer darauf verlassen können, dass die Kernfunktionalitäten des RETI-Intepreters mit jedem Release während des Semesters gleich bleiben, müssen **neue Features**, welche diese zuerst etablierten Kernfunktionalitäten brechen erst mit `-E` (extended features) **aktiviert** werden. -->
 
@@ -81,7 +137,7 @@ Für die Analyse stehen im Debug-Interface verschiedene Funktionen zur Verfügun
 
 > *Tipp:* Mit der Kommandozeilenoption `-b` (binary) werden alle Registerinhalte, Speicherinhalte und Immediates im Binärsystem angezeigt, damit lässt sich beim debuggen z.B. leichter Shiften nachvollziehen.
 
-> *Tipp:* Um beim Debugging direkt zur Startadresse Ihres in den SRAM geladenen Programmes zu springen setzt man am besten einen Breakpoint `INT 3` an den Anfang des Programmes und führt dann direkt am Anfang nach Ausführen von `reti_interpreter -d prgrm.reti` continue (`c`) aus.
+> *Tipp:* Um beim Debugging direkt zur Startadresse Ihres in den SRAM geladenen Programmes zu springen setzen man am besten einen Breakpoint `INT 3` an den Anfang des Programmes und führen dann direkt am Anfang nach Ausführen von `reti_emulator -d prgrm.reti` das Kommando `c` aus.
 
 ## UART
 *Die Kommunikation mit der UART ist wie folgt umgesetzt:*
