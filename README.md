@@ -1,7 +1,7 @@
  [![asciicast](https://asciinema.org/a/693086.svg)](https://asciinema.org/a/693086)
 
 # Was ist der RETI-Emulator?
-Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**, **RETI-Debugger** und **Visualizer** für die Speicherinhalte der Peripheriegeräte der RETI während der Ausführung
+Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**, **RETI-Debugger** und **Visualizer** für die Peripheriegeräte (UART) der RETI während der Ausführung:
 
 - **Interpreter:** Ein Interpreter führt Anweisungen einer Programmiersprache direkt aus, ohne sie vorher in Maschinencode zu übersetzen. Die Ausführung erfolgt zeilenweise oder schrittweise.
   - *Beispiel:* Python-Interpreter.
