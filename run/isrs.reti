@@ -1,8 +1,6 @@
-IVTE 5              # INT 0: Print an integer stored in ACC over UART
-IVTE 77             # INT 1: Print a string stored in memory over UART, ACC contains start address of string
-IVTE 112            # INT 2: Get user input over UART and save it in ACC
-IVTE 163 INTTIMER 2 # INT 3: Switch to scheduler
-IVTE 183 KEYPRESS 1 # INT 4: Switch to keypress interrupt
+IVTE 3   # INT 0: Print an integer stored in ACC over UART
+IVTE 75  # INT 1: Print a string stored in memory over UART, ACC contains start address of string
+IVTE 110 # INT 2: Get user input over UART and save it in ACC
 SUBI SP 4 # == INT 0 ==
 STOREIN SP DS 1
 STOREIN SP IN1 2
@@ -160,37 +158,4 @@ MOVE IN1 ACC
 LOADIN SP DS 1
 LOADIN SP IN1 2
 ADDI SP 2
-RTI
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-RTI
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
-NOP
 RTI
