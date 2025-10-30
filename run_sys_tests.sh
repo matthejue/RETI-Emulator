@@ -20,7 +20,7 @@ fi
 
 for test in "${paths[@]}"; do
   ./heading_subheadings.py "heading" "$test" "$1" "="
-  ./bin/reti_emulator_main $(cat ./run/test_opts.txt) $3 $4 "$test";
+  ./bin/reti_emulator_main $(cat ./opts/test_opts.txt) $3 $4 "$test";
 
   if [[ $? != 0 ]]; then
     not_running_through+=("$test");

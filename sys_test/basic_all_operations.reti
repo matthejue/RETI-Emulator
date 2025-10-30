@@ -1,5 +1,5 @@
 # input: 1 0 0 -1 0 -1 -1 0 1 0 0 1
-# output: -2147483643 0 -1 -1 0 0 1
+# output: -2147483645 0 -1 -1 0 0 1
 INT 3
 # Compute Immediate
 ADDI IN1 -42
