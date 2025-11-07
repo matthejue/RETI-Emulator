@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   }
 
   init_reti();
-  if (!test_mode) {
+  if (debug_mode) {
     init_tui();
   }
 

@@ -157,7 +157,8 @@ void finalize() {
   fin_reti();
   if (test_mode) {
     close_out_and_err_file();
-  } else {
+  }
+  if (debug_mode) {
     fin_tui();
   }
 }
