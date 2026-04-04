@@ -50,10 +50,10 @@ const uint8_t NUM_REGISTER_ENTRIES =
 
 const uint8_t LINEWIDTH = 54;
 
-Register eprom_watchobject = PC;
-Register sram_watchobject_cs = PC;
-Register sram_watchobject_ds = DS;
-Register sram_watchobject_stack = SP;
+WatchBox eprom_watchbox = {&eprom_box, PC, NULL};
+WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL};
+WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL};
+WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL};
 
 Mnemonic_to_String opcode_to_mnemonic[] = {
     {ADDI, "ADDI"},     {SUBI, "SUBI"},       {MULTI, "MULTI"},
@@ -330,16 +330,22 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
   }
 }
 
-uint64_t determine_watchobject_value(Register watchobject_enum) {
-  if (watchobject_enum != ADDRESS) {
-    return read_array(regs, watchobject_enum, false);
+uint64_t determine_watchobject_value(WatchBox *watchbox) {
+  if (watchbox->watchobject != ADDRESS) {
+    return read_array(regs, watchbox->watchobject, false);
+  }
+
+  if (watchbox->watchobject_addr == NULL) {
+    display_notification_box("Error", "No address configured for this box");
+    // shouldn't be possible
+    return UINT64_MAX;
   }
 
   char *endptr;
-  uint64_t watchobject_val = strtol(watchobject_addr, &endptr, 10);
+  uint64_t watchobject_val = strtol(watchbox->watchobject_addr, &endptr, 10);
   if (*endptr != '\0') {
     const char *str = "Error: Invalid register or number: ";
-    const char *str2 = proper_str_cat(str, watchobject_addr);
+    const char *str2 = proper_str_cat(str, watchbox->watchobject_addr);
 
     display_notification_box("Error", str2);
     // this value will never be reached
@@ -470,7 +476,50 @@ void print_uart_meta_data() {
   print_formatted_to_box("\n", &uart_box);
 }
 
-char *watchobject_addr = NULL;
+WatchBox *get_watchbox(BoxIdentifier box_identifier) {
+  switch (box_identifier) {
+  case EPROM_BOX:
+    return &eprom_watchbox;
+  case SRAM_C_BOX:
+    return &sram_c_watchbox;
+  case SRAM_D_BOX:
+    return &sram_d_watchbox;
+  case SRAM_S_BOX:
+    return &sram_s_watchbox;
+  default:
+    return NULL;
+  }
+}
+
+char *ask_watchobject_addr(void) {
+  char *watchobject_addr = malloc(MAX_CHARS_WATCHOBJECT + 1);
+  display_input_box(watchobject_addr, "Enter an address:",
+                    MAX_CHARS_WATCHOBJECT);
+  return watchobject_addr;
+}
+
+void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
+  Register previous_watchobject = watchbox->watchobject;
+  char *previous_addr = watchbox->watchobject_addr;
+
+  if (watchobject == ADDRESS) {
+    watchbox->watchobject_addr = ask_watchobject_addr();
+  }
+
+  watchbox->watchobject = watchobject;
+  if (draw_tui()) {
+    if (watchobject == ADDRESS) {
+      free(previous_addr);
+    }
+    return;
+  }
+
+  watchbox->watchobject = previous_watchobject;
+  if (watchobject == ADDRESS) {
+    free(watchbox->watchobject_addr);
+    watchbox->watchobject_addr = previous_addr;
+  }
+}
 
 void evaluate_keyboard_input(void) {
   char key;
@@ -508,9 +557,9 @@ void evaluate_keyboard_input(void) {
         return;
       }
     } else if (key == 'a') {
-
       BoxIdentifier box_identifier =
           display_popup_menu(box_entries, NUM_BOX_ENTRIES);
+      WatchBox *watchbox = get_watchbox(box_identifier);
 
       if (box_identifier == CANCEL) {
         draw_tui();
@@ -519,52 +568,26 @@ void evaluate_keyboard_input(void) {
 
       Register watchobject =
           display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
-      if (watchobject == ADDRESS) {
-        watchobject_addr = malloc(MAX_CHARS_WATCHOBJECT + 1);
-        display_input_box(watchobject_addr,
-                          "Enter an address:", MAX_CHARS_WATCHOBJECT);
-      }
-
       if (watchobject == CANCEL2) {
         draw_tui();
         continue;
       }
 
       switch (box_identifier) {
-      case EPROM_BOX: {
-        Register eprom_watchobject_tmp = eprom_watchobject;
-        eprom_watchobject = watchobject;
-        if (!draw_tui()) {
-          eprom_watchobject = eprom_watchobject_tmp;
-        }
+      case EPROM_BOX:
+        assign_watchobject_to_box(watchbox, watchobject);
         break;
-      }
-      case SRAM_C_BOX: {
-        Register sram_watchobject_cs_tmp = sram_watchobject_cs;
-        sram_watchobject_cs = watchobject;
-        if (!draw_tui()) {
-          sram_watchobject_cs = sram_watchobject_cs_tmp;
-        }
+      case SRAM_C_BOX:
+        assign_watchobject_to_box(watchbox, watchobject);
         break;
-      }
-      case SRAM_D_BOX: {
-        Register sram_watchobject_ds_tmp = sram_watchobject_ds;
-        sram_watchobject_ds = watchobject;
-        if (!draw_tui()) {
-          sram_watchobject_ds = sram_watchobject_ds_tmp;
-        }
+      case SRAM_D_BOX:
+        assign_watchobject_to_box(watchbox, watchobject);
         break;
-      }
-      case SRAM_S_BOX: {
-        Register sram_watchobject_stack_tmp = sram_watchobject_stack;
-        sram_watchobject_stack = watchobject;
-        if (!draw_tui()) {
-          sram_watchobject_stack = sram_watchobject_stack_tmp;
-        }
+      case SRAM_S_BOX:
+        assign_watchobject_to_box(watchbox, watchobject);
         break;
-      }
       default:
-          display_notification_box("Error", "Invalid box identifier");
+        display_notification_box("Error", "Invalid box identifier");
         break;
       }
     } else if (key == 'D') {
@@ -591,13 +614,13 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 
 bool draw_tui(void) {
   uint64_t eprom_watchobject_int =
-      determine_watchobject_value(eprom_watchobject);
+      determine_watchobject_value(&eprom_watchbox);
   uint64_t sram_watchobject_cs_int =
-      determine_watchobject_value(sram_watchobject_cs);
+      determine_watchobject_value(&sram_c_watchbox);
   uint64_t sram_watchobject_ds_int =
-      determine_watchobject_value(sram_watchobject_ds);
+      determine_watchobject_value(&sram_d_watchbox);
   uint64_t sram_watchobject_stack_int =
-      determine_watchobject_value(sram_watchobject_stack);
+      determine_watchobject_value(&sram_s_watchbox);
   if (eprom_watchobject_int == UINT64_MAX ||
       sram_watchobject_cs_int == UINT64_MAX ||
       sram_watchobject_ds_int == UINT64_MAX ||
@@ -617,7 +640,7 @@ bool draw_tui(void) {
   print_array_with_idcs(REGS, NUM_REGISTERS, false);
 
   handle_heading(false, &eprom_box, "EPROM: %s (%lu)",
-                 register_or_address_to_identifier[eprom_watchobject],
+                 register_or_address_to_identifier[eprom_watchbox.watchobject],
                  eprom_watchobject_int);
   print_eprom_watchobject(eprom_watchobject_int);
 
@@ -628,26 +651,29 @@ bool draw_tui(void) {
   // the user shouldn't have to calculate the absolute address for the sram
   sram_watchobject_cs_int =
       sram_watchobject_cs_int +
-      ((sram_watchobject_cs == ADDRESS) ? (uint32_t)(1 << 31) : 0);
+      ((sram_c_watchbox.watchobject == ADDRESS) ? (uint32_t)(1 << 31) : 0);
   sram_watchobject_ds_int =
       sram_watchobject_ds_int +
-      (uint64_t)((sram_watchobject_ds == ADDRESS) ? (uint32_t)(1 << 31) : 0);
+      (uint64_t)((sram_d_watchbox.watchobject == ADDRESS) ? (uint32_t)(1 << 31)
+                                                          : 0);
   sram_watchobject_stack_int =
       sram_watchobject_stack_int +
-      (uint64_t)((sram_watchobject_stack == ADDRESS) ? (uint32_t)(1 << 31) : 0);
+      (uint64_t)((sram_s_watchbox.watchobject == ADDRESS)
+                     ? (uint32_t)(1 << 31)
+                     : 0);
 
   handle_heading(false, &sram_c_box, "SRAM Codesegment: %s (%lu)",
-                 register_or_address_to_identifier[sram_watchobject_cs],
+                 register_or_address_to_identifier[sram_c_watchbox.watchobject],
                  sram_watchobject_cs_int);
   print_sram_watchobject(sram_watchobject_cs_int, SRAM_C);
 
   handle_heading(false, &sram_d_box, "SRAM Datasegment: %s (%lu)",
-                 register_or_address_to_identifier[sram_watchobject_ds],
+                 register_or_address_to_identifier[sram_d_watchbox.watchobject],
                  sram_watchobject_ds_int);
   print_sram_watchobject(sram_watchobject_ds_int, SRAM_D);
 
   handle_heading(false, &sram_s_box, "SRAM Stack: %s (%lu)",
-                 register_or_address_to_identifier[sram_watchobject_stack],
+                 register_or_address_to_identifier[sram_s_watchbox.watchobject],
                  sram_watchobject_stack_int);
   print_sram_watchobject(sram_watchobject_stack_int, SRAM_S);
 

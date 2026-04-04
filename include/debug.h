@@ -25,7 +25,11 @@ typedef enum {
   CANCEL = 0b11111111,
 } BoxIdentifier;
 
-extern char *watchobject_addr;
+typedef struct {
+  Box *box;
+  Register watchobject;
+  char *watchobject_addr;
+} WatchBox;
 
 extern const Menu_Entry box_entries[];
 
@@ -41,10 +45,10 @@ extern const char *register_or_address_to_identifier[];
 
 extern const uint8_t NUM_REGISTER_ENTRIES;
 
-extern Register eprom_watchobject;
-extern Register sram_watchobject_cs;
-extern Register sram_watchobject_ds;
-extern Register sram_watchobject_stack;
+extern WatchBox eprom_watchbox;
+extern WatchBox sram_c_watchbox;
+extern WatchBox sram_d_watchbox;
+extern WatchBox sram_s_watchbox;
 
 char *read_stdin();
 void process_and_print_array(uint32_t *array, size_t length);
