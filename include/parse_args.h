@@ -12,6 +12,7 @@ extern bool test_mode;
 extern bool binary_mode;
 extern bool extended_features;
 extern bool read_metadata;
+extern bool collect_comments;
 extern uint8_t max_waiting_instrs;
 extern bool verbose;
 extern bool ds_vals_unsigned;

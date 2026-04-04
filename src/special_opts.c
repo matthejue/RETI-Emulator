@@ -2,6 +2,7 @@
 #include "../include/debug.h"
 #include "../include/error.h"
 #include "../include/parse_args.h"
+#include "../include/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include <ctype.h>
@@ -155,6 +156,7 @@ void close_out_and_err_file() {
 
 void finalize() {
   fin_reti();
+  free_program_comments();
   if (test_mode) {
     close_out_and_err_file();
   }

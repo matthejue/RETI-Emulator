@@ -16,6 +16,7 @@ bool test_mode = false;
 bool binary_mode = false;
 bool extended_features = false;
 bool read_metadata = false;
+bool collect_comments = false;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool ds_vals_unsigned = false;
@@ -30,7 +31,7 @@ void print_help(char *bin_name) {
       stderr,
       "Usage: %s -r ram_size -p page_size -d (daemon mode) "
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
-      "-w max_waiting_instrs -t (test mode) -m (read metadata) -v (verbose) "
+      "-w max_waiting_instrs -t (test mode) -m (read metadata) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
       "-I timer_interrupt_interval -h (help page) "
       "prgrm_path\n",
@@ -40,7 +41,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEauI:")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEcauI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -51,6 +52,7 @@ void parse_args(uint8_t argc, char *argv[]) {
       verbose = true;
       read_metadata = true;
       binary_mode = true;
+      collect_comments = true;
       break;
     case 's':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -111,6 +113,9 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'm':
       read_metadata = true;
       break;
+    case 'c':
+      collect_comments = true;
+      break;
     case 'b':
       binary_mode = true;
       break;
@@ -158,6 +163,7 @@ void print_args() {
   printf("Interrupt timer interval: %u\n", interrupt_timer_interval);
   printf("Debug mode: %s\n", debug_mode ? "true" : "false");
   printf("Read metadata: %s\n", read_metadata ? "true" : "false");
+  printf("Collect comments: %s\n", collect_comments ? "true" : "false");
   printf("Test mode: %s\n", test_mode ? "true" : "false");
   printf("Binary mode: %s\n", binary_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");

@@ -4,6 +4,7 @@
 #include "../include/interrupt.h"
 #include "../include/log.h"
 #include "../include/parse_args.h"
+#include "../include/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
 #include "../include/statemachine.h"
@@ -179,6 +180,54 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
   return "";
 }
 
+void print_formatted_to_box(const char *format, Box *box, ...);
+
+static Box *get_box_for_mem_type(MemType mem_type) {
+  switch (mem_type) {
+  case REGS:
+    return &regs_box;
+  case EPROM:
+    return &eprom_box;
+  case UART:
+    return &uart_box;
+  case SRAM_C:
+    return &sram_c_box;
+  case SRAM_D:
+    return &sram_d_box;
+  case SRAM_S:
+    return &sram_s_box;
+  default:
+    fprintf(stderr, "Error: Invalid memory type\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+static bool comment_matches_mem_type(Source_Comment *comment, MemType mem_type) {
+  if (comment->target == COMMENT_TARGET_EPROM) {
+    return mem_type == EPROM;
+  }
+  return mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S;
+}
+
+static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
+                                           bool before_instruction) {
+  if (!collect_comments) {
+    return;
+  }
+
+  Box *box = get_box_for_mem_type(mem_type);
+  int max_comment_len = max(0, box->width - 2);
+  for (uint32_t i = 0; i < num_source_comments; i++) {
+    Source_Comment *comment = &source_comments[i];
+    if (!comment_matches_mem_type(comment, mem_type) ||
+        comment->anchor_idx != idx ||
+        comment->display_before_instr != before_instruction) {
+      continue;
+    }
+    print_formatted_to_box("%.*s\n", box, max_comment_len, comment->text);
+  }
+}
+
 void print_formatted_to_box(const char *format, Box *box, ...) {
   va_list args;
   va_start(args, box);
@@ -235,30 +284,7 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   }
 
   char *reg_to_mem_pntr_str = reg_to_mem_pntr(idx, mem_type);
-  Box *box;
-  switch (mem_type) {
-  case REGS:
-    box = &regs_box;
-    break;
-  case EPROM:
-    box = &eprom_box;
-    break;
-  case UART:
-    box = &uart_box;
-    break;
-  case SRAM_C:
-    box = &sram_c_box;
-    break;
-  case SRAM_D:
-    box = &sram_d_box;
-    break;
-  case SRAM_S:
-    box = &sram_s_box;
-    break;
-  default:
-    fprintf(stderr, "Error: Invalid memory type\n");
-    exit(EXIT_FAILURE);
-  }
+  Box *box = get_box_for_mem_type(mem_type);
 
   print_formatted_to_box("%s: %s%s\n", box, idx_str, mem_content_str,
                          reg_to_mem_pntr_str);
@@ -293,11 +319,17 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
     break;
   case EPROM:
     for (uint16_t i = start; i <= end; i++) {
+      if (are_instrs) {
+        print_comments_for_instruction(EPROM, i, true);
+      }
       if (i < num_instrs_start_prgrm) {
         print_mem_content_with_idx(i, ((uint32_t *)eprom)[i], false, are_instrs,
                                    EPROM);
       } else {
         print_mem_content_with_idx(i, 0, false, false, EPROM);
+      }
+      if (are_instrs) {
+        print_comments_for_instruction(EPROM, i, false);
       }
     }
     break;
@@ -320,8 +352,14 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
   case SRAM_D:
   case SRAM_S:
     for (uint64_t i = start; i <= end; i++) {
+      if (are_instrs) {
+        print_comments_for_instruction(mem_type, i, true);
+      }
       print_mem_content_with_idx(i, read_file(sram, i), are_unsigned,
                                  are_instrs, mem_type);
+      if (are_instrs) {
+        print_comments_for_instruction(mem_type, i, false);
+      }
     }
     break;
   default:
