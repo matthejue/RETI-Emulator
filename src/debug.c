@@ -209,6 +209,112 @@ static bool comment_matches_mem_type(Source_Comment *comment, MemType mem_type) 
   return mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S;
 }
 
+static bool mem_type_has_instruction_comments(MemType mem_type, uint64_t idx) {
+  if (!collect_comments) {
+    return false;
+  }
+  if (mem_type == EPROM) {
+    return idx < num_instrs_start_prgrm;
+  }
+  return idx >= num_instrs_isrs && idx < num_instrs_isrs + num_instrs_prgrm &&
+         (mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S);
+}
+
+static uint32_t count_comments_for_instruction(MemType mem_type, uint64_t idx,
+                                               bool before_instruction) {
+  if (!mem_type_has_instruction_comments(mem_type, idx)) {
+    return 0;
+  }
+
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < num_source_comments; i++) {
+    Source_Comment *comment = &source_comments[i];
+    if (comment_matches_mem_type(comment, mem_type) &&
+        comment->anchor_idx == idx &&
+        comment->display_before_instr == before_instruction) {
+      count++;
+    }
+  }
+  return count;
+}
+
+static uint32_t rendered_rows_for_idx(MemType mem_type, uint64_t idx) {
+  return 1 + count_comments_for_instruction(mem_type, idx, true) +
+         count_comments_for_instruction(mem_type, idx, false);
+}
+
+static uint64_t max_idx_for_mem_type(MemType mem_type) {
+  switch (mem_type) {
+  case EPROM:
+    return EPROM_SIZE - 1;
+  case SRAM_C:
+  case SRAM_D:
+  case SRAM_S:
+    return sram_size - 1;
+  default:
+    fprintf(stderr, "Error: Invalid memory type\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+static void determine_visible_range(MemType mem_type, uint64_t watch_idx,
+                                    uint16_t max_rows, uint64_t *start,
+                                    uint64_t *end) {
+  uint64_t min_idx = 0;
+  uint64_t max_idx = max_idx_for_mem_type(mem_type);
+
+  *start = watch_idx;
+  *end = watch_idx;
+
+  uint32_t rows_before_watch =
+      count_comments_for_instruction(mem_type, watch_idx, true);
+  uint32_t rows_after_watch =
+      count_comments_for_instruction(mem_type, watch_idx, false);
+  uint32_t used_rows = rows_before_watch + 1 + rows_after_watch;
+
+  while (used_rows < max_rows && (*start > min_idx || *end < max_idx)) {
+    bool can_expand_up = *start > min_idx;
+    bool can_expand_down = *end < max_idx;
+
+    if (can_expand_up &&
+        (!can_expand_down || rows_before_watch <= rows_after_watch)) {
+      uint32_t added_rows = rendered_rows_for_idx(mem_type, *start - 1);
+      if (used_rows + added_rows > max_rows) {
+        can_expand_up = false;
+      } else {
+        (*start)--;
+        rows_before_watch += added_rows;
+        used_rows += added_rows;
+        continue;
+      }
+    }
+
+    if (can_expand_down) {
+      uint32_t added_rows = rendered_rows_for_idx(mem_type, *end + 1);
+      if (used_rows + added_rows > max_rows) {
+        can_expand_down = false;
+      } else {
+        (*end)++;
+        rows_after_watch += added_rows;
+        used_rows += added_rows;
+        continue;
+      }
+    }
+
+    if (can_expand_up) {
+      uint32_t added_rows = rendered_rows_for_idx(mem_type, *start - 1);
+      if (used_rows + added_rows <= max_rows) {
+        (*start)--;
+        rows_before_watch += added_rows;
+        used_rows += added_rows;
+        continue;
+      }
+    }
+
+    break;
+  }
+}
+
 static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
                                            bool before_instruction) {
   if (!collect_comments) {
@@ -224,7 +330,15 @@ static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
         comment->display_before_instr != before_instruction) {
       continue;
     }
-    print_formatted_to_box("%.*s\n", box, max_comment_len, comment->text);
+
+    int formatted_len = snprintf(NULL, 0, "%-*.*s\n", max_comment_len,
+                                 max_comment_len, comment->text);
+    char *formatted_comment = malloc(formatted_len + 1);
+    snprintf(formatted_comment, formatted_len + 1, "%-*.*s\n", max_comment_len,
+             max_comment_len, comment->text);
+    write_text_into_box_with_attr(box, formatted_comment,
+                                  COLOR_PAIR(COMMENT_COLOR_PAIR));
+    free(formatted_comment);
   }
 }
 
@@ -407,26 +521,19 @@ void print_eprom_watchobject(uint64_t eprom_watchobject) {
     return;
   }
 
-  radius = (eprom_box.height - 2) / 2;
+  uint64_t start;
+  uint64_t end;
+  determine_visible_range(EPROM, eprom_watchobject, eprom_box.height - 2, &start,
+                          &end);
 
-  uint8_t diameter_adjust_lower = (int64_t)(eprom_watchobject - radius) < 0
-                                      ? -(int64_t)(eprom_watchobject - radius)
-                                      : 0;
-  uint8_t diameter_adjust_upper =
-      eprom_watchobject + radius > (sram_size - 1)
-          ? (eprom_watchobject + radius) - (sram_size - 1)
-          : 0;
-  print_array_with_idcs_from_to(
-      EPROM, max(0, eprom_watchobject - radius - diameter_adjust_upper),
-      min(eprom_watchobject + radius + diameter_adjust_lower,
-          num_instrs_start_prgrm - 1),
-      true);
-  print_array_with_idcs_from_to(
-      EPROM,
-      max(num_instrs_start_prgrm,
-          eprom_watchobject - radius - diameter_adjust_upper),
-      min(eprom_watchobject + radius + diameter_adjust_lower, EPROM_SIZE - 1),
-      false);
+  if (start < num_instrs_start_prgrm) {
+    print_array_with_idcs_from_to(EPROM, start,
+                                  min(end, num_instrs_start_prgrm - 1), true);
+  }
+  if (end >= num_instrs_start_prgrm) {
+    print_array_with_idcs_from_to(EPROM, max(num_instrs_start_prgrm, start), end,
+                                  false);
+  }
 }
 
 void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
@@ -434,39 +541,27 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
     return;
   }
 
-  radius = (sram_c_box.height - 2) / 2;
-
   sram_watchobject_x = sram_watchobject_x & 0x7FFFFFFF;
-  uint8_t diameter_adjust_lower = (int64_t)(sram_watchobject_x - radius) < 0
-                                      ? -(int64_t)(sram_watchobject_x - radius)
-                                      : 0;
-  uint8_t diameter_adjust_upper =
-      sram_watchobject_x + radius > (sram_size - 1)
-          ? (sram_watchobject_x + radius) - (sram_size - 1)
-          : 0;
+  uint64_t start;
+  uint64_t end;
+  uint64_t instruction_start = ivt_max_idx == (uint32_t)-1 ? 0 : ivt_max_idx + 1;
+  uint64_t instruction_end = num_instrs_isrs + num_instrs_prgrm - 1;
+  determine_visible_range(mem_type, sram_watchobject_x, sram_c_box.height - 2,
+                          &start, &end);
 
-  if (ivt_max_idx != -1) {
-    print_file_with_idcs(
-        mem_type,
-        max(0, sram_watchobject_x - radius - diameter_adjust_upper +
-                   (term_height % 2 == 1 ? 1 : 0)),
-        min(sram_watchobject_x + radius + diameter_adjust_lower, ivt_max_idx),
-        true, false);
+  if (ivt_max_idx != -1 && start <= ivt_max_idx) {
+    print_file_with_idcs(mem_type, start, min(end, ivt_max_idx), true, false);
   }
-  print_file_with_idcs(mem_type,
-                       max(ivt_max_idx + 1, sram_watchobject_x - radius -
-                                                diameter_adjust_upper +
-                                                (term_height % 2 == 1 ? 1 : 0)),
-                       min(sram_watchobject_x + radius + diameter_adjust_lower,
-                           num_instrs_isrs + num_instrs_prgrm - 1),
-                       false, true);
-  print_file_with_idcs(
-      mem_type,
-      max(num_instrs_isrs + num_instrs_prgrm,
-          sram_watchobject_x - radius - diameter_adjust_upper +
-              (term_height % 2 == 1 ? 1 : 0)),
-      min(sram_watchobject_x + radius + diameter_adjust_lower, sram_size - 1),
-      ds_vals_unsigned, false);
+  if (end >= instruction_start && start <= instruction_end) {
+    print_file_with_idcs(mem_type, max(instruction_start, start),
+                         min(end, instruction_end), false, true);
+  }
+  if (end >= num_instrs_isrs + num_instrs_prgrm) {
+    print_file_with_idcs(mem_type,
+                         max((uint64_t)(num_instrs_isrs + num_instrs_prgrm),
+                             start),
+                         end, ds_vals_unsigned, false);
+  }
 }
 
 void print_uart_meta_data() {

@@ -26,7 +26,10 @@ extern Box *boxes[];
 extern const uint8_t NUM_BOXES;
 
 void write_text_into_box(Box *box, const char *text);
+void write_text_into_box_with_attr(Box *box, const char *text, int attr);
 void draw_boxes();
+
+#define COMMENT_COLOR_PAIR 1
 
 void init_tui();
 void fin_tui();

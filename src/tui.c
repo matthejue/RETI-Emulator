@@ -36,6 +36,11 @@ void init_tui() {
   cbreak();
   noecho();
   curs_set(0); // Hide cursor
+  if (has_colors()) {
+    start_color();
+    use_default_colors();
+    init_pair(COMMENT_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
+  }
 
   for (uint8_t i = 0; i < NUM_BOXES; i++) {
     boxes[i]->win = newwin(1, 1, 0, 0);
@@ -126,6 +131,10 @@ void draw_boxes() {
 }
 
 void write_text_into_box(Box *box, const char *text) {
+  write_text_into_box_with_attr(box, text, A_NORMAL);
+}
+
+void write_text_into_box_with_attr(Box *box, const char *text, int attr) {
   uint8_t text_len = strlen(text);
   for (uint8_t i = 0; i < text_len; i++) {
     if (box->line >= (box->height - 1)) {
@@ -140,7 +149,9 @@ void write_text_into_box(Box *box, const char *text) {
     }
     if (box->line <
         (box->height - 1)) { // Ensure we don't write on the bottom border
+      wattron(box->win, attr);
       mvwaddch(box->win, box->line, box->col, text[i]);
+      wattroff(box->win, attr);
       box->col++;
     }
   }
