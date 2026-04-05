@@ -220,6 +220,16 @@ static bool mem_type_has_instruction_comments(MemType mem_type, uint64_t idx) {
          (mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S);
 }
 
+static uint32_t wrapped_comment_rows(Box *box, const char *text) {
+  int max_comment_len = max(0, box->width - 2);
+  if (max_comment_len == 0) {
+    return 0;
+  }
+
+  size_t text_len = strlen(text);
+  return max(1, (text_len + max_comment_len - 1) / max_comment_len);
+}
+
 static uint32_t count_comments_for_instruction(MemType mem_type, uint64_t idx,
                                                bool before_instruction) {
   if (!mem_type_has_instruction_comments(mem_type, idx)) {
@@ -227,12 +237,13 @@ static uint32_t count_comments_for_instruction(MemType mem_type, uint64_t idx,
   }
 
   uint32_t count = 0;
+  Box *box = get_box_for_mem_type(mem_type);
   for (uint32_t i = 0; i < num_source_comments; i++) {
     Source_Comment *comment = &source_comments[i];
     if (comment_matches_mem_type(comment, mem_type) &&
         comment->anchor_idx == idx &&
         comment->display_before_instr == before_instruction) {
-      count++;
+      count += wrapped_comment_rows(box, comment->text);
     }
   }
   return count;
@@ -313,6 +324,29 @@ static void determine_visible_range(MemType mem_type, uint64_t watch_idx,
 
     break;
   }
+
+  if (used_rows < max_rows) {
+    uint32_t up_overflow = UINT32_MAX;
+    uint32_t down_overflow = UINT32_MAX;
+
+    if (*start > min_idx) {
+      uint32_t added_rows = rendered_rows_for_idx(mem_type, *start - 1);
+      up_overflow = used_rows + added_rows - max_rows;
+    }
+    if (*end < max_idx) {
+      uint32_t added_rows = rendered_rows_for_idx(mem_type, *end + 1);
+      down_overflow = used_rows + added_rows - max_rows;
+    }
+
+    if (up_overflow == UINT32_MAX && down_overflow == UINT32_MAX) {
+      return;
+    }
+    if (up_overflow <= down_overflow) {
+      (*start)--;
+    } else {
+      (*end)++;
+    }
+  }
 }
 
 static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
@@ -323,6 +357,9 @@ static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
 
   Box *box = get_box_for_mem_type(mem_type);
   int max_comment_len = max(0, box->width - 2);
+  if (max_comment_len == 0) {
+    return;
+  }
   for (uint32_t i = 0; i < num_source_comments; i++) {
     Source_Comment *comment = &source_comments[i];
     if (!comment_matches_mem_type(comment, mem_type) ||
@@ -330,15 +367,20 @@ static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
         comment->display_before_instr != before_instruction) {
       continue;
     }
-
-    int formatted_len = snprintf(NULL, 0, "%-*.*s\n", max_comment_len,
-                                 max_comment_len, comment->text);
-    char *formatted_comment = malloc(formatted_len + 1);
-    snprintf(formatted_comment, formatted_len + 1, "%-*.*s\n", max_comment_len,
-             max_comment_len, comment->text);
-    write_text_into_box_with_attr(box, formatted_comment,
-                                  COLOR_PAIR(COMMENT_COLOR_PAIR));
-    free(formatted_comment);
+    size_t text_len = strlen(comment->text);
+    size_t offset = 0;
+    do {
+      int chunk_len = min((int64_t)(text_len - offset), max_comment_len);
+      int formatted_len = snprintf(NULL, 0, "%-*.*s\n", max_comment_len,
+                                   chunk_len, comment->text + offset);
+      char *formatted_comment = malloc(formatted_len + 1);
+      snprintf(formatted_comment, formatted_len + 1, "%-*.*s\n",
+               max_comment_len, chunk_len, comment->text + offset);
+      write_text_into_box_with_attr(box, formatted_comment,
+                                    COLOR_PAIR(COMMENT_COLOR_PAIR));
+      free(formatted_comment);
+      offset += chunk_len;
+    } while (offset < text_len);
   }
 }
 
