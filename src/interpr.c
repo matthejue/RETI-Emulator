@@ -309,6 +309,14 @@ void interpr_instr(Instruction *assembly_instr) {
                       (int32_t)assembly_instr->opd3,
                   read_array(regs, assembly_instr->opd2, false));
     break;
+  case TSL: {
+    uint32_t source_value = read_array(regs, assembly_instr->opd2, false);
+    write_array(regs, assembly_instr->opd1, source_value, false);
+    write_array(regs, assembly_instr->opd2, 1, false);
+    if (assembly_instr->opd1 == PC || assembly_instr->opd2 == PC) {
+      goto no_pc_increase;
+    }
+  } break;
   case MOVE:
     write_array(regs, assembly_instr->opd2,
                 read_array(regs, assembly_instr->opd1, false), false);

@@ -66,7 +66,8 @@ Mnemonic_to_String opcode_to_mnemonic[] = {
     {MULTM, "MULT"},    {DIVM, "DIV"},        {MODM, "MOD"},
     {OPLUSM, "OPLUS"},  {ORM, "OR"},          {ANDM, "AND"},
     {LOAD, "LOAD"},     {LOADIN, "LOADIN"},   {LOADI, "LOADI"},
-    {STORE, "STORE"},   {STOREIN, "STOREIN"}, {MOVE, "MOVE"},
+    {STORE, "STORE"},   {STOREIN, "STOREIN"}, {TSL, "TSL"},
+    {MOVE, "MOVE"},
     {JUMPGT, "JUMP>"},  {JUMPEQ, "JUMP=="},   {JUMPEQ, "JUMP="},
     {JUMPGE, "JUMP>="}, {JUMPLT, "JUMP<"},    {JUMPNE, "JUMP!="},
     {JUMPNE, "JUMP<>"}, {JUMPLE, "JUMP<="},   {JUMP, "JUMP"},
@@ -123,7 +124,7 @@ char *assembly_to_str(Instruction *instr) {
     dest = copy_reg_into_str(dest, instr->opd1);
     dest = copy_reg_into_str(dest, instr->opd2);
     dest = copy_im_into_str(dest, instr->opd3);
-  } else if (instr->op == MOVE) {
+  } else if (instr->op == TSL || instr->op == MOVE) {
     dest = copy_reg_into_str(dest, instr->opd1);
     dest = copy_reg_into_str(dest, instr->opd2);
   } else if ((JUMPGT <= instr->op && instr->op <= JUMP) || instr->op == INT) {

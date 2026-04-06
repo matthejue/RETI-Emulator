@@ -29,7 +29,8 @@ String_to_Mnemonic mnemonic_to_opcode[] = {
     {"MOD", MODR},      {"OPLUS", OPLUSR},  {"OR", ORR},
     {"AND", ANDR},      {"LOAD", LOAD},     {"LOADIN", LOADIN},
     {"LOADI", LOADI},   {"STORE", STORE},   {"STOREIN", STOREIN},
-    {"MOVE", MOVE},     {"JUMP>", JUMPGT},  {"JUMP==", JUMPEQ},
+    {"TSL", TSL},       {"MOVE", MOVE},     {"JUMP>", JUMPGT},
+    {"JUMP==", JUMPEQ},
     {"JUMP=", JUMPEQ},  {"JUMP>=", JUMPGE}, {"JUMP<", JUMPLT},
     {"JUMP!=", JUMPNE}, {"JUMP<>", JUMPNE}, {"JUMP<=", JUMPLE},
     {"JUMP", JUMP},     {"INT", INT},       {"RTI", RTI},
@@ -154,6 +155,8 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
     machine_instr = op << 25 | opd1 << 25 | opd2;
   } else if (op == STOREIN) {
     machine_instr = op << 25 | opd1 << 22 | opd2 << 25 | opd3;
+  } else if (op == TSL) {
+    machine_instr = op << 25 | opd1 << 22 | opd2 << 25;
   } else if (op == MOVE) {
     machine_instr = op << 25 | opd1 << 25 | opd2 << 22;
   } else if ((JUMPGT <= op && op <= JUMP) || op == INT) {
@@ -265,6 +268,10 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
       instr->opd1 = d;
       instr->opd2 = s;
       instr->opd3 = i;
+      break;
+    case TSL:
+      instr->opd1 = d;
+      instr->opd2 = s;
       break;
     case MOVE:
       instr->opd1 = s;
