@@ -766,6 +766,15 @@ void evaluate_keyboard_input(void) {
         display_notification_box("Error", "Invalid box identifier");
         break;
       }
+    } else if (key == 'o') {
+      cycle_info_box_page();
+      draw_tui();
+      continue;
+    } else if (key == 'e') {
+      if (cycle_keypress_interrupt_action_isr()) {
+        draw_tui();
+      }
+      continue;
     } else if (key == 'D') {
       debug_activated = !debug_activated;
     } else if (key == 'q') {

@@ -130,13 +130,13 @@ bool setup_hardware_interrupt(uint8_t isr) {
   bool should_cont = false;
 
   const char *title = NULL;
-  if (isr == isr_of_keypress_interrupt) {
+  if (isr == get_keypress_interrupt_action_isr() ||
+      isr == isr_of_keypress_interrupt) {
     title = "Keyboard Interrupt";
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
   } else {
-    fprintf(stderr, "Error: Unknown interrupt type\n");
-    exit(EXIT_FAILURE);
+    title = "Hardware Interrupt";
   }
 
   if (visibility_condition) {

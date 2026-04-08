@@ -21,6 +21,7 @@ extern Box uart_box;
 extern Box sram_c_box;
 extern Box sram_d_box;
 extern Box sram_s_box;
+extern Box info_box;
 
 extern Box *boxes[];
 extern const uint8_t NUM_BOXES;
@@ -40,5 +41,6 @@ void fin_tui();
 void reset_box_line(Box *box);
 void make_unneccessary_spaces_visible(Box *box);
 void update_term_and_box_sizes();
+void cycle_info_box_page(void);
 
 #endif // TUI_H
