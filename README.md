@@ -29,6 +29,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-w max_waiting_instrs`: Setzt raximale Wartezeit der UART für das Senden und Empfangen von Daten (Anzahle Befehle)
 - `-t`: Aktiviert Testmode für Systemtests
 - `-m`: Liest Eingaben aus Kommentar `# input: ...` raus
+- `-c`: Zeigt Quellkommentare im Debugmode an
 - `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
 - `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
@@ -129,6 +130,8 @@ Mittels der Direktive `IVTE i` (**I**nterrupt **V**ector **T**able **E**ntry) k�
 ## Debugging
 Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils näcsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. In der untersten Zeile des Text-User-Interfaces (TUI) stehen alle Aktionen, die Sie in diesem Debug-Modus ausführen können.
 
+Mit `-c` werden zusätzlich Quellkommentare im Debugmode angezeigt. Dazu werden Kommentare beim Parsen in einer internen Struktur mit Ziel-Speicherbereich, referenziertem Instruktionsindex und Anzeigeposition gespeichert. Beim Anzeigen einer Instruktion wird geprüft, welche gespeicherten Kommentare diesem Instruktionsindex im aktuellen Speicherbereich zugeordnet sind, und diese werden dann vor oder nach der Instruktion ausgegeben.
+
 Mithilfe sogenannter **Watchbojects** wird ein mittels `-r i` (radius) bestimmter Radius von `i` (default ist 2) sichtbaren Instructions bzw. Speicherinhalten über und unter einer von diesem Watchobject betrachteten Speicheradresse angezeigt. Die Speicheradresse ist hierbei entweder über den Inhalt eines vorher dem Watchobject zugewiesenen Registers bestimmt oder einfach direkt durch eine vorher an das Watchobject zugewiesene Speicheradresse. Die verschiedenen verfügbaren Wachpointer in dem TUI für das Debuggen sind `ew` (EPROM Watchobject), `swc` (SRAM Watchobject für das Codesegment), `swd` (SRAM Watchobject für das Datensegment) und `sws` (SRAM Watchobject für den Stack). Die Zuweisung einer Speicheradresse oder eines Registers erfolgt dabei über das Kommando `a` (`a`ssign), z.B. in Form von `a<enter>ew<enter>10`, `a<enter>sws<enter>BAF` usw.
 
 <!-- Damit die Studenten sich immer darauf verlassen können, dass die Kernfunktionalitäten des RETI-Intepreters mit jedem Release während des Semesters gleich bleiben, müssen **neue Features**, welche diese zuerst etablierten Kernfunktionalitäten brechen erst mit `-E` (extended features) **aktiviert** werden. -->
@@ -155,3 +158,10 @@ Für die UART zeigt das TUI fürs Debuggen neben offensichtlich den Registern R0
 > *Tipp:* Sie können dieser Wartezeit mittels der Kommandozeilenoption `-w 0` (waiting time) auf 0 setzen, um beim Debuggen nicht unnötig warten zu müssen. Allgemein steht `i` in `-w i` für die Anzahl Befehle, die maximal gewartet werden muss. Man sollten hierbei allerdings nicht vergessen, dass ein geschriebenes Programm mit beliebig langen Wartezeit umgehen können sollte.
 
 > *Tipp:* Um beim Debuggen nicht immer selbst einen Input eingeben zu müssen können sie mittels der Kommandozeilenoption `-m` (metadata) leerzeichenseparierte Inputs aus dem Kommentar `# input: 16909060 3` am Anfang des Programms `prgrm.reti` rauslesen.
+
+# TSL Extension
+```
+TSL DS ACC 0: ACC=M[DS + 0], then M[DS + 0]=1 (DS contains address of Lock variable)
+```
+
+Die `TSL`-Instruction hat die Syntax `TSL S D i`. Dabei wird `S` als Register interpretiert, das eine Adresse enthält, `i` ist der Offset auf diese Adresse und `D` ist das Zielregister. `M[]` bezeichnet dabei einen Speicherzugriff. Im obigen Beispiel wird also zuerst der Wert an der Speicheradresse `DS + 0` nach `ACC` geladen und danach dieselbe Speicherzelle auf `1` gesetzt.
