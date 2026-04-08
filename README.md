@@ -123,9 +123,48 @@ RETI-Emulator speichert alle Memory-Inhalte des SRAM in einer Datei `sram.bin` a
 
 > *Tipp:* Mittels `-f /tmp` (files) lässt sich das `/tmp` Verzeichnis unter Linux für die Speicherung von `sram.bin` nutzen. Das Verzeichnis `\tmp` ist häufig als **tmpfs**-Partition, welche im Arbeitsspeicher gemounted ist umgesetzt. Dadurch existiert der Inhalt des Verzeichnis nach dem Herunterfahren nicht mehr und das Verzeichnis, indem der RETI-Emulator ausgeführt wird, wird nicht mit unnützen Dateien vollgemüllt.
 
+### Interrupt Service Routinen spezifizieren
 Mithilfe der Kommandozeilenoption `-i` (isr code) ist der RETI-Emulator in der Lage die RETI-Befehle für **Interrupt-Service-Routinen** aus einer Datei `interrupt_service_routines.reti` herauszulesen und an den Anfang des simulierten SRAM, vor das geladene Programm aus `program.reti` zu schreiben. Mithilfe von `INT i` kann wie in der Vorlesung erklärt an den Anfang jeder dieser Interrupt-Service-Routinen `i` gesprungen werden. Mittels `RTI` kann am Ende einer Interrupt-Service-Routine wieder an die nächste Stelle im ursprünglichen Programm zurückgesprungen werden, an der dieses mittels `INT i` unterbrochen wurde. 
 
-Mittels der Direktive `IVTE i` (**I**nterrupt **V**ector **T**able **E**ntry) können **Einträge einer Interrupt Vector Tabelle** mit der korrekten Startadresse einer Interrupt-Sevice-Routine erstellt werden. Die SRAM Konstante wird automatisch auf `i` draufaddiert.
+Für das Erstellen von Interrupt-Vector-Table-Entries gibt es die Syntax `IVTE <Adresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle> <Gerät> <Priorität für den Interrupt-Controller>`. `IVTE` steht dabei für **I**nterrupt **V**ector **T**able **E**ntry. Die erste Zahl ist die Startadresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle, wobei die SRAM-Konstante automatisch auf diesen Wert draufaddiert wird. `<Gerät>` ist das zugeordnete Gerät und `<Priorität für den Interrupt-Controller>` die Priorität im Interrupt-Controller. Aktuell sind insbesondere `INTTIMER` und `KEYPRESS` relevant: `INTTIMER` ist der automatische Timer-Interrupt, dessen Intervall über `-I` eingestellt wird, und `KEYPRESS` ist der Interrupt, der im TUI durch Drücken von `t` ausgelöst wird.
+
+Eine Datei mit Interrupt Service Routinen, zum Beispiel `isrs.reti`, kann so aufgebaut sein:
+
+```reti
+# Interrupt-Vektor-Tabelle
+IVTE 6
+IVTE 20
+IVTE 34
+IVTE 48 KEYPRESS 1
+IVTE 52 INTTIMER 2
+
+# == INT 0 ==
+# Interrupt Service Routine für Software-Interrupt 0
+...
+RTI
+
+# == INT 1 ==
+# Interrupt Service Routine für Software-Interrupt 1
+...
+RTI
+
+# == INT 2 ==
+# Interrupt Service Routine für Software-Interrupt 2
+...
+RTI
+
+# == KEYPRESS ==
+# Interrupt Service Routine für den durch 't' im TUI ausgelösten Interrupt
+...
+RTI
+
+# == INTTIMER ==
+# Interrupt Service Routine für den automatischen Timer-Interrupt
+...
+RTI
+```
+
+Die Datei `isrs.reti` beginnt also mit den `IVTE`-Einträgen der Interrupt-Vektor-Tabelle. Danach folgen die eigentlichen Interrupt Service Routinen im selben File. Jede ISR sollte üblicherweise mit `RTI` enden.
 
 ## Debugging
 Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils näcsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. In der untersten Zeile des Text-User-Interfaces (TUI) stehen alle Aktionen, die Sie in diesem Debug-Modus ausführen können.
