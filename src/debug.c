@@ -120,11 +120,11 @@ char *assembly_to_str(Instruction *instr) {
   } else if (instr->op == LOAD || instr->op == STORE || instr->op == LOADI) {
     dest = copy_reg_into_str(dest, instr->opd1);
     dest = copy_im_into_str(dest, instr->opd2);
-  } else if (instr->op == LOADIN || instr->op == STOREIN) {
+  } else if (instr->op == LOADIN || instr->op == STOREIN || instr->op == TSL) {
     dest = copy_reg_into_str(dest, instr->opd1);
     dest = copy_reg_into_str(dest, instr->opd2);
     dest = copy_im_into_str(dest, instr->opd3);
-  } else if (instr->op == TSL || instr->op == MOVE) {
+  } else if (instr->op == MOVE) {
     dest = copy_reg_into_str(dest, instr->opd1);
     dest = copy_reg_into_str(dest, instr->opd2);
   } else if ((JUMPGT <= instr->op && instr->op <= JUMP) || instr->op == INT) {

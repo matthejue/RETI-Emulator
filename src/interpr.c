@@ -310,10 +310,12 @@ void interpr_instr(Instruction *assembly_instr) {
                   read_array(regs, assembly_instr->opd2, false));
     break;
   case TSL: {
-    uint32_t source_value = read_array(regs, assembly_instr->opd2, false);
-    write_array(regs, assembly_instr->opd1, source_value, false);
-    write_array(regs, assembly_instr->opd2, 1, false);
-    if (assembly_instr->opd1 == PC || assembly_instr->opd2 == PC) {
+    uint32_t addr = read_array(regs, assembly_instr->opd1, false) +
+                    (int32_t)assembly_instr->opd3;
+    uint32_t source_value = read_storage(addr);
+    write_array(regs, assembly_instr->opd2, source_value, false);
+    write_storage(addr, 1);
+    if (assembly_instr->opd2 == PC) {
       goto no_pc_increase;
     }
   } break;

@@ -165,7 +165,7 @@ void check_instr(uint8_t op, String_Instruction *str_instr) {
   } else if (op == TSL) {
     check_opd(REG, str_instr->opd1);
     check_opd(REG, str_instr->opd2);
-    check_opd(EMPTY, str_instr->opd3);
+    check_opd(IM, str_instr->opd3);
   } else if (op == MOVE) {
     check_opd(REG, str_instr->opd1);
     check_opd(REG, str_instr->opd2);

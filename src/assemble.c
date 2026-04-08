@@ -156,7 +156,7 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
   } else if (op == STOREIN) {
     machine_instr = op << 25 | opd1 << 22 | opd2 << 25 | opd3;
   } else if (op == TSL) {
-    machine_instr = op << 25 | opd1 << 22 | opd2 << 25;
+    machine_instr = op << 25 | opd1 << 25 | opd2 << 22 | opd3;
   } else if (op == MOVE) {
     machine_instr = op << 25 | opd1 << 25 | opd2 << 22;
   } else if ((JUMPGT <= op && op <= JUMP) || op == INT) {
@@ -239,7 +239,7 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
     if (load_store_mode == LOAD || load_store_mode == STORE) {
       i = machine_instr & IMMEDIATE_MASK;
     } else if (load_store_mode == LOADIN || load_store_mode == STOREIN ||
-               load_store_mode == LOADI) {
+               load_store_mode == TSL || load_store_mode == LOADI) {
       i = sign_extend_22_to_32(machine_instr & IMMEDIATE_MASK);
     }
     // TODO: LOADI in folien ändern, dass das i signed ist
@@ -270,8 +270,9 @@ Instruction *machine_to_assembly(uint32_t machine_instr) {
       instr->opd3 = i;
       break;
     case TSL:
-      instr->opd1 = d;
-      instr->opd2 = s;
+      instr->opd1 = s;
+      instr->opd2 = d;
+      instr->opd3 = i;
       break;
     case MOVE:
       instr->opd1 = s;
