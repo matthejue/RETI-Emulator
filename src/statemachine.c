@@ -6,7 +6,6 @@
 #include "../include/interpr.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
-#include "../include/log.h"
 #include "../include/reti.h"
 #include "../include/stddef.h"
 #include <stdbool.h>
@@ -277,6 +276,4 @@ void update_state(Event event) {
     exit(EXIT_FAILURE);
     break;
   }
-
-  log_statemachine(event);
 }

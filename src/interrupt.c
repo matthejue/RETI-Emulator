@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 uint32_t timer_cnt = 0;
-uint32_t interrupt_timer_interval = 3;
+uint32_t interrupt_timer_interval = 10;
 
 bool interrupt_timer_active = false;
 
