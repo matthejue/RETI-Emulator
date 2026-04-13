@@ -15,12 +15,30 @@
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 uint8_t radius = 2;
+static bool snapshot_available = false;
+static pid_t snapshot_child_pid = -1;
+static int snapshot_child_write_fd = -1;
+
+static const char *SNAPSHOT_ROOT_DIR = "/tmp/reti_emulator";
+static const char *SNAPSHOT_SRAM_PATH = "/tmp/reti_emulator/sram.bin";
+
+typedef enum {
+  SNAPSHOT_RESULT_FAILED,
+  SNAPSHOT_RESULT_CREATED,
+  SNAPSHOT_RESULT_RESTORED
+} Snapshot_Result;
 
 char **gargv;
 
@@ -182,6 +200,263 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
 }
 
 void print_formatted_to_box(const char *format, Box *box, ...);
+WatchBox *get_watchbox(BoxIdentifier box_identifier);
+void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject);
+
+static void set_error_message(char *buffer, size_t buffer_size,
+                              const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buffer, buffer_size, format, args);
+  va_end(args);
+}
+
+static bool ensure_directory_exists(const char *path, char *error_buffer,
+                                    size_t error_buffer_size) {
+  if (mkdir(path, 0700) == 0 || errno == EEXIST) {
+    return true;
+  }
+
+  set_error_message(error_buffer, error_buffer_size,
+                    "Failed to create %s: %s", path, strerror(errno));
+  return false;
+}
+
+static bool flush_sram_snapshot_file(char *error_buffer,
+                                     size_t error_buffer_size) {
+  if (fflush(sram) != 0) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to flush sram.bin: %s", strerror(errno));
+    return false;
+  }
+
+  if (fsync(fileno(sram)) != 0) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to sync sram.bin: %s", strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+
+static bool copy_file_contents(const char *src_path, const char *dest_path,
+                               char *error_buffer,
+                               size_t error_buffer_size) {
+  int src_fd = open(src_path, O_RDONLY);
+  if (src_fd < 0) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to open %s: %s", src_path, strerror(errno));
+    return false;
+  }
+
+  int dest_fd = open(dest_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  if (dest_fd < 0) {
+    close(src_fd);
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to open %s: %s", dest_path, strerror(errno));
+    return false;
+  }
+
+  char buffer[4096];
+  ssize_t bytes_read;
+  while ((bytes_read = read(src_fd, buffer, sizeof(buffer))) > 0) {
+    ssize_t offset = 0;
+    while (offset < bytes_read) {
+      ssize_t written =
+          write(dest_fd, buffer + offset, (size_t)(bytes_read - offset));
+      if (written < 0) {
+        close(src_fd);
+        close(dest_fd);
+        set_error_message(error_buffer, error_buffer_size,
+                          "Failed to write %s: %s", dest_path,
+                          strerror(errno));
+        return false;
+      }
+      offset += written;
+    }
+  }
+
+  if (bytes_read < 0) {
+    close(src_fd);
+    close(dest_fd);
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to read %s: %s", src_path, strerror(errno));
+    return false;
+  }
+
+  if (fsync(dest_fd) != 0) {
+    close(src_fd);
+    close(dest_fd);
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to sync %s: %s", dest_path, strerror(errno));
+    return false;
+  }
+
+  close(src_fd);
+  close(dest_fd);
+  return true;
+}
+
+static bool reopen_sram_from_snapshot(char *error_buffer,
+                                      size_t error_buffer_size) {
+  if (fclose(sram) != 0) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to close current sram.bin: %s", strerror(errno));
+    return false;
+  }
+
+  sram = fopen(SNAPSHOT_SRAM_PATH, "r+b");
+  if (sram == NULL) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to open %s: %s", SNAPSHOT_SRAM_PATH,
+                      strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+
+static void discard_snapshot_process(void) {
+  if (snapshot_child_write_fd != -1) {
+    close(snapshot_child_write_fd);
+    snapshot_child_write_fd = -1;
+  }
+
+  if (snapshot_child_pid > 0) {
+    kill(snapshot_child_pid, SIGKILL);
+    waitpid(snapshot_child_pid, NULL, 0);
+    snapshot_child_pid = -1;
+  }
+
+  snapshot_available = false;
+  set_tui_snapshot_available(false);
+}
+
+static Snapshot_Result create_snapshot(char *error_buffer,
+                                       size_t error_buffer_size) {
+  if (!ensure_directory_exists(SNAPSHOT_ROOT_DIR, error_buffer,
+                               error_buffer_size)) {
+    return SNAPSHOT_RESULT_FAILED;
+  }
+
+  char *sram_path = proper_str_cat(peripherals_dir, "/sram.bin");
+
+  if (!flush_sram_snapshot_file(error_buffer, error_buffer_size)) {
+    free(sram_path);
+    return SNAPSHOT_RESULT_FAILED;
+  }
+
+  if (!copy_file_contents(sram_path, SNAPSHOT_SRAM_PATH, error_buffer,
+                          error_buffer_size)) {
+    free(sram_path);
+    return SNAPSHOT_RESULT_FAILED;
+  }
+  free(sram_path);
+
+  discard_snapshot_process();
+
+  int pipefd[2];
+  if (pipe(pipefd) != 0) {
+    set_error_message(error_buffer, error_buffer_size, "pipe failed: %s",
+                      strerror(errno));
+    return SNAPSHOT_RESULT_FAILED;
+  }
+
+  pid_t child_pid = fork();
+  if (child_pid < 0) {
+    close(pipefd[0]);
+    close(pipefd[1]);
+    set_error_message(error_buffer, error_buffer_size, "fork failed: %s",
+                      strerror(errno));
+    return SNAPSHOT_RESULT_FAILED;
+  }
+
+  if (child_pid == 0) {
+    close(pipefd[1]);
+
+    char command = '\0';
+    ssize_t bytes_read;
+    do {
+      bytes_read = read(pipefd[0], &command, 1);
+    } while (bytes_read < 0 && errno == EINTR);
+    close(pipefd[0]);
+
+    if (bytes_read != 1 || command != 'R') {
+      _exit(EXIT_FAILURE);
+    }
+
+    if (!reopen_sram_from_snapshot(error_buffer, error_buffer_size)) {
+      _exit(EXIT_FAILURE);
+    }
+
+    snapshot_child_pid = -1;
+    snapshot_child_write_fd = -1;
+    snapshot_available = false;
+    set_tui_snapshot_available(false);
+    return SNAPSHOT_RESULT_RESTORED;
+  }
+
+  close(pipefd[0]);
+  snapshot_child_pid = child_pid;
+  snapshot_child_write_fd = pipefd[1];
+
+  snapshot_available = true;
+  set_tui_snapshot_available(true);
+  return SNAPSHOT_RESULT_CREATED;
+}
+
+static bool restore_snapshot(pid_t *restored_pid, char *error_buffer,
+                             size_t error_buffer_size) {
+  if (snapshot_child_pid <= 0 || snapshot_child_write_fd == -1) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "No snapshot available yet");
+    return false;
+  }
+
+  *restored_pid = snapshot_child_pid;
+
+  if (write(snapshot_child_write_fd, "R", 1) != 1) {
+    set_error_message(error_buffer, error_buffer_size,
+                      "Failed to wake snapshot process: %s", strerror(errno));
+    return false;
+  }
+
+  close(snapshot_child_write_fd);
+  snapshot_child_write_fd = -1;
+  snapshot_child_pid = -1;
+  snapshot_available = false;
+  set_tui_snapshot_available(false);
+  return true;
+}
+
+static void handle_watchobject_assignment(void) {
+  BoxIdentifier box_identifier = display_popup_menu(box_entries, NUM_BOX_ENTRIES);
+  WatchBox *watchbox = get_watchbox(box_identifier);
+
+  if (box_identifier == CANCEL) {
+    draw_tui();
+    return;
+  }
+
+  Register watchobject =
+      display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
+  if (watchobject == CANCEL2) {
+    draw_tui();
+    return;
+  }
+
+  switch (box_identifier) {
+  case EPROM_BOX:
+  case SRAM_C_BOX:
+  case SRAM_D_BOX:
+  case SRAM_S_BOX:
+    assign_watchobject_to_box(watchbox, watchobject);
+    break;
+  default:
+    display_notification_box("Error", "Invalid box identifier");
+    break;
+  }
+}
 
 static Box *get_box_for_mem_type(MemType mem_type) {
   switch (mem_type) {
@@ -700,6 +975,7 @@ void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
 void evaluate_keyboard_input(void) {
   char key;
   while (true) {
+    char snapshot_error[256];
     char ch = getchar();
     if (ch == EOF) {
       continue;
@@ -711,6 +987,7 @@ void evaluate_keyboard_input(void) {
       update_state(CONTINUE);
       return;
     } else if (key == 'r') {
+      discard_snapshot_process();
       finalize();
       execvp(gargv[0], gargv);
     } else if (key == 's') {
@@ -733,43 +1010,41 @@ void evaluate_keyboard_input(void) {
         return;
       }
     } else if (key == 'a') {
-      BoxIdentifier box_identifier =
-          display_popup_menu(box_entries, NUM_BOX_ENTRIES);
-      WatchBox *watchbox = get_watchbox(box_identifier);
-
-      if (box_identifier == CANCEL) {
-        draw_tui();
-        continue;
-      }
-
-      Register watchobject =
-          display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
-      if (watchobject == CANCEL2) {
-        draw_tui();
-        continue;
-      }
-
-      switch (box_identifier) {
-      case EPROM_BOX:
-        assign_watchobject_to_box(watchbox, watchobject);
-        break;
-      case SRAM_C_BOX:
-        assign_watchobject_to_box(watchbox, watchobject);
-        break;
-      case SRAM_D_BOX:
-        assign_watchobject_to_box(watchbox, watchobject);
-        break;
-      case SRAM_S_BOX:
-        assign_watchobject_to_box(watchbox, watchobject);
-        break;
-      default:
-        display_notification_box("Error", "Invalid box identifier");
-        break;
-      }
+      handle_watchobject_assignment();
     } else if (key == 'o') {
       cycle_info_box_page();
       draw_tui();
       continue;
+    } else if (key == 'S') {
+      Snapshot_Result snapshot_result =
+          create_snapshot(snapshot_error, sizeof(snapshot_error));
+      if (snapshot_result == SNAPSHOT_RESULT_CREATED) {
+        display_notification_box("Snapshot",
+                                 "Saved process state to /tmp/reti_emulator");
+      } else if (snapshot_result == SNAPSHOT_RESULT_RESTORED) {
+        draw_tui();
+        continue;
+      } else {
+        display_notification_box("Snapshot Error", snapshot_error);
+      }
+      draw_tui();
+      continue;
+    } else if (key == 'R') {
+      pid_t restored_pid;
+      if (!snapshot_available) {
+        display_notification_box("Restore Error",
+                                 "No snapshot available yet");
+        draw_tui();
+        continue;
+      }
+      if (!restore_snapshot(&restored_pid, snapshot_error,
+                            sizeof(snapshot_error))) {
+        display_notification_box("Restore Error", snapshot_error);
+        draw_tui();
+        continue;
+      }
+      waitpid(restored_pid, NULL, 0);
+      _exit(EXIT_SUCCESS);
     } else if (key == 'e') {
       if (cycle_keypress_interrupt_action_isr()) {
         draw_tui();
@@ -778,6 +1053,7 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'D') {
       debug_activated = !debug_activated;
     } else if (key == 'q') {
+      discard_snapshot_process();
       finalize();
       exit(EXIT_SUCCESS);
     }
@@ -788,6 +1064,7 @@ void wait_for_tui_quit(void) {
   set_tui_halted_mode(true);
 
   while (true) {
+    char snapshot_error[256];
     update_term_and_box_sizes();
     draw_tui();
 
@@ -797,37 +1074,45 @@ void wait_for_tui_quit(void) {
     }
 
     switch ((char)ch) {
-    case 'a': {
-      BoxIdentifier box_identifier =
-          display_popup_menu(box_entries, NUM_BOX_ENTRIES);
-      WatchBox *watchbox = get_watchbox(box_identifier);
-
-      if (box_identifier == CANCEL) {
-        draw_tui();
-        continue;
-      }
-
-      Register watchobject =
-          display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
-      if (watchobject == CANCEL2) {
-        draw_tui();
-        continue;
-      }
-
-      switch (box_identifier) {
-      case EPROM_BOX:
-      case SRAM_C_BOX:
-      case SRAM_D_BOX:
-      case SRAM_S_BOX:
-        assign_watchobject_to_box(watchbox, watchobject);
-        break;
-      default:
-        display_notification_box("Error", "Invalid box identifier");
-        break;
-      }
+    case 'a':
+      handle_watchobject_assignment();
       break;
-    }
+    case 'o':
+      cycle_info_box_page();
+      draw_tui();
+      continue;
+    case 'S':
+      Snapshot_Result snapshot_result =
+          create_snapshot(snapshot_error, sizeof(snapshot_error));
+      if (snapshot_result == SNAPSHOT_RESULT_CREATED) {
+        display_notification_box("Snapshot",
+                                 "Saved process state to /tmp/reti_emulator");
+      } else if (snapshot_result == SNAPSHOT_RESULT_RESTORED) {
+        draw_tui();
+        continue;
+      } else {
+        display_notification_box("Snapshot Error", snapshot_error);
+      }
+      draw_tui();
+      continue;
+    case 'R':
+      pid_t restored_pid;
+      if (!snapshot_available) {
+        display_notification_box("Restore Error",
+                                 "No snapshot available yet");
+        draw_tui();
+        continue;
+      }
+      if (!restore_snapshot(&restored_pid, snapshot_error,
+                            sizeof(snapshot_error))) {
+        display_notification_box("Restore Error", snapshot_error);
+        draw_tui();
+        continue;
+      }
+      waitpid(restored_pid, NULL, 0);
+      _exit(EXIT_SUCCESS);
     case 'q':
+      discard_snapshot_process();
       set_tui_halted_mode(false);
       return;
     default:

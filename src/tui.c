@@ -20,16 +20,15 @@ static const char *info_box_pages[] = {
     "(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
     "(s)tep into isr, (f)inalize isr, "
     "(a)ssign watchobject reg or addr, (q)uit, (o)ther actions",
-    ""};
+};
 static const char *halted_info_box_pages[] = {
-    "Program halted, (a)ssign watchobject reg or addr, (q)uit"};
-static const uint8_t NUM_INFO_BOX_PAGES =
-    sizeof(info_box_pages) / sizeof(info_box_pages[0]);
-static const uint8_t NUM_HALTED_INFO_BOX_PAGES =
-    sizeof(halted_info_box_pages) / sizeof(halted_info_box_pages[0]);
+    "Program halted, (a)ssign watchobject reg or addr, (q)uit, (o)ther actions"};
+static const uint8_t NUM_INFO_BOX_PAGES = 2;
+static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
 static uint8_t current_info_box_page = 0;
 static char info_box_second_page[128];
 static bool tui_halted_mode = false;
+static bool tui_snapshot_available = false;
 
 Box info_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 // Box paging_box = {"", 0, 0, 0, 0, 1, 1, NULL};
@@ -42,14 +41,31 @@ const uint8_t NUM_BOXES = sizeof(boxes) / sizeof(boxes[0]);
 
 static void update_info_box_text(void) {
   if (current_info_box_page == 1) {
-    uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
-    if (keypress_action_isr == INVALID_ISR_NUM) {
+    if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
-               "(t)rigger isr none, (e)xchange keypress isr, (o)ther actions");
+               tui_snapshot_available
+                   ? "(S)napshot, (R)estore, (o)ther actions"
+                   : "(S)napshot, (o)ther actions");
     } else {
-      snprintf(info_box_second_page, sizeof(info_box_second_page),
-               "(t)rigger isr %u, (e)xchange keypress isr, (o)ther actions",
-               keypress_action_isr);
+      uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
+      if (keypress_action_isr == INVALID_ISR_NUM) {
+        snprintf(
+            info_box_second_page, sizeof(info_box_second_page),
+            tui_snapshot_available
+                ? "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(S)napshot, (R)estore, (o)ther actions"
+                : "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(S)napshot, (o)ther actions");
+      } else {
+        snprintf(
+            info_box_second_page, sizeof(info_box_second_page),
+            tui_snapshot_available
+                ? "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(S)napshot, (R)estore, (o)ther actions"
+                : "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(S)napshot, (o)ther actions",
+            keypress_action_isr);
+      }
     }
     info_box.title = info_box_second_page;
     return;
@@ -61,6 +77,11 @@ static void update_info_box_text(void) {
   }
 
   info_box.title = (char *)info_box_pages[current_info_box_page];
+}
+
+void set_tui_snapshot_available(bool available) {
+  tui_snapshot_available = available;
+  update_info_box_text();
 }
 
 void init_tui() {
