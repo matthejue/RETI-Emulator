@@ -784,6 +784,58 @@ void evaluate_keyboard_input(void) {
   }
 }
 
+void wait_for_tui_quit(void) {
+  set_tui_halted_mode(true);
+
+  while (true) {
+    update_term_and_box_sizes();
+    draw_tui();
+
+    char ch = getchar();
+    if (ch == EOF) {
+      continue;
+    }
+
+    switch ((char)ch) {
+    case 'a': {
+      BoxIdentifier box_identifier =
+          display_popup_menu(box_entries, NUM_BOX_ENTRIES);
+      WatchBox *watchbox = get_watchbox(box_identifier);
+
+      if (box_identifier == CANCEL) {
+        draw_tui();
+        continue;
+      }
+
+      Register watchobject =
+          display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
+      if (watchobject == CANCEL2) {
+        draw_tui();
+        continue;
+      }
+
+      switch (box_identifier) {
+      case EPROM_BOX:
+      case SRAM_C_BOX:
+      case SRAM_D_BOX:
+      case SRAM_S_BOX:
+        assign_watchobject_to_box(watchbox, watchobject);
+        break;
+      default:
+        display_notification_box("Error", "Invalid box identifier");
+        break;
+      }
+      break;
+    }
+    case 'q':
+      set_tui_halted_mode(false);
+      return;
+    default:
+      break;
+    }
+  }
+}
+
 void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
                     const char *watchobject, uint64_t watchobject_int) {
   if (simple_debug_tui) {

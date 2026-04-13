@@ -42,5 +42,6 @@ void reset_box_line(Box *box);
 void make_unneccessary_spaces_visible(Box *box);
 void update_term_and_box_sizes();
 void cycle_info_box_page(void);
+void set_tui_halted_mode(bool halted);
 
 #endif // TUI_H

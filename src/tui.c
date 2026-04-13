@@ -21,10 +21,15 @@ static const char *info_box_pages[] = {
     "(s)tep into isr, (f)inalize isr, "
     "(a)ssign watchobject reg or addr, (q)uit, (o)ther actions",
     ""};
+static const char *halted_info_box_pages[] = {
+    "Program halted, (a)ssign watchobject reg or addr, (q)uit"};
 static const uint8_t NUM_INFO_BOX_PAGES =
     sizeof(info_box_pages) / sizeof(info_box_pages[0]);
+static const uint8_t NUM_HALTED_INFO_BOX_PAGES =
+    sizeof(halted_info_box_pages) / sizeof(halted_info_box_pages[0]);
 static uint8_t current_info_box_page = 0;
 static char info_box_second_page[128];
+static bool tui_halted_mode = false;
 
 Box info_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 // Box paging_box = {"", 0, 0, 0, 0, 1, 1, NULL};
@@ -47,6 +52,11 @@ static void update_info_box_text(void) {
                keypress_action_isr);
     }
     info_box.title = info_box_second_page;
+    return;
+  }
+
+  if (tui_halted_mode) {
+    info_box.title = (char *)halted_info_box_pages[current_info_box_page];
     return;
   }
 
@@ -129,7 +139,15 @@ void update_term_and_box_sizes() {
 }
 
 void cycle_info_box_page(void) {
-  current_info_box_page = (current_info_box_page + 1) % NUM_INFO_BOX_PAGES;
+  current_info_box_page =
+      (current_info_box_page + 1) %
+      (tui_halted_mode ? NUM_HALTED_INFO_BOX_PAGES : NUM_INFO_BOX_PAGES);
+  update_info_box_text();
+}
+
+void set_tui_halted_mode(bool halted) {
+  tui_halted_mode = halted;
+  current_info_box_page = 0;
   update_info_box_text();
 }
 

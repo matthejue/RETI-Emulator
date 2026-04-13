@@ -20,6 +20,7 @@ bool collect_comments = false;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool ds_vals_unsigned = false;
+bool keep_tui_alive_after_halt = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -33,6 +34,7 @@ void print_help(char *bin_name) {
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
+      "-K (keep tui open after final JUMP 0 until q) "
       "-I timer_interrupt_interval -h (help page) "
       "prgrm_path\n",
       bin_name);
@@ -41,7 +43,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEcauI:")) != -1) {
+  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEcauKI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -125,6 +127,9 @@ void parse_args(uint8_t argc, char *argv[]) {
     case 'u':
       ds_vals_unsigned = true;
       break;
+    case 'K':
+      keep_tui_alive_after_halt = true;
+      break;
     case 'h':
       print_help(argv[0]);
       exit(EXIT_SUCCESS);
@@ -170,6 +175,8 @@ void print_args() {
   printf("Datasegment values unsigned: %s\n",
          ds_vals_unsigned ? "true" : "false");
   printf("Extended features: %s\n", extended_features ? "true" : "false");
+  printf("Keep TUI alive after halt: %s\n",
+         keep_tui_alive_after_halt ? "true" : "false");
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);

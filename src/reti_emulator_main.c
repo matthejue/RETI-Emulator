@@ -50,6 +50,10 @@ int main(int argc, char *argv[]) {
 
   interpr_prgrm();
 
+  if (debug_mode && keep_tui_alive_after_halt) {
+    wait_for_tui_quit();
+  }
+
   finalize();
 
   return 0;

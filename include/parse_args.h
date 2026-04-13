@@ -16,6 +16,7 @@ extern bool collect_comments;
 extern uint8_t max_waiting_instrs;
 extern bool verbose;
 extern bool ds_vals_unsigned;
+extern bool keep_tui_alive_after_halt;
 
 extern char *peripherals_dir;
 extern char *eprom_prgrm_path;
@@ -23,6 +24,6 @@ extern char *sram_prgrm_path;
 extern char *isrs_prgrm_path;
 
 void parse_args(uint8_t argc, char *argv[]);
-void print_args() ;
+void print_args();
 
 #endif // PARSE_ARGS_H
