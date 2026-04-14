@@ -275,6 +275,46 @@ static bool reopen_snapshot_sram(void) {
   return sram != NULL;
 }
 
+static void wait_for_restore_command(int read_fd) {
+  while (true) {
+    char command;
+    if (read(read_fd, &command, 1) != 1) {
+      _exit(0);
+    }
+    if (command != 'R') {
+      continue;
+    }
+
+    int next_pipe[2];
+    if (pipe(next_pipe) != 0) {
+      _exit(1);
+    }
+
+    pid_t next_snapshot_pid = fork();
+    if (next_snapshot_pid < 0) {
+      _exit(1);
+    }
+
+    if (next_snapshot_pid == 0) {
+      close(next_pipe[1]);
+      close(read_fd);
+      wait_for_restore_command(next_pipe[0]);
+      return;
+    }
+
+    close(read_fd);
+    close(next_pipe[0]);
+    snapshot_child_pid = next_snapshot_pid;
+    snapshot_child_write_fd = next_pipe[1];
+    set_snapshot_available(true);
+
+    if (!reopen_snapshot_sram()) {
+      _exit(1);
+    }
+    return;
+  }
+}
+
 // returns -1 on error, 0 in the restored child, 1 in the current process
 static int create_snapshot(void) {
   mkdir(SNAPSHOT_ROOT_DIR, 0700);
@@ -299,17 +339,10 @@ static int create_snapshot(void) {
 
   if (child_pid == 0) {
     close(pipefd[1]);
-
-    char command;
-    ssize_t bytes_read = read(pipefd[0], &command, 1);
-    close(pipefd[0]);
-    if (bytes_read != 1 || command != 'R' || !reopen_snapshot_sram()) {
-      _exit(1);
-    }
-
     snapshot_child_pid = -1;
     snapshot_child_write_fd = -1;
     set_snapshot_available(false);
+    wait_for_restore_command(pipefd[0]);
     return 0;
   }
 
