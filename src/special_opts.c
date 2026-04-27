@@ -17,9 +17,9 @@ FILE *err_file = NULL;
 
 uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
   const char *prefix;
-  if (strncmp(line, "# input:", strlen("# input:")) == 0) {
+  if (!strncmp(line, "# input:", strlen("# input:"))) {
     prefix = "# input:";
-  } else if (strncmp(line, "#input:", strlen("#input:")) == 0) {
+  } else if (!strncmp(line, "#input:", strlen("#input:"))) {
     prefix = "#input:";
   } else {
     return NULL;
@@ -39,7 +39,35 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
     }
 
     ar = realloc(ar, (count + 1) * sizeof(uint32_t));
-    if (isdigit((char)*ptr) || *ptr == '-') {
+    if (*ptr == '\'') {
+      if (*(ptr + 1) == '\\' && *(ptr + 3) == '\'') {
+        switch (*(ptr + 2)) {
+        case 'n':
+          ar[count++] = '\n';
+          ptr += 4;
+          continue;
+        case 't':
+          ar[count++] = '\t';
+          ptr += 4;
+          continue;
+        case '\\':
+          ar[count++] = '\\';
+          ptr += 4;
+          continue;
+        case '\'':
+          ar[count++] = '\'';
+          ptr += 4;
+          continue;
+        default:
+          ar[count++] = (uint8_t)*ptr++;
+          continue;
+        }
+      } else if (*(ptr + 1) != '\0' && *(ptr + 2) == '\'') {
+        ar[count++] = (uint8_t)*(ptr + 1);
+        ptr += 3;
+        continue;
+      }
+    } else if (isdigit((unsigned char)*ptr) || *ptr == '-') {
       uint8_t *original_ptr = (uint8_t *)ptr;
       uint64_t num = strtol(ptr, (char **)&ptr, 10);
       if ((int64_t)num < INT32_MIN || (int64_t)num > INT32_MAX) {

@@ -154,13 +154,31 @@ uint32_t get_user_input() {
         input, "Number between -2147483648 and 2147483647 or a character:",
         MAX_NUM_DIGITS_INTEGER);
 
-    if (isalpha(input[0])) {
-      if (strlen((char *)input) > 1) {
-        display_notification_box("Error", "Only one character allowed");
-      } else {
-        return *(uint32_t *)input;
+    if (input[0] == '\'') {
+      if (input[1] == '\0') {
+        return '\'';
       }
-    } else if (isdigit(input[0]) || input[0] == '-') {
+      if (input[1] == '\\' && input[3] == '\'' && input[4] == '\0') {
+        switch (input[2]) {
+        case 'n':
+          return '\n';
+        case 't':
+          return '\t';
+        case '\\':
+          return '\\';
+        case '\'':
+          return '\'';
+        default:
+          display_notification_box("Error", "Invalid escape sequence");
+          continue;
+        }
+      } else if (input[1] != '\0' && input[2] == '\'' && input[3] == '\0') {
+        return (uint8_t)input[1];
+      } else {
+        display_notification_box("Error", "Invalid quoted character");
+        continue;
+      }
+    } else if (isdigit((unsigned char)input[0]) || input[0] == '-') {
       char *endptr;
       uint64_t tmp_num = strtol((char *)input, &endptr, 10);
       if (*endptr != '\0') {
@@ -174,6 +192,10 @@ uint32_t get_user_input() {
       } else {
         return tmp_num;
       }
+    } else if (strlen((char *)input) == 1 &&
+               isprint((unsigned char)input[0]) &&
+               !isdigit((unsigned char)input[0])) {
+      return (uint8_t)input[0];
     } else {
       display_notification_box("Error", "Invalid input");
     }
