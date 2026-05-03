@@ -26,7 +26,7 @@ static const char *halted_info_box_pages[] = {
 static const uint8_t NUM_INFO_BOX_PAGES = 2;
 static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
 static uint8_t current_info_box_page = 0;
-static char info_box_second_page[128];
+static char info_box_second_page[192];
 static bool tui_halted_mode = false;
 static bool tui_snapshot_available = false;
 
@@ -44,8 +44,8 @@ static void update_info_box_text(void) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
                tui_snapshot_available
-                   ? "(S)napshot, (R)estore, (o)ther actions"
-                   : "(S)napshot, (o)ther actions");
+                   ? "(C)-source debug, (S)napshot, (R)estore, (o)ther actions"
+                   : "(C)-source debug, (S)napshot, (o)ther actions");
     } else {
       uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
       if (keypress_action_isr == INVALID_ISR_NUM) {
@@ -53,16 +53,20 @@ static void update_info_box_text(void) {
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
                 ? "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(C)-source debug, "
                   "(S)napshot, (R)estore, (o)ther actions"
                 : "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(C)-source debug, "
                   "(S)napshot, (o)ther actions");
       } else {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
                 ? "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(C)-source debug, "
                   "(S)napshot, (R)estore, (o)ther actions"
                 : "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(C)-source debug, "
                   "(S)napshot, (o)ther actions",
             keypress_action_isr);
       }

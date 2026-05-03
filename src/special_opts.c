@@ -183,6 +183,7 @@ void close_out_and_err_file() {
 }
 
 void finalize() {
+  stop_source_debugger();
   fin_reti();
   free_program_comments();
   if (test_mode) {

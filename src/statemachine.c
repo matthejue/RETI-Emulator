@@ -276,4 +276,5 @@ void update_state(Event event) {
     exit(EXIT_FAILURE);
     break;
   }
+  update_source_debug_state();
 }

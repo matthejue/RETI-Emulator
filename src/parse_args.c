@@ -21,6 +21,7 @@ uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool ds_vals_unsigned = false;
 bool keep_tui_alive_after_halt = false;
+bool source_debug_enabled = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -30,10 +31,11 @@ char *isrs_prgrm_path = "";
 void print_help(char *bin_name) {
   fprintf(
       stderr,
-      "Usage: %s -r ram_size -p page_size -d (daemon mode) "
+      "Usage: %s -r ram_size -p page_size -d (debug mode) "
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
-      "-w max_waiting_instrs -t (test mode) -m (read metadata) -c (show source comments in tui) -v (verbose) "
+      "-w max_waiting_instrs -t (test mode) -m (read metadata comments) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
+      "-s (write source debug state file without launching the UI) "
       "-K (keep tui open after final JUMP 0 until q) "
       "-I timer_interrupt_interval -h (help page) "
       "prgrm_path\n",
@@ -43,7 +45,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "s:p:f:e:i:w:hdvtmbEcauKI:")) != -1) {
+  while ((opt = getopt(argc, argv, "r:p:f:e:i:w:hdvtmbEcausKI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -55,8 +57,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       read_metadata = true;
       binary_mode = true;
       collect_comments = true;
+      source_debug_enabled = true;
       break;
-    case 's':
+    case 'r':
       tmp_val = strtol(optarg, &endptr, 10);
       if (endptr == optarg || *endptr != '\0') {
         fprintf(stderr, "Error: Invalid sram size\n");
@@ -68,6 +71,9 @@ void parse_args(uint8_t argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
       sram_size = tmp_val;
+      break;
+    case 's':
+      source_debug_enabled = true;
       break;
     case 'p':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -177,6 +183,8 @@ void print_args() {
   printf("Extended features: %s\n", extended_features ? "true" : "false");
   printf("Keep TUI alive after halt: %s\n",
          keep_tui_alive_after_halt ? "true" : "false");
+  printf("Source debug state updates enabled: %s\n",
+         source_debug_enabled ? "true" : "false");
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);

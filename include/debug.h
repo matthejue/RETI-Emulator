@@ -70,6 +70,9 @@ bool draw_tui(void);
 void evaluate_keyboard_input(void);
 void wait_for_tui_quit(void);
 void debug(void);
+void enable_source_debug(void);
+void update_source_debug_state(void);
+void stop_source_debugger(void);
 void handle_heading(bool simple_debug_tui, Box *box,
                     char *format_str, const char *watchobject,
                     uint64_t watchobject_int);
