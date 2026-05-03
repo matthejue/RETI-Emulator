@@ -23,6 +23,7 @@ uint8_t isr_heap[HEAP_SIZE];
 bool breakpoint_encountered = true;
 bool isr_finished = true;
 bool isr_step_into = true;
+static bool source_debug_active = false;
 
 uint8_t finished_isr_here;
 uint8_t not_stepped_into_isr_here;
@@ -223,6 +224,14 @@ void check_draw_tui() {
   }
 }
 
+void activate_source_debug(void) { source_debug_active = true; }
+
+void sync_source_debug_state(void) {
+  if (source_debug_active) {
+    write_source_debug_state();
+  }
+}
+
 void update_state(Event event) {
   debug();
   switch (event) {
@@ -276,5 +285,5 @@ void update_state(Event event) {
     exit(EXIT_FAILURE);
     break;
   }
-  update_source_debug_state();
+  sync_source_debug_state();
 }

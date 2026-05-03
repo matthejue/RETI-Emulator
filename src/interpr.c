@@ -398,9 +398,9 @@ no_pc_increase:;
 }
 
 void interpr_prgrm() {
-  update_source_debug_state();
+  sync_source_debug_state();
   while (true) {
-    update_source_debug_state();
+    sync_source_debug_state();
     if (visibility_condition) {
       update_term_and_box_sizes();
       draw_tui();

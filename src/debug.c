@@ -283,10 +283,8 @@ static bool write_source_debug_state_file(uint32_t pc, uint32_t cs) {
   return success;
 }
 
-void enable_source_debug(void) { source_debug_enabled = true; }
-
-void update_source_debug_state(void) {
-  if (!source_debug_enabled || regs == NULL || !ensure_runtime_dir()) {
+void write_source_debug_state(void) {
+  if (regs == NULL || !ensure_runtime_dir()) {
     return;
   }
 
@@ -354,8 +352,8 @@ static bool start_source_debugger(void) {
     return false;
   }
 
-  enable_source_debug();
-  update_source_debug_state();
+  activate_source_debug();
+  write_source_debug_state();
 
   char *script_path = build_source_debug_script_path();
   char *debuginfo_path = build_debuginfo_path();
@@ -378,13 +376,6 @@ static bool start_source_debugger(void) {
       _exit(EXIT_FAILURE);
     }
 #endif
-    int devnull_fd = open("/dev/null", O_RDWR);
-    if (devnull_fd >= 0) {
-      dup2(devnull_fd, STDIN_FILENO);
-      if (devnull_fd > STDERR_FILENO) {
-        close(devnull_fd);
-      }
-    }
     execlp("python3", "python3", script_path, debuginfo_path,
            SOURCE_DEBUG_STATE_PATH, NULL);
     _exit(EXIT_FAILURE);
@@ -472,7 +463,7 @@ static void wait_for_restore_command(int read_fd) {
     if (!reopen_snapshot_sram()) {
       _exit(1);
     }
-    update_source_debug_state();
+    sync_source_debug_state();
     return;
   }
 }
