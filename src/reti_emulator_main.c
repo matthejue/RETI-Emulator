@@ -18,9 +18,6 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     print_args();
   }
-  if (source_debug_enabled) {
-    activate_source_debug();
-  }
   if (test_mode) {
     create_out_and_err_file();
   }

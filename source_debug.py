@@ -8,42 +8,8 @@ from pathlib import Path
 from tkinter import scrolledtext
 
 
-POLL_INTERVAL_MS = 100
+POLL_INTERVAL_MS = 1000
 STATE_STRUCT = struct.Struct("<II")
-
-
-def resolve_ranges(debug_data, debug_path):
-    files = []
-    ranges = debug_data
-    if isinstance(debug_data, dict):
-        files = debug_data.get("files", [])
-        ranges = debug_data.get("ranges", debug_data.get("entries", []))
-
-    normalized = []
-    for entry in ranges:
-        file_path = entry.get("file")
-        if file_path is None and "file_id" in entry:
-            file_id = entry["file_id"]
-            if 0 <= file_id < len(files):
-                file_path = files[file_id]
-        if file_path is None:
-            continue
-
-        path = Path(file_path)
-        if not path.is_absolute():
-            path = (debug_path.parent / path).resolve()
-
-        normalized.append(
-            {
-                "start": int(entry["start"]),
-                "end": int(entry["end"]),
-                "file": path,
-                "line": int(entry["line"]),
-            }
-        )
-
-    normalized.sort(key=lambda entry: entry["start"])
-    return normalized
 
 
 class SourceDebugApp:
@@ -53,15 +19,14 @@ class SourceDebugApp:
         self.state_path = state_path
         self.current_state = None
         self.current_file = None
+        self.files = []
         self.file_cache = {}
+        self.file_path_cache = {}
         self.status_var = tk.StringVar(
             value=f"debuginfo: {self.debuginfo_path}"
         )
 
         self.ranges = self.load_debuginfo()
-        self.zero_based_lines = any(
-            entry["line"] == 0 for entry in self.ranges
-        )
         self.header = tk.Label(
             root, textvariable=self.status_var, anchor="w", justify="left"
         )
@@ -77,7 +42,7 @@ class SourceDebugApp:
         self.text.tag_configure("current_line", background="#fff59d")
 
         if self.ranges:
-            self.current_file = self.ranges[0]["file"]
+            self.current_file = self.resolve_file_path(self.ranges[0]["file_id"])
             self.load_source_file(self.current_file)
 
         self.root.after(POLL_INTERVAL_MS, self.poll_state)
@@ -94,7 +59,13 @@ class SourceDebugApp:
             self.status_var.set(f"failed to read debuginfo: {exc}")
             return []
 
-        return resolve_ranges(debug_data, self.debuginfo_path)
+        self.files = debug_data["files"]
+        return debug_data["ranges"]
+
+    def resolve_file_path(self, file_id):
+        if file_id not in self.file_path_cache:
+            self.file_path_cache[file_id] = Path(self.files[file_id]).resolve()
+        return self.file_path_cache[file_id]
 
     def poll_state(self):
         try:
@@ -117,19 +88,16 @@ class SourceDebugApp:
 
         pc, cs = self.current_state
         relative_pc = pc - cs if pc >= cs else pc
-        location = self.lookup_location(relative_pc)
-        if location is None and relative_pc != pc:
-            location = self.lookup_location(pc)
-        if location is None:
+        range_entry = self.lookup_range_entry(relative_pc)
+        if range_entry is None:
             self.clear_highlight()
             self.status_var.set(
                 f"PC={pc} CS={cs} relative_pc={relative_pc} | no source mapping"
             )
             return
 
-        file_path = location["file"]
-        line_number = location["line"] + 1 if self.zero_based_lines else location["line"]
-        line_number = max(1, line_number)
+        file_path = self.resolve_file_path(range_entry["file_id"])
+        line_number = range_entry["line"]
         self.status_var.set(
             f"PC={pc} CS={cs} relative_pc={relative_pc} | "
             f"{file_path}:{line_number}"
@@ -141,7 +109,7 @@ class SourceDebugApp:
 
         self.highlight_line(line_number)
 
-    def lookup_location(self, relative_pc):
+    def lookup_range_entry(self, relative_pc):
         for entry in self.ranges:
             if entry["start"] <= relative_pc <= entry["end"]:
                 return entry
@@ -191,7 +159,7 @@ def main():
     state_path = Path(sys.argv[2]).resolve()
 
     root = tk.Tk()
-    root.title("RETI Source Debug")
+    root.title("Source Debug")
     root.geometry("1000x700")
 
     SourceDebugApp(root, debuginfo_path, state_path)
