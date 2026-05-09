@@ -87,7 +87,7 @@ class SourceDebugApp:
             return
 
         pc, cs = self.current_state
-        relative_pc = pc - cs if pc >= cs else pc
+        relative_pc = (pc - cs if pc >= cs else pc) + 1
         range_entry = self.lookup_range_entry(relative_pc)
         if range_entry is None:
             self.clear_highlight()
