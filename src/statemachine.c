@@ -228,6 +228,7 @@ void check_draw_tui() {
 void activate_source_debug(void) { source_debug_active = true; }
 
 void sync_source_debug_state(void) {
+  source_debug_update_current_stackframe_function();
   if (source_debug_active) {
     write_source_debug_state();
   }

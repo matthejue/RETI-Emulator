@@ -475,9 +475,22 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
 
   char *reg_to_mem_pntr_str = reg_to_mem_pntr(idx, mem_type);
   Box *box = get_box_for_mem_type(mem_type);
+  const char *variable_label =
+      (mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S)
+          ? source_debug_variable_label_for_sram_idx(idx)
+          : NULL;
 
-  print_formatted_to_box("%s: %s%s\n", box, idx_str, mem_content_str,
+  if (variable_label == NULL) {
+    print_formatted_to_box("%s: %s%s\n", box, idx_str, mem_content_str,
+                           reg_to_mem_pntr_str);
+    return;
+  }
+
+  print_formatted_to_box("%s: %s%s ", box, idx_str, mem_content_str,
                          reg_to_mem_pntr_str);
+  write_text_into_box_with_attr(
+      box, variable_label, A_DIM | COLOR_PAIR(DEBUG_VARIABLE_COLOR_PAIR));
+  write_text_into_box(box, "\n");
 }
 
 void print_reg_content_with_reg(uint8_t reg_idx, uint32_t mem_content) {
@@ -853,6 +866,8 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 }
 
 bool draw_tui(void) {
+  source_debug_update_current_stackframe_function();
+
   uint64_t eprom_watchobject_int =
       determine_watchobject_value(&eprom_watchbox);
   uint64_t sram_watchobject_cs_int =

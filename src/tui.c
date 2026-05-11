@@ -97,6 +97,7 @@ void init_tui() {
     start_color();
     use_default_colors();
     init_pair(COMMENT_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
+    init_pair(DEBUG_VARIABLE_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
   }
 
   for (uint8_t i = 0; i < NUM_BOXES; i++) {

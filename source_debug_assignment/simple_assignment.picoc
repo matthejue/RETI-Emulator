@@ -1,0 +1,14 @@
+int global_value;
+
+int add_and_store(int a, int b) {
+  int local_value;
+  local_value = a + 1;
+  global_value = b + 1;
+  return local_value + global_value;
+}
+
+int main(void) {
+  int result;
+  result = add_and_store(41, 42);
+  return 0;
+}
