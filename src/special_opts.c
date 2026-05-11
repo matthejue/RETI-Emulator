@@ -1,9 +1,10 @@
 #include "../include/special_opts.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/error.h"
 #include "../include/parse_args.h"
 #include "../include/parse_instrs.h"
 #include "../include/reti.h"
+#include "../include/source_debug.h"
 #include "../include/utils.h"
 #include <ctype.h>
 #include <stdarg.h>

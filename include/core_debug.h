@@ -5,8 +5,8 @@
 
 extern char **gargv;
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef CORE_DEBUG_H
+#define CORE_DEBUG_H
 
 typedef struct {
   Unique_Opcode value;
@@ -70,10 +70,8 @@ bool draw_tui(void);
 void evaluate_keyboard_input(void);
 void wait_for_tui_quit(void);
 void debug(void);
-void write_source_debug_state(void);
-void stop_source_debugger(void);
 void handle_heading(bool simple_debug_tui, Box *box,
                     char *format_str, const char *watchobject,
                     uint64_t watchobject_int);
 
-#endif // DEBUG_H
+#endif // CORE_DEBUG_H

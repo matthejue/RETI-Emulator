@@ -10,7 +10,7 @@ INCLUDE_DIR  := include
 
 BIN_SRC  := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
 BIN_TEST := $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(wildcard $(TEST_DIR)/*_test.c))
-SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c))
+SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/*/*.c))
 OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 CC			 := gcc
@@ -62,6 +62,7 @@ $(BIN_DIR)/%_test: $(OBJ_TEST_DIR)/%_test.o $(OBJ_SRC) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJ_TEST_DIR)/%.o: $(TEST_DIR)/%.c | $(OBJ_TEST_DIR)

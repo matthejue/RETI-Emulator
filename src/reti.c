@@ -1,6 +1,6 @@
 #include "../include/reti.h"
 #include "../include/assemble.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/parse_args.h"
 #include "../include/uart.h"
 #include "../include/utils.h"

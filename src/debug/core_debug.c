@@ -1,45 +1,28 @@
-#include "../include/debug.h"
-#include "../include/assemble.h"
-#include "../include/input_output.h"
-#include "../include/interrupt.h"
-#include "../include/log.h"
-#include "../include/parse_args.h"
-#include "../include/parse_instrs.h"
-#include "../include/reti.h"
-#include "../include/special_opts.h"
-#include "../include/statemachine.h"
-#include "../include/tui.h"
-#include "../include/uart.h"
-#include "../include/utils.h"
-#include <limits.h>
-#ifdef __linux__
-#include <sys/prctl.h>
-#endif
+#include "../../include/core_debug.h"
+#include "../../include/assemble.h"
+#include "../../include/input_output.h"
+#include "../../include/interrupt.h"
+#include "../../include/log.h"
+#include "../../include/parse_args.h"
+#include "../../include/parse_instrs.h"
+#include "../../include/reti.h"
+#include "../../include/snapshot_debug.h"
+#include "../../include/source_debug.h"
+#include "../../include/special_opts.h"
+#include "../../include/statemachine.h"
+#include "../../include/tui.h"
+#include "../../include/uart.h"
+#include "../../include/utils.h"
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 uint8_t radius = 2;
-static bool snapshot_available = false;
-static pid_t snapshot_child_pid = -1;
-static int snapshot_child_write_fd = -1;
-static pid_t source_debugger_pid = -1;
-
-static const char *SNAPSHOT_ROOT_DIR = "/tmp/reti_emulator";
-static const char *SNAPSHOT_SRAM_PATH = "/tmp/reti_emulator/sram.bin";
-static const char *SOURCE_DEBUG_STATE_PATH =
-    "/tmp/reti_emulator/source_debug_state.bin";
-static const char *SOURCE_DEBUG_STATE_TMP_PATH =
-    "/tmp/reti_emulator/source_debug_state.bin.tmp";
 
 char **gargv;
 
@@ -203,327 +186,6 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
 void print_formatted_to_box(const char *format, Box *box, ...);
 WatchBox *get_watchbox(BoxIdentifier box_identifier);
 void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject);
-
-static bool copy_file_contents(const char *src_path, const char *dest_path) {
-  int src_fd = open(src_path, O_RDONLY);
-  if (src_fd < 0) {
-    return false;
-  }
-
-  int dest_fd = open(dest_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-  if (dest_fd < 0) {
-    close(src_fd);
-    return false;
-  }
-
-  char buffer[4096];
-  ssize_t bytes_read;
-  while ((bytes_read = read(src_fd, buffer, sizeof(buffer))) > 0) {
-    ssize_t offset = 0;
-    while (offset < bytes_read) {
-      ssize_t written =
-          write(dest_fd, buffer + offset, (size_t)(bytes_read - offset));
-      if (written < 0) {
-        close(src_fd);
-        close(dest_fd);
-        return false;
-      }
-      offset += written;
-    }
-  }
-
-  if (bytes_read < 0) {
-    close(src_fd);
-    close(dest_fd);
-    return false;
-  }
-
-  if (fsync(dest_fd) != 0) {
-    close(src_fd);
-    close(dest_fd);
-    return false;
-  }
-
-  close(src_fd);
-  close(dest_fd);
-  return true;
-}
-
-static void set_snapshot_available(bool available) {
-  snapshot_available = available;
-  set_tui_snapshot_available(available);
-}
-
-static bool ensure_runtime_dir(void) {
-  return mkdir(SNAPSHOT_ROOT_DIR, 0700) == 0 || errno == EEXIST;
-}
-
-static bool write_source_debug_state_file(uint32_t pc, uint32_t cs) {
-  int state_fd =
-      open(SOURCE_DEBUG_STATE_TMP_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-  if (state_fd < 0) {
-    return false;
-  }
-
-  uint32_t state_values[] = {pc, cs};
-  ssize_t bytes_written =
-      write(state_fd, state_values, sizeof(state_values));
-  bool success = bytes_written == (ssize_t)sizeof(state_values) &&
-                 fsync(state_fd) == 0;
-  if (close(state_fd) != 0) {
-    success = false;
-  }
-  if (success &&
-      rename(SOURCE_DEBUG_STATE_TMP_PATH, SOURCE_DEBUG_STATE_PATH) != 0) {
-    success = false;
-  }
-  if (!success) {
-    unlink(SOURCE_DEBUG_STATE_TMP_PATH);
-  }
-  return success;
-}
-
-void write_source_debug_state(void) {
-  if (regs == NULL || !ensure_runtime_dir()) {
-    return;
-  }
-
-  write_source_debug_state_file(read_array(regs, PC, false),
-                                read_array(regs, CS, false));
-}
-
-static void reap_source_debugger_if_exited(void) {
-  if (source_debugger_pid <= 0) {
-    return;
-  }
-
-  pid_t wait_result = waitpid(source_debugger_pid, NULL, WNOHANG);
-  if (wait_result == source_debugger_pid) {
-    source_debugger_pid = -1;
-  }
-}
-
-static char *build_debuginfo_path(void) {
-  const char *last_slash = strrchr(sram_prgrm_path, '/');
-  if (last_slash == NULL) {
-    return strdup("debuginfo.json");
-  }
-
-  size_t dir_len = (size_t)(last_slash - sram_prgrm_path);
-  size_t total_len = dir_len + strlen("/debuginfo.json") + 1;
-  char *path = malloc(total_len);
-  strncpy(path, sram_prgrm_path, dir_len);
-  path[dir_len] = '\0';
-  strcat(path, "/debuginfo.json");
-  return path;
-}
-
-static char *build_source_debug_script_path(void) {
-  char exe_path[PATH_MAX];
-  ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-  if (len < 0) {
-    return NULL;
-  }
-  exe_path[len] = '\0';
-
-  char *last_slash = strrchr(exe_path, '/');
-  if (last_slash == NULL) {
-    return NULL;
-  }
-  *last_slash = '\0';
-
-  char *bin_slash = strrchr(exe_path, '/');
-  if (bin_slash != NULL && strcmp(bin_slash + 1, "bin") == 0) {
-    *bin_slash = '\0';
-  }
-
-  size_t total_len = strlen(exe_path) + strlen("/source_debug.py") + 1;
-  char *script_path = malloc(total_len);
-  snprintf(script_path, total_len, "%s/source_debug.py", exe_path);
-  return script_path;
-}
-
-static bool start_source_debugger(void) {
-  reap_source_debugger_if_exited();
-  if (source_debugger_pid > 0) {
-    return true;
-  }
-  if (!ensure_runtime_dir()) {
-    return false;
-  }
-
-  activate_source_debug();
-  write_source_debug_state();
-
-  char *script_path = build_source_debug_script_path();
-  char *debuginfo_path = build_debuginfo_path();
-  if (script_path == NULL || debuginfo_path == NULL) {
-    free(script_path);
-    free(debuginfo_path);
-    return false;
-  }
-
-  pid_t child_pid = fork();
-  if (child_pid < 0) {
-    free(script_path);
-    free(debuginfo_path);
-    return false;
-  }
-
-  if (child_pid == 0) {
-#ifdef __linux__
-    if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0) {
-      _exit(EXIT_FAILURE);
-    }
-#endif
-    execlp("python3", "python3", script_path, debuginfo_path,
-           SOURCE_DEBUG_STATE_PATH, NULL);
-    _exit(EXIT_FAILURE);
-  }
-
-  free(script_path);
-  free(debuginfo_path);
-  source_debugger_pid = child_pid;
-  return true;
-}
-
-void stop_source_debugger(void) {
-  reap_source_debugger_if_exited();
-  if (source_debugger_pid <= 0) {
-    return;
-  }
-
-  kill(source_debugger_pid, SIGTERM);
-  waitpid(source_debugger_pid, NULL, 0);
-  source_debugger_pid = -1;
-}
-
-static void discard_snapshot_process(void) {
-  if (snapshot_child_write_fd != -1) {
-    close(snapshot_child_write_fd);
-    snapshot_child_write_fd = -1;
-  }
-
-  if (snapshot_child_pid > 0) {
-    kill(snapshot_child_pid, SIGKILL);
-    waitpid(snapshot_child_pid, NULL, 0);
-    snapshot_child_pid = -1;
-  }
-
-  set_snapshot_available(false);
-}
-
-static bool copy_current_sram_to_snapshot(void) {
-  char *sram_path = proper_str_cat(peripherals_dir, "/sram.bin");
-  bool ok = fflush(sram) == 0 && fsync(fileno(sram)) == 0 &&
-            copy_file_contents(sram_path, SNAPSHOT_SRAM_PATH);
-  free(sram_path);
-  return ok;
-}
-
-static bool reopen_snapshot_sram(void) {
-  fclose(sram);
-  sram = fopen(SNAPSHOT_SRAM_PATH, "r+b");
-  return sram != NULL;
-}
-
-static void wait_for_restore_command(int read_fd) {
-  while (true) {
-    char command;
-    if (read(read_fd, &command, 1) != 1) {
-      _exit(0);
-    }
-    if (command != 'R') {
-      continue;
-    }
-
-    int next_pipe[2];
-    if (pipe(next_pipe) != 0) {
-      _exit(1);
-    }
-
-    pid_t next_snapshot_pid = fork();
-    if (next_snapshot_pid < 0) {
-      _exit(1);
-    }
-
-    if (next_snapshot_pid == 0) {
-      close(next_pipe[1]);
-      close(read_fd);
-      wait_for_restore_command(next_pipe[0]);
-      return;
-    }
-
-    close(read_fd);
-    close(next_pipe[0]);
-    snapshot_child_pid = next_snapshot_pid;
-    snapshot_child_write_fd = next_pipe[1];
-    set_snapshot_available(true);
-
-    if (!reopen_snapshot_sram()) {
-      _exit(1);
-    }
-    sync_source_debug_state();
-    return;
-  }
-}
-
-// returns -1 on error, 0 in the restored child, 1 in the current process
-static int create_snapshot(void) {
-  if (!ensure_runtime_dir()) {
-    return -1;
-  }
-
-  if (!copy_current_sram_to_snapshot()) {
-    return -1;
-  }
-
-  discard_snapshot_process();
-
-  int pipefd[2];
-  if (pipe(pipefd) != 0) {
-    return -1;
-  }
-
-  pid_t child_pid = fork();
-  if (child_pid < 0) {
-    close(pipefd[0]);
-    close(pipefd[1]);
-    return -1;
-  }
-
-  if (child_pid == 0) {
-    close(pipefd[1]);
-    snapshot_child_pid = -1;
-    snapshot_child_write_fd = -1;
-    set_snapshot_available(false);
-    wait_for_restore_command(pipefd[0]);
-    return 0;
-  }
-
-  close(pipefd[0]);
-  snapshot_child_pid = child_pid;
-  snapshot_child_write_fd = pipefd[1];
-  set_snapshot_available(true);
-  return 1;
-}
-
-static bool restore_snapshot(pid_t *restored_pid) {
-  if (snapshot_child_pid <= 0 || snapshot_child_write_fd == -1) {
-    return false;
-  }
-
-  *restored_pid = snapshot_child_pid;
-  if (write(snapshot_child_write_fd, "R", 1) != 1) {
-    return false;
-  }
-
-  close(snapshot_child_write_fd);
-  snapshot_child_write_fd = -1;
-  snapshot_child_pid = -1;
-  set_snapshot_available(false);
-  return true;
-}
 
 static void handle_watchobject_assignment(void) {
   BoxIdentifier box_identifier = display_popup_menu(box_entries, NUM_BOX_ENTRIES);
@@ -1082,7 +744,7 @@ void evaluate_keyboard_input(void) {
       update_state(CONTINUE);
       return;
     } else if (key == 'r') {
-      discard_snapshot_process();
+      cleanup_snapshot_debug();
       finalize();
       execvp(gargv[0], gargv);
     } else if (key == 's') {
@@ -1110,41 +772,15 @@ void evaluate_keyboard_input(void) {
       cycle_info_box_page();
       draw_tui();
       continue;
-    } else if (key == 'C') {
+    } else if (key == 'd') {
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
       }
       draw_tui();
       continue;
-    } else if (key == 'S') {
-      int snapshot_result = create_snapshot();
-      if (snapshot_result == 1) {
-        display_notification_box("Snapshot",
-                                 "Saved process state to /tmp/reti_emulator");
-      } else if (snapshot_result == 0) {
-        draw_tui();
-        continue;
-      } else {
-        display_notification_box("Snapshot Error", "Snapshot failed");
-      }
-      draw_tui();
+    } else if (handle_snapshot_debug_key(key)) {
       continue;
-    } else if (key == 'R') {
-      pid_t restored_pid;
-      if (!snapshot_available) {
-        display_notification_box("Restore Error",
-                                 "No snapshot available yet");
-        draw_tui();
-        continue;
-      }
-      if (!restore_snapshot(&restored_pid)) {
-        display_notification_box("Restore Error", "Restore failed");
-        draw_tui();
-        continue;
-      }
-      waitpid(restored_pid, NULL, 0);
-      _exit(EXIT_SUCCESS);
     } else if (key == 'e') {
       if (cycle_keypress_interrupt_action_isr()) {
         draw_tui();
@@ -1153,7 +789,7 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'D') {
       debug_activated = !debug_activated;
     } else if (key == 'q') {
-      discard_snapshot_process();
+      cleanup_snapshot_debug();
       finalize();
       exit(EXIT_SUCCESS);
     }
@@ -1180,7 +816,7 @@ void wait_for_tui_quit(void) {
       cycle_info_box_page();
       draw_tui();
       continue;
-    case 'C':
+    case 'd':
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
@@ -1188,39 +824,13 @@ void wait_for_tui_quit(void) {
       draw_tui();
       continue;
     case 'S':
-      {
-      int snapshot_result = create_snapshot();
-      if (snapshot_result == 1) {
-        display_notification_box("Snapshot",
-                                 "Saved process state to /tmp/reti_emulator");
-      } else if (snapshot_result == 0) {
-        draw_tui();
-        continue;
-      } else {
-        display_notification_box("Snapshot Error", "Snapshot failed");
-      }
-      draw_tui();
-      continue;
-      }
     case 'R':
-      {
-      pid_t restored_pid;
-      if (!snapshot_available) {
-        display_notification_box("Restore Error",
-                                 "No snapshot available yet");
-        draw_tui();
+      if (handle_snapshot_debug_key((char)ch)) {
         continue;
       }
-      if (!restore_snapshot(&restored_pid)) {
-        display_notification_box("Restore Error", "Restore failed");
-        draw_tui();
-        continue;
-      }
-      waitpid(restored_pid, NULL, 0);
-      _exit(EXIT_SUCCESS);
-      }
+      continue;
     case 'q':
-      discard_snapshot_process();
+      cleanup_snapshot_debug();
       set_tui_halted_mode(false);
       return;
     default:

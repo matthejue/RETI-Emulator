@@ -1,12 +1,13 @@
 #include "../include/statemachine.h"
 #include "../include/datastructures.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/error.h"
 #include "../include/input_output.h"
 #include "../include/interpr.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
 #include "../include/reti.h"
+#include "../include/source_debug.h"
 #include "../include/stddef.h"
 #include <stdbool.h>
 #include <stdlib.h>

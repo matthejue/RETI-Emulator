@@ -8,7 +8,7 @@
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include <string.h>
 
 int main(int argc, char *argv[]) {

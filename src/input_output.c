@@ -1,5 +1,5 @@
 #include "../include/input_output.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"

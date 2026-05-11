@@ -1,7 +1,7 @@
 #include "../include/interpr.h"
 #include "../include/assemble.h"
 #include "../include/datastructures.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/error.h"
 #include "../include/interpr.h"
 #include "../include/interrupt.h"

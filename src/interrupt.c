@@ -1,5 +1,5 @@
 #include "../include/interrupt.h"
-#include "../include/debug.h"
+#include "../include/core_debug.h"
 #include "../include/interpr.h"
 #include "../include/interrupt_controller.h"
 #include "../include/log.h"
