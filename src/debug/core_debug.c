@@ -65,11 +65,20 @@ static const BoxIdentifier focus_order[] = {
 static const uint8_t NUM_FOCUS_BOXES =
     sizeof(focus_order) / sizeof(focus_order[0]);
 
+WatchBox *get_watchbox(BoxIdentifier box_identifier);
+
 static void reset_all_scroll_offsets(void) {
   eprom_watchbox.scroll_offset = 0;
   sram_c_watchbox.scroll_offset = 0;
   sram_d_watchbox.scroll_offset = 0;
   sram_s_watchbox.scroll_offset = 0;
+}
+
+static void reset_active_scroll_offset(void) {
+  WatchBox *watchbox = get_watchbox(active_box_identifier);
+  if (watchbox != NULL) {
+    watchbox->scroll_offset = 0;
+  }
 }
 
 Mnemonic_to_String opcode_to_mnemonic[] = {
@@ -198,7 +207,6 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
 }
 
 void print_formatted_to_box(const char *format, Box *box, ...);
-WatchBox *get_watchbox(BoxIdentifier box_identifier);
 void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject);
 uint64_t determine_watchobject_value(WatchBox *watchbox);
 static Box *get_box_for_box_identifier(BoxIdentifier box_identifier);
@@ -1020,6 +1028,10 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'k') {
       scroll_active_window(-1);
       continue;
+    } else if (key == 'C') {
+      reset_active_scroll_offset();
+      draw_tui();
+      continue;
     } else if (key == 'a') {
       reset_all_scroll_offsets();
       handle_watchobject_assignment();
@@ -1090,6 +1102,10 @@ void wait_for_tui_quit(void) {
       continue;
     case 'k':
       scroll_active_window(-1);
+      continue;
+    case 'C':
+      reset_active_scroll_offset();
+      draw_tui();
       continue;
     case 'a':
       reset_all_scroll_offsets();

@@ -19,15 +19,15 @@ Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 static const char *info_box_pages[] = {
     "(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
     "(s)tep into isr, (f)inalize isr, "
-    "(q)uit, (tab/S-tab) to switch, (j/k) to scroll, (o)ther actions",
+    "(tab/S-tab) to switch, (j/k) to scroll, (q)uit, (o)ther actions",
 };
 static const char *halted_info_box_pages[] = {
-    "Program halted, (r)estart, (q)uit, "
-    "(tab/S-tab) to switch, (j/k) to scroll, (o)ther actions"};
+    "Program halted, (r)estart, "
+    "(tab/S-tab) to switch, (j/k) to scroll, (q)uit, (o)ther actions"};
 static const uint8_t NUM_INFO_BOX_PAGES = 2;
 static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
 static uint8_t current_info_box_page = 0;
-static char info_box_second_page[192];
+static char info_box_second_page[256];
 static bool tui_halted_mode = false;
 static bool tui_snapshot_available = false;
 
@@ -46,9 +46,11 @@ static void update_info_box_text(void) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
                tui_snapshot_available
-                   ? "(a)ssign watchobject reg or addr, (d)ebug source, "
+                   ? "(C)enter, (a)ssign watchobject reg or addr, "
+                     "(d)ebug source, "
                      "(S)napshot, (R)estore, (o)ther actions"
-                   : "(a)ssign watchobject reg or addr, (d)ebug source, "
+                   : "(C)enter, (a)ssign watchobject reg or addr, "
+                     "(d)ebug source, "
                      "(S)napshot, (o)ther actions");
     } else {
       uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
@@ -56,11 +58,11 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(a)ssign watchobject reg or addr, "
+                ? "(C)enter, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(a)ssign watchobject reg or addr, "
+                : "(C)enter, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions");
@@ -68,11 +70,11 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(a)ssign watchobject reg or addr, "
+                ? "(C)enter, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(a)ssign watchobject reg or addr, "
+                : "(C)enter, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions",
