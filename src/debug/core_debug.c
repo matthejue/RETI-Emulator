@@ -491,6 +491,7 @@ static void determine_visible_range_from_start(MemType mem_type,
   for (uint64_t idx = start; idx <= max_idx; idx++) {
     uint32_t rows = rendered_rows_for_idx(mem_type, idx);
     if (used_rows > 0 && used_rows + rows > max_rows) {
+      *end = idx;
       break;
     }
     used_rows += rows;
