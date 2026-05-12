@@ -29,6 +29,7 @@ typedef struct {
   Box *box;
   Register watchobject;
   char *watchobject_addr;
+  int64_t scroll_offset;
 } WatchBox;
 
 extern const Menu_Entry box_entries[];

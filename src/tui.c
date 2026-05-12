@@ -19,11 +19,11 @@ Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 static const char *info_box_pages[] = {
     "(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
     "(s)tep into isr, (f)inalize isr, "
-    "(a)ssign watchobject reg or addr, (q)uit, (o)ther actions",
+    "(q)uit, (tab/S-tab) to switch, (j/k) to scroll, (o)ther actions",
 };
 static const char *halted_info_box_pages[] = {
-    "Program halted, (r)estart, (a)ssign watchobject reg or addr, (q)uit, "
-    "(o)ther actions"};
+    "Program halted, (r)estart, (q)uit, "
+    "(tab/S-tab) to switch, (j/k) to scroll, (o)ther actions"};
 static const uint8_t NUM_INFO_BOX_PAGES = 2;
 static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
 static uint8_t current_info_box_page = 0;
@@ -39,34 +39,41 @@ uint16_t term_width, term_height;
 Box *boxes[] = {&regs_box,   &eprom_box,  &uart_box, &sram_c_box,
                 &sram_d_box, &sram_s_box, &info_box};
 const uint8_t NUM_BOXES = sizeof(boxes) / sizeof(boxes[0]);
+static Box *active_box = &eprom_box;
 
 static void update_info_box_text(void) {
   if (current_info_box_page == 1) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
                tui_snapshot_available
-                   ? "(d)ebug source, (S)napshot, (R)estore, (o)ther actions"
-                   : "(d)ebug source, (S)napshot, (o)ther actions");
+                   ? "(a)ssign watchobject reg or addr, (d)ebug source, "
+                     "(S)napshot, (R)estore, (o)ther actions"
+                   : "(a)ssign watchobject reg or addr, (d)ebug source, "
+                     "(S)napshot, (o)ther actions");
     } else {
       uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
       if (keypress_action_isr == INVALID_ISR_NUM) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(t)rigger isr none, (e)xchange keypress isr, "
+                ? "(a)ssign watchobject reg or addr, "
+                  "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(t)rigger isr none, (e)xchange keypress isr, "
+                : "(a)ssign watchobject reg or addr, "
+                  "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions");
       } else {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(t)rigger isr %u, (e)xchange keypress isr, "
+                ? "(a)ssign watchobject reg or addr, "
+                  "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(t)rigger isr %u, (e)xchange keypress isr, "
+                : "(a)ssign watchobject reg or addr, "
+                  "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions",
             keypress_action_isr);
@@ -93,12 +100,14 @@ void init_tui() {
   initscr();
   cbreak();
   noecho();
+  keypad(stdscr, TRUE);
   curs_set(0); // Hide cursor
   if (has_colors()) {
     start_color();
     use_default_colors();
     init_pair(COMMENT_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
     init_pair(DEBUG_VARIABLE_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
+    init_pair(ACTIVE_TITLE_COLOR_PAIR, COLOR_BLACK, COLOR_WHITE);
   }
 
   for (uint8_t i = 0; i < NUM_BOXES; i++) {
@@ -178,6 +187,8 @@ void set_tui_halted_mode(bool halted) {
   update_info_box_text();
 }
 
+void set_tui_active_box(Box *box) { active_box = box; }
+
 void fin_tui() {
   for (uint8_t i = 0; i < NUM_BOXES; i++) {
     delwin(boxes[i]->win);
@@ -198,10 +209,16 @@ void draw_boxes() {
     if (i < NUM_BOXES - 1) {
       box(boxes[i]->win, 0, 0);
     }
+    if (boxes[i] == active_box) {
+      wattron(boxes[i]->win, COLOR_PAIR(ACTIVE_TITLE_COLOR_PAIR));
+    }
     mvwprintw(boxes[i]->win, 0, rel_pos == 0 ? 1 : rel_pos, " %.*s ",
               (uint32_t)min(boxes[i]->width - 4 /* 2 spaces + 2 corner */,
                             TITLE_LEN + 2),
               boxes[i]->title);
+    if (boxes[i] == active_box) {
+      wattroff(boxes[i]->win, COLOR_PAIR(ACTIVE_TITLE_COLOR_PAIR));
+    }
     wrefresh(boxes[i]->win);
   }
 }

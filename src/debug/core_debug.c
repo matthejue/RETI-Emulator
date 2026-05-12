@@ -53,10 +53,24 @@ const uint8_t NUM_REGISTER_ENTRIES =
 
 const uint8_t LINEWIDTH = 54;
 
-WatchBox eprom_watchbox = {&eprom_box, PC, NULL};
-WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL};
-WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL};
-WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL};
+WatchBox eprom_watchbox = {&eprom_box, PC, NULL, 0};
+WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL, 0};
+WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL, 0};
+WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL, 0};
+
+static BoxIdentifier active_box_identifier = EPROM_BOX;
+
+static const BoxIdentifier focus_order[] = {
+    REGS_BOX, EPROM_BOX, UART_BOX, SRAM_C_BOX, SRAM_D_BOX, SRAM_S_BOX};
+static const uint8_t NUM_FOCUS_BOXES =
+    sizeof(focus_order) / sizeof(focus_order[0]);
+
+static void reset_all_scroll_offsets(void) {
+  eprom_watchbox.scroll_offset = 0;
+  sram_c_watchbox.scroll_offset = 0;
+  sram_d_watchbox.scroll_offset = 0;
+  sram_s_watchbox.scroll_offset = 0;
+}
 
 Mnemonic_to_String opcode_to_mnemonic[] = {
     {ADDI, "ADDI"},     {SUBI, "SUBI"},       {MULTI, "MULTI"},
@@ -186,16 +200,19 @@ char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
 void print_formatted_to_box(const char *format, Box *box, ...);
 WatchBox *get_watchbox(BoxIdentifier box_identifier);
 void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject);
+uint64_t determine_watchobject_value(WatchBox *watchbox);
+static Box *get_box_for_box_identifier(BoxIdentifier box_identifier);
 
 static void handle_watchobject_assignment(void) {
-  BoxIdentifier box_identifier = display_popup_menu(box_entries, NUM_BOX_ENTRIES);
-  WatchBox *watchbox = get_watchbox(box_identifier);
+  WatchBox *watchbox = get_watchbox(active_box_identifier);
 
-  if (box_identifier == CANCEL) {
+  if (watchbox == NULL) {
+    display_notification_box(
+        "Assign Watchobject",
+        "Use Tab/S-Tab to select a scrollable address window.");
     draw_tui();
     return;
   }
-
   Register watchobject =
       display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
   if (watchobject == CANCEL2) {
@@ -203,17 +220,46 @@ static void handle_watchobject_assignment(void) {
     return;
   }
 
+  assign_watchobject_to_box(watchbox, watchobject);
+}
+
+static Box *get_box_for_box_identifier(BoxIdentifier box_identifier) {
   switch (box_identifier) {
+  case REGS_BOX:
+    return &regs_box;
   case EPROM_BOX:
+    return &eprom_box;
+  case UART_BOX:
+    return &uart_box;
   case SRAM_C_BOX:
+    return &sram_c_box;
   case SRAM_D_BOX:
+    return &sram_d_box;
   case SRAM_S_BOX:
-    assign_watchobject_to_box(watchbox, watchobject);
-    break;
+    return &sram_s_box;
   default:
-    display_notification_box("Error", "Invalid box identifier");
-    break;
+    return NULL;
   }
+}
+
+static void update_active_box_marker(void) {
+  set_tui_active_box(get_box_for_box_identifier(active_box_identifier));
+}
+
+static void switch_active_window(int8_t direction) {
+  for (uint8_t i = 0; i < NUM_FOCUS_BOXES; i++) {
+    if (focus_order[i] == active_box_identifier) {
+      uint8_t next = (i + NUM_FOCUS_BOXES + direction) % NUM_FOCUS_BOXES;
+      active_box_identifier = focus_order[next];
+      update_active_box_marker();
+      draw_tui();
+      return;
+    }
+  }
+
+  active_box_identifier = EPROM_BOX;
+  update_active_box_marker();
+  draw_tui();
 }
 
 static Box *get_box_for_mem_type(MemType mem_type) {
@@ -302,6 +348,49 @@ static uint64_t max_idx_for_mem_type(MemType mem_type) {
   }
 }
 
+static MemType mem_type_for_box_identifier(BoxIdentifier box_identifier) {
+  switch (box_identifier) {
+  case EPROM_BOX:
+    return EPROM;
+  case SRAM_C_BOX:
+    return SRAM_C;
+  case SRAM_D_BOX:
+    return SRAM_D;
+  case SRAM_S_BOX:
+    return SRAM_S;
+  default:
+    return REGS;
+  }
+}
+
+static bool raw_watchobject_has_address_space(WatchBox *watchbox,
+                                              MemType mem_type,
+                                              uint64_t raw_watchobject,
+                                              uint64_t *idx) {
+  switch (mem_type) {
+  case EPROM:
+    if (raw_watchobject & 0xC0000000) {
+      return false;
+    }
+    *idx = raw_watchobject;
+    return true;
+  case SRAM_C:
+  case SRAM_D:
+  case SRAM_S:
+    if (watchbox->watchobject == ADDRESS) {
+      *idx = raw_watchobject & 0x7FFFFFFF;
+      return true;
+    }
+    if (!(raw_watchobject & 0x80000000)) {
+      return false;
+    }
+    *idx = raw_watchobject & 0x7FFFFFFF;
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void determine_visible_range(MemType mem_type, uint64_t watch_idx,
                                     uint16_t max_rows, uint64_t *start,
                                     uint64_t *end) {
@@ -381,6 +470,97 @@ static void determine_visible_range(MemType mem_type, uint64_t watch_idx,
       (*end)++;
     }
   }
+}
+
+static void determine_visible_range_from_start(MemType mem_type,
+                                               uint64_t start,
+                                               uint16_t max_rows,
+                                               uint64_t *end) {
+  uint64_t max_idx = max_idx_for_mem_type(mem_type);
+  uint32_t used_rows = 0;
+  *end = start;
+
+  for (uint64_t idx = start; idx <= max_idx; idx++) {
+    uint32_t rows = rendered_rows_for_idx(mem_type, idx);
+    if (used_rows > 0 && used_rows + rows > max_rows) {
+      break;
+    }
+    used_rows += rows;
+    *end = idx;
+    if (idx == max_idx) {
+      break;
+    }
+  }
+}
+
+static bool visible_range_for_watchbox(WatchBox *watchbox, MemType mem_type,
+                                       uint64_t raw_watchobject,
+                                       uint16_t max_rows, uint64_t *start,
+                                       uint64_t *end) {
+  uint64_t base_idx;
+  if (!raw_watchobject_has_address_space(watchbox, mem_type, raw_watchobject,
+                                         &base_idx)) {
+    return false;
+  }
+
+  uint64_t centered_start;
+  uint64_t centered_end;
+  determine_visible_range(mem_type, base_idx, max_rows, &centered_start,
+                          &centered_end);
+
+  int64_t max_idx = (int64_t)max_idx_for_mem_type(mem_type);
+  int64_t visible_start = (int64_t)centered_start + watchbox->scroll_offset;
+  if (visible_start < 0) {
+    visible_start = 0;
+  } else if (visible_start > max_idx) {
+    visible_start = max_idx;
+  }
+
+  *start = (uint64_t)visible_start;
+  determine_visible_range_from_start(mem_type, *start, max_rows, end);
+  return true;
+}
+
+static void scroll_watchbox(WatchBox *watchbox, MemType mem_type,
+                            int8_t direction) {
+  uint64_t raw_watchobject = determine_watchobject_value(watchbox);
+  if (raw_watchobject == UINT64_MAX) {
+    return;
+  }
+
+  uint64_t base_idx;
+  if (!raw_watchobject_has_address_space(watchbox, mem_type, raw_watchobject,
+                                         &base_idx)) {
+    return;
+  }
+
+  uint16_t max_rows = watchbox->box->height - 2;
+  uint64_t centered_start;
+  uint64_t centered_end;
+  determine_visible_range(mem_type, base_idx, max_rows, &centered_start,
+                          &centered_end);
+
+  int64_t max_idx = (int64_t)max_idx_for_mem_type(mem_type);
+  int64_t visible_start =
+      (int64_t)centered_start + watchbox->scroll_offset + direction;
+  if (visible_start < 0) {
+    visible_start = 0;
+  } else if (visible_start > max_idx) {
+    visible_start = max_idx;
+  }
+
+  watchbox->scroll_offset = visible_start - (int64_t)centered_start;
+}
+
+static void scroll_active_window(int8_t direction) {
+  WatchBox *watchbox = get_watchbox(active_box_identifier);
+  if (watchbox == NULL) {
+    return;
+  }
+
+  scroll_watchbox(watchbox, mem_type_for_box_identifier(active_box_identifier),
+                  direction);
+  draw_tui();
 }
 
 static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
@@ -606,14 +786,12 @@ uint64_t determine_watchobject_value(WatchBox *watchbox) {
 }
 
 void print_eprom_watchobject(uint64_t eprom_watchobject) {
-  if (eprom_watchobject & 0xC0000000) {
-    return;
-  }
-
   uint64_t start;
   uint64_t end;
-  determine_visible_range(EPROM, eprom_watchobject, eprom_box.height - 2, &start,
-                          &end);
+  if (!visible_range_for_watchbox(&eprom_watchbox, EPROM, eprom_watchobject,
+                                  eprom_box.height - 2, &start, &end)) {
+    return;
+  }
 
   if (start < num_instrs_start_prgrm) {
     print_array_with_idcs_from_to(EPROM, start,
@@ -626,17 +804,30 @@ void print_eprom_watchobject(uint64_t eprom_watchobject) {
 }
 
 void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
-  if (!(sram_watchobject_x & 0x80000000)) {
+  WatchBox *watchbox = NULL;
+  switch (mem_type) {
+  case SRAM_C:
+    watchbox = &sram_c_watchbox;
+    break;
+  case SRAM_D:
+    watchbox = &sram_d_watchbox;
+    break;
+  case SRAM_S:
+    watchbox = &sram_s_watchbox;
+    break;
+  default:
     return;
   }
 
-  sram_watchobject_x = sram_watchobject_x & 0x7FFFFFFF;
   uint64_t start;
   uint64_t end;
+  if (!visible_range_for_watchbox(watchbox, mem_type, sram_watchobject_x,
+                                  sram_c_box.height - 2, &start, &end)) {
+    return;
+  }
+
   uint64_t instruction_start = ivt_max_idx == (uint32_t)-1 ? 0 : ivt_max_idx + 1;
   uint64_t instruction_end = num_instrs_isrs + num_instrs_prgrm - 1;
-  determine_visible_range(mem_type, sram_watchobject_x, sram_c_box.height - 2,
-                          &start, &end);
 
   if (ivt_max_idx != -1 && start <= ivt_max_idx) {
     print_file_with_idcs(mem_type, start, min(end, ivt_max_idx), true, false);
@@ -723,12 +914,14 @@ char *ask_watchobject_addr(void) {
 void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
   Register previous_watchobject = watchbox->watchobject;
   char *previous_addr = watchbox->watchobject_addr;
+  int64_t previous_scroll_offset = watchbox->scroll_offset;
 
   if (watchobject == ADDRESS) {
     watchbox->watchobject_addr = ask_watchobject_addr();
   }
 
   watchbox->watchobject = watchobject;
+  watchbox->scroll_offset = 0;
   if (draw_tui()) {
     if (watchobject == ADDRESS) {
       free(previous_addr);
@@ -737,6 +930,7 @@ void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
   }
 
   watchbox->watchobject = previous_watchobject;
+  watchbox->scroll_offset = previous_scroll_offset;
   if (watchobject == ADDRESS) {
     free(watchbox->watchobject_addr);
     watchbox->watchobject_addr = previous_addr;
@@ -749,63 +943,118 @@ static void restart_emulator(void) {
   execvp(gargv[0], gargv);
 }
 
+static int read_tui_key(void) {
+  int key = getch();
+  if (key != 27) {
+    return key;
+  }
+
+  nodelay(stdscr, TRUE);
+  int second = getch();
+  int third = getch();
+  nodelay(stdscr, FALSE);
+
+  if (second == '[' && third == 'Z') {
+    return KEY_BTAB;
+  }
+  if (third != ERR) {
+    ungetch(third);
+  }
+  if (second != ERR) {
+    ungetch(second);
+  }
+  return key;
+}
+
 void evaluate_keyboard_input(void) {
-  char key;
   while (true) {
-    char ch = getchar();
-    if (ch == EOF) {
+    int key = read_tui_key();
+    if (key == ERR) {
       continue;
     }
-    key = (char)ch;
     if (key == 'n') {
+      reset_all_scroll_offsets();
       return;
     } else if (key == 'c') {
+      reset_all_scroll_offsets();
       update_state(CONTINUE);
       return;
     } else if (key == 'r') {
+      reset_all_scroll_offsets();
       restart_emulator();
     } else if (key == 's') {
+      reset_all_scroll_offsets();
       update_state(STEP_INTO_ACTION);
       bool success = out.retbool1;
       if (success) {
         return;
       }
+      draw_tui();
       continue;
     } else if (key == 'f') {
+      reset_all_scroll_offsets();
       update_state(FINALIZE);
       bool success = out.retbool1;
       if (success) {
         return;
       }
+      draw_tui();
       continue;
     } else if (key == 't') {
+      reset_all_scroll_offsets();
       bool success = keypress_interrupt_trigger();
       if (success) {
         return;
       }
+      draw_tui();
+      continue;
+    } else if (key == '\t') {
+      switch_active_window(1);
+      continue;
+    } else if (key == KEY_BTAB) {
+      switch_active_window(-1);
+      continue;
+    } else if (key == 'j') {
+      scroll_active_window(1);
+      continue;
+    } else if (key == 'k') {
+      scroll_active_window(-1);
+      continue;
     } else if (key == 'a') {
+      reset_all_scroll_offsets();
       handle_watchobject_assignment();
     } else if (key == 'o') {
       cycle_info_box_page();
       draw_tui();
       continue;
     } else if (key == 'd') {
+      reset_all_scroll_offsets();
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
       }
       draw_tui();
       continue;
-    } else if (handle_snapshot_debug_key(key)) {
+    } else if (key == 'S' || key == 'R') {
+      reset_all_scroll_offsets();
+      if (handle_snapshot_debug_key(key)) {
+        continue;
+      }
+      draw_tui();
       continue;
     } else if (key == 'e') {
+      reset_all_scroll_offsets();
       if (cycle_keypress_interrupt_action_isr()) {
         draw_tui();
       }
       continue;
     } else if (key == 'D') {
+      reset_all_scroll_offsets();
       debug_activated = !debug_activated;
+      draw_tui();
+      continue;
     } else if (key == 'q') {
+      reset_all_scroll_offsets();
       cleanup_snapshot_debug();
       finalize();
       exit(EXIT_SUCCESS);
@@ -820,16 +1069,30 @@ void wait_for_tui_quit(void) {
     update_term_and_box_sizes();
     draw_tui();
 
-    char ch = getchar();
-    if (ch == EOF) {
+    int key = read_tui_key();
+    if (key == ERR) {
       continue;
     }
 
-    switch ((char)ch) {
+    switch (key) {
     case 'r':
+      reset_all_scroll_offsets();
       restart_emulator();
       break;
+    case '\t':
+      switch_active_window(1);
+      continue;
+    case KEY_BTAB:
+      switch_active_window(-1);
+      continue;
+    case 'j':
+      scroll_active_window(1);
+      continue;
+    case 'k':
+      scroll_active_window(-1);
+      continue;
     case 'a':
+      reset_all_scroll_offsets();
       handle_watchobject_assignment();
       break;
     case 'o':
@@ -837,6 +1100,7 @@ void wait_for_tui_quit(void) {
       draw_tui();
       continue;
     case 'd':
+      reset_all_scroll_offsets();
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
@@ -845,11 +1109,13 @@ void wait_for_tui_quit(void) {
       continue;
     case 'S':
     case 'R':
-      if (handle_snapshot_debug_key((char)ch)) {
+      reset_all_scroll_offsets();
+      if (handle_snapshot_debug_key((char)key)) {
         continue;
       }
       continue;
     case 'q':
+      reset_all_scroll_offsets();
       cleanup_snapshot_debug();
       set_tui_halted_mode(false);
       return;
@@ -874,6 +1140,7 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 
 bool draw_tui(void) {
   source_debug_update_current_stackframe_function();
+  update_active_box_marker();
 
   uint64_t eprom_watchobject_int =
       determine_watchobject_value(&eprom_watchbox);

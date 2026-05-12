@@ -29,9 +29,11 @@ extern const uint8_t NUM_BOXES;
 void write_text_into_box(Box *box, const char *text);
 void write_text_into_box_with_attr(Box *box, const char *text, int attr);
 void draw_boxes();
+void set_tui_active_box(Box *box);
 
 #define COMMENT_COLOR_PAIR 1
 #define DEBUG_VARIABLE_COLOR_PAIR 2
+#define ACTIVE_TITLE_COLOR_PAIR 3
 
 void init_tui();
 void fin_tui();
