@@ -14,7 +14,7 @@ typedef struct {
   const char *text;
 } Menu_Entry_Reversed;
 
-#define MAX_NUM_DIGITS_INTEGER 11 // log(2**32, 10) + possible minus sign
+#define MAX_NUM_DIGITS_INTEGER 11 // int32 min incl. sign, or uint32 max
 
 #define MAX_CHARS_BOX_IDENTIFIER 2
 

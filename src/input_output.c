@@ -4,6 +4,8 @@
 #include "../include/tui.h"
 #include "../include/utils.h"
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -154,7 +156,7 @@ uint32_t get_user_input() {
   char input[MAX_NUM_DIGITS_INTEGER + 2]; // null terminator + newline character
   while (true) {
     display_input_box(
-        input, "Number between -2147483648 and 2147483647 or a character:",
+        input, "Number between -2147483648 and 4294967295 or a character:",
         MAX_NUM_DIGITS_INTEGER);
 
     if (input[0] == '\'') {
@@ -183,17 +185,34 @@ uint32_t get_user_input() {
       }
     } else if (isdigit((unsigned char)input[0]) || input[0] == '-') {
       char *endptr;
-      uint64_t tmp_num = strtol((char *)input, &endptr, 10);
+      errno = 0;
+      if (input[0] == '-') {
+        long long tmp_num = strtoll((char *)input, &endptr, 10);
+        if (*endptr != '\0') {
+          const char *str = "Error: Further characters after number: ";
+          const char *str2 = proper_str_cat(str, endptr);
+          display_notification_box("Error", str2);
+        } else if (errno == ERANGE || tmp_num < INT32_MIN) {
+          display_notification_box("Error",
+                                   "Number out of range, must be between "
+                                   "-2147483648 and 4294967295");
+        } else {
+          return (uint32_t)(int32_t)tmp_num;
+        }
+        continue;
+      }
+
+      unsigned long long tmp_num = strtoull((char *)input, &endptr, 10);
       if (*endptr != '\0') {
         const char *str = "Error: Further characters after number: ";
         const char *str2 = proper_str_cat(str, endptr);
-        const char *str3 = proper_str_cat(str2, "\n");
-        fprintf(stderr, "%s", str3);
-      } else if ((int64_t)tmp_num < INT32_MIN || (int64_t)tmp_num > INT32_MAX) {
-        fprintf(stderr, "Error: Number out of range, must be between "
-                        "-2147483648 and 2147483647\n");
+        display_notification_box("Error", str2);
+      } else if (errno == ERANGE || tmp_num > UINT32_MAX) {
+        display_notification_box("Error",
+                                 "Number out of range, must be between "
+                                 "-2147483648 and 4294967295");
       } else {
-        return tmp_num;
+        return (uint32_t)tmp_num;
       }
     } else if (strlen((char *)input) == 1 &&
                isprint((unsigned char)input[0]) &&

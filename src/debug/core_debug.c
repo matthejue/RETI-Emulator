@@ -40,6 +40,11 @@ const Menu_Entry register_entries[] = {
     {"BAF", BAF}, {"CS", CS},   {"DS", DS},   {"Address", ADDRESS},
 };
 
+const Menu_Entry assign_value_register_entries[] = {
+    {"PC", PC},   {"IN1", IN1}, {"IN2", IN2}, {"ACC", ACC},
+    {"SP", SP},   {"BAF", BAF}, {"CS", CS},   {"DS", DS},
+};
+
 const Menu_Entry identifier_to_register_or_address[] = {
     {"PC", PC},   {"IN1", IN1}, {"IN2", IN2}, {"ACC", ACC},   {"SP", SP},
     {"BAF", BAF}, {"CS", CS},   {"DS", DS},   {"A", ADDRESS},
@@ -50,6 +55,9 @@ const char *register_or_address_to_identifier[] = {
 
 const uint8_t NUM_REGISTER_ENTRIES =
     sizeof(register_entries) / sizeof(register_entries[0]);
+const uint8_t NUM_ASSIGN_VALUE_REGISTER_ENTRIES =
+    sizeof(assign_value_register_entries) /
+    sizeof(assign_value_register_entries[0]);
 
 const uint8_t LINEWIDTH = 54;
 
@@ -682,6 +690,84 @@ static void fix_active_scroll_as_watchobject(void) {
   draw_tui();
 }
 
+static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
+                                                 MemType mem_type,
+                                                 uint32_t value) {
+  uint64_t raw_watchobject = determine_watchobject_value(watchbox);
+  if (raw_watchobject == UINT64_MAX) {
+    return false;
+  }
+
+  uint64_t idx;
+  if (!raw_watchobject_has_address_space(watchbox, mem_type, raw_watchobject,
+                                         &idx)) {
+    display_notification_box(
+        "Assign Value",
+        "Selected watchobject does not point into this address space.");
+    draw_tui();
+    return false;
+  }
+
+  switch (mem_type) {
+  case EPROM:
+    if (idx >= num_instrs_start_prgrm) {
+      display_notification_box("Assign Value",
+                               "EPROM address is outside loaded EPROM.");
+      draw_tui();
+      return false;
+    }
+    write_array(eprom, idx, value, false);
+    return true;
+  case SRAM_C:
+  case SRAM_D:
+  case SRAM_S:
+    if (idx >= sram_size) {
+      display_notification_box("Assign Value",
+                               "SRAM address is outside configured SRAM.");
+      draw_tui();
+      return false;
+    }
+    write_file(sram, idx, value);
+    return true;
+  default:
+    return false;
+  }
+}
+
+static void handle_value_assignment(void) {
+  if (active_box_identifier == REGS_BOX) {
+    Register reg =
+        display_popup_menu(assign_value_register_entries,
+                           NUM_ASSIGN_VALUE_REGISTER_ENTRIES);
+    if (reg == CANCEL2) {
+      draw_tui();
+      return;
+    }
+
+    uint32_t value = get_user_input();
+    write_array(regs, reg, value, false);
+    reset_all_scroll_offsets();
+    draw_tui();
+    return;
+  }
+
+  WatchBox *watchbox = get_watchbox(active_box_identifier);
+  if (watchbox == NULL) {
+    display_notification_box(
+        "Assign Value",
+        "Use Tab/S-Tab to select Registers or a scrollable address window.");
+    draw_tui();
+    return;
+  }
+
+  uint32_t value = get_user_input();
+  if (assign_value_to_watchobject_mem_cell(
+          watchbox, mem_type_for_box_identifier(active_box_identifier), value)) {
+    reset_all_scroll_offsets();
+    draw_tui();
+  }
+}
+
 static void print_comments_for_instruction(MemType mem_type, uint64_t idx,
                                            bool before_instruction) {
   if (!collect_comments) {
@@ -1191,6 +1277,9 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'F') {
       fix_active_scroll_as_watchobject();
       continue;
+    } else if (key == 'A') {
+      handle_value_assignment();
+      continue;
     } else if (key == 'a') {
       reset_all_scroll_offsets();
       handle_watchobject_assignment();
@@ -1268,6 +1357,9 @@ void wait_for_tui_quit(void) {
       continue;
     case 'F':
       fix_active_scroll_as_watchobject();
+      continue;
+    case 'A':
+      handle_value_assignment();
       continue;
     case 'a':
       reset_all_scroll_offsets();
