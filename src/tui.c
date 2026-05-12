@@ -46,10 +46,10 @@ static void update_info_box_text(void) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
                tui_snapshot_available
-                   ? "(C)enter, (a)ssign watchobject reg or addr, "
+                   ? "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                      "(d)ebug source, "
                      "(S)napshot, (R)estore, (o)ther actions"
-                   : "(C)enter, (a)ssign watchobject reg or addr, "
+                   : "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                      "(d)ebug source, "
                      "(S)napshot, (o)ther actions");
     } else {
@@ -58,11 +58,11 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(C)enter, (a)ssign watchobject reg or addr, "
+                ? "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (a)ssign watchobject reg or addr, "
+                : "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions");
@@ -70,11 +70,11 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(C)enter, (a)ssign watchobject reg or addr, "
+                ? "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (a)ssign watchobject reg or addr, "
+                : "(C)enter, (F)ix, (a)ssign watchobject reg or addr, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions",
