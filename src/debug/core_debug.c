@@ -67,6 +67,29 @@ static const uint8_t NUM_FOCUS_BOXES =
 
 WatchBox *get_watchbox(BoxIdentifier box_identifier);
 
+static bool highlighted_watchobject_idx_valid[] = {
+    false, false, false, false, false, false};
+static uint64_t highlighted_watchobject_idx[] = {0, 0, 0, 0, 0, 0};
+
+static void clear_watchobject_highlights(void) {
+  for (uint8_t i = 0;
+       i < sizeof(highlighted_watchobject_idx_valid) /
+               sizeof(highlighted_watchobject_idx_valid[0]);
+       i++) {
+    highlighted_watchobject_idx_valid[i] = false;
+  }
+}
+
+static void set_watchobject_highlight(MemType mem_type, uint64_t idx) {
+  highlighted_watchobject_idx_valid[mem_type] = true;
+  highlighted_watchobject_idx[mem_type] = idx;
+}
+
+static bool is_watchobject_highlight(MemType mem_type, uint64_t idx) {
+  return highlighted_watchobject_idx_valid[mem_type] &&
+         highlighted_watchobject_idx[mem_type] == idx;
+}
+
 static void reset_all_scroll_offsets(void) {
   eprom_watchbox.scroll_offset = 0;
   sram_c_watchbox.scroll_offset = 0;
@@ -704,6 +727,29 @@ void print_formatted_to_box(const char *format, Box *box, ...) {
   va_end(args);
 }
 
+static void print_full_width_line_to_box_with_attr(Box *box, int attr,
+                                                   const char *line) {
+  int inner_width = max(0, box->width - 2);
+  if (inner_width == 0) {
+    return;
+  }
+
+  size_t line_len = strlen(line);
+  int formatted_len =
+      line_len < (size_t)inner_width
+          ? snprintf(NULL, 0, "%-*s\n", inner_width, line)
+          : snprintf(NULL, 0, "%s\n", line);
+  char *formatted_line = malloc(formatted_len + 1);
+  if (line_len < (size_t)inner_width) {
+    snprintf(formatted_line, formatted_len + 1, "%-*s\n", inner_width, line);
+  } else {
+    snprintf(formatted_line, formatted_len + 1, "%s\n", line);
+  }
+
+  write_text_into_box_with_attr(box, formatted_line, attr);
+  free(formatted_line);
+}
+
 // TODO:: split zwischen mem content und assembly instrs
 // TODO:: Unit test dafür und die ganzen idx Funktionen
 void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
@@ -755,18 +801,40 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
       (mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S)
           ? source_debug_variable_label_for_sram_idx(idx)
           : NULL;
+  bool highlight = is_watchobject_highlight(mem_type, idx);
+  int highlight_attr = COLOR_PAIR(WATCHOBJECT_COLOR_PAIR);
 
   if (variable_label == NULL) {
-    print_formatted_to_box("%s: %s%s\n", box, idx_str, mem_content_str,
-                           reg_to_mem_pntr_str);
+    if (highlight) {
+      int line_len = snprintf(NULL, 0, "%s: %s%s", idx_str, mem_content_str,
+                              reg_to_mem_pntr_str);
+      char *line = malloc(line_len + 1);
+      snprintf(line, line_len + 1, "%s: %s%s", idx_str, mem_content_str,
+               reg_to_mem_pntr_str);
+      print_full_width_line_to_box_with_attr(box, highlight_attr, line);
+      free(line);
+    } else {
+      print_formatted_to_box("%s: %s%s\n", box, idx_str, mem_content_str,
+                             reg_to_mem_pntr_str);
+    }
     return;
   }
 
-  print_formatted_to_box("%s: %s%s ", box, idx_str, mem_content_str,
-                         reg_to_mem_pntr_str);
-  write_text_into_box_with_attr(
-      box, variable_label, A_DIM | COLOR_PAIR(DEBUG_VARIABLE_COLOR_PAIR));
-  write_text_into_box(box, "\n");
+  if (highlight) {
+    int line_len = snprintf(NULL, 0, "%s: %s%s %s", idx_str, mem_content_str,
+                            reg_to_mem_pntr_str, variable_label);
+    char *line = malloc(line_len + 1);
+    snprintf(line, line_len + 1, "%s: %s%s %s", idx_str, mem_content_str,
+             reg_to_mem_pntr_str, variable_label);
+    print_full_width_line_to_box_with_attr(box, highlight_attr, line);
+    free(line);
+  } else {
+    print_formatted_to_box("%s: %s%s ", box, idx_str, mem_content_str,
+                           reg_to_mem_pntr_str);
+    write_text_into_box_with_attr(
+        box, variable_label, A_DIM | COLOR_PAIR(DEBUG_VARIABLE_COLOR_PAIR));
+    write_text_into_box(box, "\n");
+  }
 }
 
 void print_reg_content_with_reg(uint8_t reg_idx, uint32_t mem_content) {
@@ -1265,6 +1333,33 @@ bool draw_tui(void) {
       sram_watchobject_ds_int == UINT64_MAX ||
       sram_watchobject_stack_int == UINT64_MAX) {
     return false;
+  }
+
+  clear_watchobject_highlights();
+  uint64_t highlight_idx;
+  if (raw_watchobject_has_address_space(&eprom_watchbox, EPROM,
+                                        eprom_watchobject_int,
+                                        &highlight_idx) &&
+      highlight_idx <= max_idx_for_mem_type(EPROM)) {
+    set_watchobject_highlight(EPROM, highlight_idx);
+  }
+  if (raw_watchobject_has_address_space(&sram_c_watchbox, SRAM_C,
+                                        sram_watchobject_cs_int,
+                                        &highlight_idx) &&
+      highlight_idx <= max_idx_for_mem_type(SRAM_C)) {
+    set_watchobject_highlight(SRAM_C, highlight_idx);
+  }
+  if (raw_watchobject_has_address_space(&sram_d_watchbox, SRAM_D,
+                                        sram_watchobject_ds_int,
+                                        &highlight_idx) &&
+      highlight_idx <= max_idx_for_mem_type(SRAM_D)) {
+    set_watchobject_highlight(SRAM_D, highlight_idx);
+  }
+  if (raw_watchobject_has_address_space(&sram_s_watchbox, SRAM_S,
+                                        sram_watchobject_stack_int,
+                                        &highlight_idx) &&
+      highlight_idx <= max_idx_for_mem_type(SRAM_S)) {
+    set_watchobject_highlight(SRAM_S, highlight_idx);
   }
 
   for (int i = 0; i < NUM_BOXES; i++) {

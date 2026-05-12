@@ -34,6 +34,7 @@ void set_tui_active_box(Box *box);
 #define COMMENT_COLOR_PAIR 1
 #define DEBUG_VARIABLE_COLOR_PAIR 2
 #define ACTIVE_TITLE_COLOR_PAIR 3
+#define WATCHOBJECT_COLOR_PAIR 4
 
 void init_tui();
 void fin_tui();
