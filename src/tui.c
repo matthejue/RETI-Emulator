@@ -22,7 +22,8 @@ static const char *info_box_pages[] = {
     "(a)ssign watchobject reg or addr, (q)uit, (o)ther actions",
 };
 static const char *halted_info_box_pages[] = {
-    "Program halted, (a)ssign watchobject reg or addr, (q)uit, (o)ther actions"};
+    "Program halted, (r)estart, (a)ssign watchobject reg or addr, (q)uit, "
+    "(o)ther actions"};
 static const uint8_t NUM_INFO_BOX_PAGES = 2;
 static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
 static uint8_t current_info_box_page = 0;

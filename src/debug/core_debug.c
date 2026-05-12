@@ -743,6 +743,12 @@ void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
   }
 }
 
+static void restart_emulator(void) {
+  cleanup_snapshot_debug();
+  finalize();
+  execvp(gargv[0], gargv);
+}
+
 void evaluate_keyboard_input(void) {
   char key;
   while (true) {
@@ -757,9 +763,7 @@ void evaluate_keyboard_input(void) {
       update_state(CONTINUE);
       return;
     } else if (key == 'r') {
-      cleanup_snapshot_debug();
-      finalize();
-      execvp(gargv[0], gargv);
+      restart_emulator();
     } else if (key == 's') {
       update_state(STEP_INTO_ACTION);
       bool success = out.retbool1;
@@ -822,6 +826,9 @@ void wait_for_tui_quit(void) {
     }
 
     switch ((char)ch) {
+    case 'r':
+      restart_emulator();
+      break;
     case 'a':
       handle_watchobject_assignment();
       break;
