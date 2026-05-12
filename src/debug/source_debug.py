@@ -12,6 +12,8 @@ from tkinter import scrolledtext
 POLL_INTERVAL_MS = 1000
 STATE_STRUCT = struct.Struct("<II")
 INCLUDE_RE = re.compile(r'^\s*#\s*include\s+[<"]([^>"]+)[>"]')
+MEM_TYPE_SHIFT = 30
+EPROM_MEM_TYPE = 0b00
 
 
 class SourceDebugApp:
@@ -108,7 +110,24 @@ class SourceDebugApp:
             return
 
         pc, cs = self.current_state
-        relative_pc = (pc - cs if pc >= cs else pc) + 1
+        if pc >> MEM_TYPE_SHIFT == EPROM_MEM_TYPE:
+            self.clear_highlight()
+            self.status_var.set(
+                f"PC={pc} CS={cs} | in the EPROM start program that is "
+                "executing there are no assembly instructions associated "
+                "with the debugged program"
+            )
+            return
+
+        if pc < cs:
+            self.clear_highlight()
+            self.status_var.set(
+                f"PC={pc} CS={cs} | before the code segment there are no "
+                "assembly instructions associated with the debugged program"
+            )
+            return
+
+        relative_pc = pc - cs + 1
         range_entry = self.lookup_range_entry(relative_pc)
         if range_entry is None:
             self.clear_highlight()
