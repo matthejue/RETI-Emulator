@@ -13,7 +13,10 @@ bool display_notification_box_with_action(const char *title,
                                           void (*action)(void),
                                           void (*action2)(void)) {
   const uint8_t LEN_ERROR = strlen(title);
-  const uint8_t LEN_PRESS_ENTER = strlen("Press Enter to skip");
+  const char *press_enter_text =
+      strcmp(title, "Assign Watchobject") == 0 ? "Press Enter to close"
+                                               : "Press Enter to skip";
+  const uint8_t LEN_PRESS_ENTER = strlen(press_enter_text);
   const uint8_t LEN_MESSAGE = strlen(message);
   uint8_t box_width = max(LEN_MESSAGE + 4, LEN_PRESS_ENTER + 4);
   uint8_t box_height = 4;
@@ -26,7 +29,7 @@ bool display_notification_box_with_action(const char *title,
             title);
   mvwprintw(notification_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
   mvwprintw(notification_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
-            "Press Enter to skip");
+            "%s", press_enter_text);
   wrefresh(notification_box);
 
   bool should_cont = true;
