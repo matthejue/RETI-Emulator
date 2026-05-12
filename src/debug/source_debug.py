@@ -41,7 +41,9 @@ class SourceDebugApp:
             state="disabled",
         )
         self.text.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        self.text.tag_configure("current_line", background="#fff59d")
+        self.text.tag_configure(
+            "current_line", background="white", foreground="black"
+        )
 
         if self.ranges:
             self.current_file = self.resolve_file_path(self.ranges[0]["file_id"])
