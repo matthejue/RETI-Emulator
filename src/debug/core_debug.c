@@ -821,19 +821,18 @@ static void print_full_width_line_to_box_with_attr(Box *box, int attr,
   }
 
   size_t line_len = strlen(line);
-  int formatted_len =
-      line_len < (size_t)inner_width
-          ? snprintf(NULL, 0, "%-*s\n", inner_width, line)
-          : snprintf(NULL, 0, "%s\n", line);
-  char *formatted_line = malloc(formatted_len + 1);
-  if (line_len < (size_t)inner_width) {
-    snprintf(formatted_line, formatted_len + 1, "%-*s\n", inner_width, line);
-  } else {
-    snprintf(formatted_line, formatted_len + 1, "%s\n", line);
-  }
-
-  write_text_into_box_with_attr(box, formatted_line, attr);
-  free(formatted_line);
+  size_t offset = 0;
+  do {
+    int chunk_len = min((int64_t)(line_len - offset), inner_width);
+    int formatted_len = snprintf(NULL, 0, "%-*.*s\n", inner_width, chunk_len,
+                                 line + offset);
+    char *formatted_line = malloc(formatted_len + 1);
+    snprintf(formatted_line, formatted_len + 1, "%-*.*s\n", inner_width,
+             chunk_len, line + offset);
+    write_text_into_box_with_attr(box, formatted_line, attr);
+    free(formatted_line);
+    offset += chunk_len;
+  } while (offset < line_len);
 }
 
 // TODO:: split zwischen mem content und assembly instrs
