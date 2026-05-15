@@ -603,49 +603,6 @@ static void scroll_active_window(int8_t direction) {
   draw_tui();
 }
 
-static uint64_t range_distance(uint64_t start, uint64_t end,
-                               uint64_t target_start, uint64_t target_end) {
-  uint64_t start_distance =
-      start > target_start ? start - target_start : target_start - start;
-  uint64_t end_distance =
-      end > target_end ? end - target_end : target_end - end;
-  return start_distance + end_distance;
-}
-
-static bool find_watch_idx_for_visible_range(MemType mem_type,
-                                             uint16_t max_rows,
-                                             uint64_t target_start,
-                                             uint64_t target_end,
-                                             uint64_t *watch_idx) {
-  uint64_t best_idx = target_start;
-  uint64_t best_distance = UINT64_MAX;
-
-  for (uint64_t idx = target_start; idx <= target_end; idx++) {
-    uint64_t candidate_start;
-    uint64_t candidate_end;
-    determine_visible_range(mem_type, idx, max_rows, &candidate_start,
-                            &candidate_end);
-    if (candidate_start == target_start && candidate_end == target_end) {
-      *watch_idx = idx;
-      return true;
-    }
-
-    uint64_t distance =
-        range_distance(candidate_start, candidate_end, target_start, target_end);
-    if (distance < best_distance) {
-      best_distance = distance;
-      best_idx = idx;
-    }
-
-    if (idx == UINT64_MAX) {
-      break;
-    }
-  }
-
-  *watch_idx = best_idx;
-  return best_distance != UINT64_MAX;
-}
-
 static char *address_idx_to_string(uint64_t idx) {
   uint8_t len_addr = snprintf(NULL, 0, "%llu", (unsigned long long)idx) + 1;
   char *addr = malloc(len_addr);
@@ -653,39 +610,40 @@ static char *address_idx_to_string(uint64_t idx) {
   return addr;
 }
 
-static void fix_active_scroll_as_watchobject(void) {
+static void change_active_watchobject(int8_t direction) {
   WatchBox *watchbox = get_watchbox(active_box_identifier);
   if (watchbox == NULL) {
     display_notification_box(
-        "Fix Watchobject",
+        "Change Watchobject",
         "Use Tab/S-Tab to select a scrollable address window.");
     draw_tui();
     return;
   }
 
-  MemType mem_type = mem_type_for_box_identifier(active_box_identifier);
-  uint64_t raw_watchobject = determine_watchobject_value(watchbox);
-  if (raw_watchobject == UINT64_MAX) {
-    return;
+  if (watchbox->watchobject == ADDRESS) {
+    uint64_t watchobject_value = determine_watchobject_value(watchbox);
+    if (watchobject_value == UINT64_MAX) {
+      return;
+    }
+
+    if (direction < 0 && watchobject_value == 0) {
+      display_notification_box("Change Watchobject",
+                               "Address cannot be decreased below 0.");
+      draw_tui();
+      return;
+    }
+
+    uint64_t updated_value =
+        direction > 0 ? watchobject_value + 1 : watchobject_value - 1;
+    free(watchbox->watchobject_addr);
+    watchbox->watchobject_addr = address_idx_to_string(updated_value);
+  } else {
+    uint32_t watchobject_value =
+        read_array(regs, watchbox->watchobject, false);
+    write_array(regs, watchbox->watchobject, watchobject_value + direction,
+                false);
   }
 
-  uint16_t max_rows = watchbox->box->height - 2;
-  uint64_t target_start;
-  uint64_t target_end;
-  if (!visible_range_for_watchbox(watchbox, mem_type, raw_watchobject, max_rows,
-                                  &target_start, &target_end)) {
-    return;
-  }
-
-  uint64_t watch_idx;
-  if (!find_watch_idx_for_visible_range(mem_type, max_rows, target_start,
-                                        target_end, &watch_idx)) {
-    return;
-  }
-
-  free(watchbox->watchobject_addr);
-  watchbox->watchobject_addr = address_idx_to_string(watch_idx);
-  watchbox->watchobject = ADDRESS;
   watchbox->scroll_offset = 0;
   draw_tui();
 }
@@ -1269,12 +1227,15 @@ void evaluate_keyboard_input(void) {
     } else if (key == 'k') {
       scroll_active_window(-1);
       continue;
+    } else if (key == 'J') {
+      change_active_watchobject(1);
+      continue;
+    } else if (key == 'K') {
+      change_active_watchobject(-1);
+      continue;
     } else if (key == 'C') {
       reset_active_scroll_offset();
       draw_tui();
-      continue;
-    } else if (key == 'F') {
-      fix_active_scroll_as_watchobject();
       continue;
     } else if (key == 'A') {
       handle_value_assignment();
@@ -1350,12 +1311,15 @@ void wait_for_tui_quit(void) {
     case 'k':
       scroll_active_window(-1);
       continue;
+    case 'J':
+      change_active_watchobject(1);
+      continue;
+    case 'K':
+      change_active_watchobject(-1);
+      continue;
     case 'C':
       reset_active_scroll_offset();
       draw_tui();
-      continue;
-    case 'F':
-      fix_active_scroll_as_watchobject();
       continue;
     case 'A':
       handle_value_assignment();

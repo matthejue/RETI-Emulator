@@ -46,11 +46,13 @@ static void update_info_box_text(void) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
                tui_snapshot_available
-                   ? "(C)enter, (F)ix, (a)ssign watchobject, "
+                   ? "(C)enter, (J/K) to in/decrease watchobject, "
+                     "(a)ssign watchobject, "
                      "(A)ssign value, "
                      "(d)ebug source, "
                      "(S)napshot, (R)estore, (o)ther actions"
-                   : "(C)enter, (F)ix, (a)ssign watchobject, "
+                   : "(C)enter, (J/K) to in/decrease watchobject, "
+                     "(a)ssign watchobject, "
                      "(A)ssign value, "
                      "(d)ebug source, "
                      "(S)napshot, (o)ther actions");
@@ -60,12 +62,14 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(C)enter, (F)ix, (a)ssign watchobject, "
+                ? "(C)enter, (J/K) to in/decrease watchobject, "
+                  "(a)ssign watchobject, "
                   "(A)ssign value, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (F)ix, (a)ssign watchobject, "
+                : "(C)enter, (J/K) to in/decrease watchobject, "
+                  "(a)ssign watchobject, "
                   "(A)ssign value, "
                   "(t)rigger isr none, (e)xchange keypress isr, "
                   "(d)ebug source, "
@@ -74,12 +78,14 @@ static void update_info_box_text(void) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
-                ? "(C)enter, (F)ix, (a)ssign watchobject, "
+                ? "(C)enter, (J/K) to in/decrease watchobject, "
+                  "(a)ssign watchobject, "
                   "(A)ssign value, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (F)ix, (a)ssign watchobject, "
+                : "(C)enter, (J/K) to in/decrease watchobject, "
+                  "(a)ssign watchobject, "
                   "(A)ssign value, "
                   "(t)rigger isr %u, (e)xchange keypress isr, "
                   "(d)ebug source, "
@@ -114,7 +120,7 @@ void init_tui() {
     start_color();
     use_default_colors();
     init_pair(COMMENT_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
-    init_pair(DEBUG_VARIABLE_COLOR_PAIR, COLOR_WHITE, COLOR_BLACK);
+    init_pair(DEBUG_VARIABLE_COLOR_PAIR, COLOR_WHITE, -1);
     init_pair(ACTIVE_TITLE_COLOR_PAIR, COLOR_BLACK, COLOR_WHITE);
     init_pair(WATCHOBJECT_COLOR_PAIR, COLOR_BLACK, COLOR_WHITE);
   }

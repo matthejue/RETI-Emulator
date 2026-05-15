@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "RETI: Compile",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "read -e -p \"$ \" -i \"make clean; intercept-build make\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Run",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "read -e -p \"$ \" -i \"make run EXTRA_ARGS=\\\"\\\"\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Debug",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "read -e -p \"$ \" -i \"make debug EXTRA_ARGS=\\\"\\\"\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Execute steps",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "read -e -p \"$ \" -i \"make run_send_keypresses EXTRA_ARGS=\\\"\\\"\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Debug and execute steps",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "read -e -p \"$ \" -i \"make debug_send_keypresses EXTRA_ARGS=\\\"\\\"\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Diff",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "hash=$(tr -d '\\r\\n' </tmp/current_hash.txt 2>/dev/null); read -e -p \"$ \" -i \"git -c core.pager=nvimpager diff $hash -U50 # current_hash.txt, HEAD^..HEAD, $hash^!\" input; eval \"$input\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RETI: Open src in vifm",
+      "type": "shell",
+      "command": "vifm ./src -c 'goto statemachine.c'",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
