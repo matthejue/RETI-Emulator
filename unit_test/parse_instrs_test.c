@@ -4,6 +4,7 @@
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include "assert.h"
+#include <stdint.h>
 #include "string.h"
 
 void test_parse_instr() {
@@ -55,11 +56,29 @@ void test_parse_and_load_program2() {
   fin_reti();
 }
 
+void test_parse_and_load_numeric_memory_words() {
+  peripherals_dir = "/tmp";
+  init_reti();
+  parse_and_load_program(
+      allocate_and_copy_string("LOADI ACC 1; -1; 4294967295; 2147483648 # comment\nJUMP 0"),
+      SRAM_PRGRM);
+  assert(strcmp(assembly_to_str(machine_to_assembly(read_file(sram, 0))),
+                "LOADI ACC 1") == 0);
+  assert(read_file(sram, 1) == (uint32_t)(int32_t)-1);
+  assert(read_file(sram, 2) == UINT32_MAX);
+  assert(read_file(sram, 3) == 2147483648U);
+  assert(strcmp(assembly_to_str(machine_to_assembly(read_file(sram, 4))),
+                "JUMP 0") == 0);
+  assert(num_instrs_prgrm == 5);
+  fin_reti();
+}
+
 int main() {
   test_parse_instr();
   test_parse_instr2();
   test_parse_instr3();
   test_parse_and_load_program();
   test_parse_and_load_program2();
+  test_parse_and_load_numeric_memory_words();
   return 0;
 }

@@ -234,7 +234,7 @@ class SourceDebugApp:
 def main():
     if len(sys.argv) != 3:
         raise SystemExit(
-            "usage: source_debug.py <debuginfo.json> <source_debug_state.bin>"
+            "usage: source_debug.py <basename.debuginfo> <source_debug_state.bin>"
         )
 
     debuginfo_path = Path(sys.argv[1]).resolve()

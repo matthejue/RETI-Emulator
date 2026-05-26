@@ -4,7 +4,10 @@
 #include "../include/reti.h"
 #include "../include/parse_args.h"
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +38,90 @@ static bool segment_contains_instruction(const char *start, size_t len) {
     start++;
     len--;
   }
-  return len > 0 && isalpha((unsigned char)*start);
+  return len > 0 &&
+         (isalpha((unsigned char)*start) || isdigit((unsigned char)*start) ||
+          *start == '-');
+}
+
+static bool is_segment_end(char c) {
+  return c == '\0' || c == ';' || c == '\n' || c == '\r' || c == '#';
+}
+
+static void skip_to_next_segment(const char **prgrm_pntr) {
+  while (!is_segment_end(**prgrm_pntr)) {
+    (*prgrm_pntr)++;
+  }
+  if (**prgrm_pntr == '#') {
+    while (**prgrm_pntr != '\0' && **prgrm_pntr != '\n' &&
+           **prgrm_pntr != '\r') {
+      (*prgrm_pntr)++;
+    }
+  }
+  if (**prgrm_pntr != '\0') {
+    (*prgrm_pntr)++;
+  }
+}
+
+static bool parse_numeric_memory_word(const char **prgrm_pntr,
+                                      uint32_t *value) {
+  const char *start = *prgrm_pntr;
+  while (*start == ' ' || *start == '\t') {
+    start++;
+  }
+  if (!isdigit((unsigned char)*start) && *start != '-') {
+    return false;
+  }
+
+  char *endptr;
+  errno = 0;
+  if (*start == '-') {
+    long long signed_value = strtoll(start, &endptr, 10);
+    if (errno == ERANGE || signed_value < INT32_MIN ||
+        signed_value > INT32_MAX) {
+      char *word = copy_trimmed_comment_text(start, endptr - start);
+      display_error_message(
+          "SyntaxError",
+          "Signed memory word \"%s\" is not a 32-bit signed number", word,
+          Pntr);
+      exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+    }
+
+    const char *ptr = endptr;
+    while (*ptr == ' ' || *ptr == '\t') {
+      ptr++;
+    }
+    if (!is_segment_end(*ptr)) {
+      return false;
+    }
+
+    *value = (uint32_t)(int32_t)signed_value;
+    *prgrm_pntr = ptr;
+    skip_to_next_segment(prgrm_pntr);
+    return true;
+  }
+
+  unsigned long long unsigned_value = strtoull(start, &endptr, 10);
+  if (errno == ERANGE || unsigned_value > UINT32_MAX) {
+    char *word = copy_trimmed_comment_text(start, endptr - start);
+    display_error_message(
+        "SyntaxError",
+        "Unsigned memory word \"%s\" is not a 32-bit unsigned number", word,
+        Pntr);
+    exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
+  }
+
+  const char *ptr = endptr;
+  while (*ptr == ' ' || *ptr == '\t') {
+    ptr++;
+  }
+  if (!is_segment_end(*ptr)) {
+    return false;
+  }
+
+  *value = (uint32_t)unsigned_value;
+  *prgrm_pntr = ptr;
+  skip_to_next_segment(prgrm_pntr);
+  return true;
 }
 
 static void append_source_comment(Comment_Target target, uint32_t anchor_idx,
@@ -224,6 +310,30 @@ void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
   error_context.code_begin = prgrm_pntr;
   while (*prgrm_pntr != '\0') {
     error_context.code_current = prgrm_pntr;
+    uint32_t memory_word;
+    if (parse_numeric_memory_word(&prgrm_pntr, &memory_word)) {
+      switch (prgrm_type) {
+      case SRAM_PRGRM:
+      case ISR_PRGRMS:
+        write_file(sram, i++, memory_word);
+        break;
+      case EPROM_START_PRGRM: {
+        uint32_t *temp;
+        temp = realloc(eprom, sizeof(uint32_t) * i + sizeof(uint32_t));
+        if (temp == NULL) {
+          fprintf(stderr, "Realloc failed\n");
+          free(eprom);
+          exit(EXIT_FAILURE);
+        }
+        eprom = temp;
+        write_array(eprom, i++, memory_word, false);
+      } break;
+      default:
+        fprintf(stderr, "Error: Invalid memory type\n");
+      }
+      continue;
+    }
+
     String_Instruction *str_instr = parse_instr(&prgrm_pntr);
     if (isalpha(*str_instr->op)) {
       // the if solves the problem of empty lines or empty space between ';'

@@ -114,16 +114,28 @@ static void reap_source_debugger_if_exited(void) {
 
 static char *build_debuginfo_path(void) {
   const char *last_slash = strrchr(sram_prgrm_path, '/');
-  if (last_slash == NULL) {
-    return strdup("debuginfo.json");
+  const char *filename = last_slash == NULL ? sram_prgrm_path : last_slash + 1;
+  const char *last_dot = strrchr(filename, '.');
+  size_t basename_len =
+      last_dot == NULL ? strlen(filename) : (size_t)(last_dot - filename);
+  size_t dir_len = last_slash == NULL ? 0 : (size_t)(last_slash - sram_prgrm_path);
+  size_t total_len = dir_len + (dir_len > 0 ? 1 : 0) + basename_len +
+                     strlen(".debuginfo") + 1;
+  char *path = malloc(total_len);
+  if (path == NULL) {
+    return NULL;
   }
 
-  size_t dir_len = (size_t)(last_slash - sram_prgrm_path);
-  size_t total_len = dir_len + strlen("/debuginfo.json") + 1;
-  char *path = malloc(total_len);
-  strncpy(path, sram_prgrm_path, dir_len);
-  path[dir_len] = '\0';
-  strcat(path, "/debuginfo.json");
+  if (dir_len > 0) {
+    strncpy(path, sram_prgrm_path, dir_len);
+    path[dir_len] = '/';
+    strncpy(path + dir_len + 1, filename, basename_len);
+    path[dir_len + 1 + basename_len] = '\0';
+  } else {
+    strncpy(path, filename, basename_len);
+    path[basename_len] = '\0';
+  }
+  strcat(path, ".debuginfo");
   return path;
 }
 
