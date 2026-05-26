@@ -1,1 +1,1 @@
-./sys_test/basic_tsl.reti
+./sys_test/basic_raw_memory_words.reti

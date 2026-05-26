@@ -12,3 +12,5 @@ sram.bin
 *.cast
 test_results
 *.pdf
+source_debug_assignment/simple_assignment.debuginfo
+source_debug_assignment/simple_assignment.reti
