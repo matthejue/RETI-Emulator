@@ -150,15 +150,17 @@ static void append_source_comment(Comment_Target target, uint32_t anchor_idx,
   };
 }
 
-void collect_program_comments(const char *prgrm, Program_Type prgrm_type) {
+void collect_program_comments_range(const char *prgrm, Program_Type prgrm_type,
+                                    uint32_t start_entry, uint32_t end_entry,
+                                    uint32_t anchor_base) {
   if (!collect_comments) {
     return;
   }
 
   Comment_Target target =
       prgrm_type == EPROM_START_PRGRM ? COMMENT_TARGET_EPROM : COMMENT_TARGET_SRAM;
-  uint32_t next_instr_idx = prgrm_type == SRAM_PRGRM ? num_instrs_isrs : 0;
-  bool saw_instr_in_program = false;
+  uint32_t next_entry_idx = 0;
+  bool saw_entry_in_range = false;
   const char *line = prgrm;
 
   while (*line != '\0') {
@@ -188,20 +190,30 @@ void collect_program_comments(const char *prgrm, Program_Type prgrm_type) {
     }
 
     if (comment_start != NULL) {
+      uint32_t anchor_entry = 0;
+      bool display_before_instr = false;
       if (instrs_on_line > 0) {
-        append_source_comment(target, next_instr_idx + instrs_on_line - 1, false,
-                              comment_start + 1, line_end - comment_start - 1);
-      } else if (!saw_instr_in_program) {
-        append_source_comment(target, next_instr_idx, true, comment_start + 1,
+        anchor_entry = next_entry_idx + instrs_on_line - 1;
+      } else if (!saw_entry_in_range && next_entry_idx == start_entry) {
+        anchor_entry = start_entry;
+        display_before_instr = true;
+      } else if (next_entry_idx > 0) {
+        anchor_entry = next_entry_idx - 1;
+      }
+
+      if (anchor_entry >= start_entry &&
+          (end_entry == UINT32_MAX || anchor_entry < end_entry)) {
+        append_source_comment(target, anchor_base + anchor_entry - start_entry,
+                              display_before_instr, comment_start + 1,
                               line_end - comment_start - 1);
-      } else {
-        append_source_comment(target, next_instr_idx - 1, false,
-                              comment_start + 1, line_end - comment_start - 1);
       }
     }
 
-    next_instr_idx += instrs_on_line;
-    saw_instr_in_program = saw_instr_in_program || instrs_on_line > 0;
+    if (instrs_on_line > 0 && next_entry_idx + instrs_on_line > start_entry &&
+        (end_entry == UINT32_MAX || next_entry_idx < end_entry)) {
+      saw_entry_in_range = true;
+    }
+    next_entry_idx += instrs_on_line;
 
     if (*line_end == '\r' && *(line_end + 1) == '\n') {
       line = line_end + 2;
@@ -211,6 +223,11 @@ void collect_program_comments(const char *prgrm, Program_Type prgrm_type) {
       line = line_end;
     }
   }
+}
+
+void collect_program_comments(const char *prgrm, Program_Type prgrm_type) {
+  uint32_t anchor_base = prgrm_type == SRAM_PRGRM ? num_instrs_isrs : 0;
+  collect_program_comments_range(prgrm, prgrm_type, 0, UINT32_MAX, anchor_base);
 }
 
 String_Instruction *parse_instr(const char **original_prgrm_pntr) {
@@ -296,88 +313,79 @@ String_Instruction *parse_instr(const char **original_prgrm_pntr) {
   }
 }
 
-void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
-  const char *prgrm_pntr = prgrm;
-  uint32_t i;
-  if (prgrm_type == SRAM_PRGRM) {
-    i = num_instrs_isrs;
-  } else {
-    i = 0;
+static void write_machine_word(Program_Type prgrm_type, uint32_t idx,
+                               uint32_t machine_word) {
+  if (prgrm_type != EPROM_START_PRGRM) {
+    write_file(sram, idx, machine_word);
+    return;
   }
 
-  collect_program_comments(prgrm, prgrm_type);
+  uint32_t *temp;
+  temp = realloc(eprom, sizeof(uint32_t) * idx + sizeof(uint32_t));
+  if (temp == NULL) {
+    fprintf(stderr, "Realloc failed\n");
+    free(eprom);
+    exit(EXIT_FAILURE);
+  }
+  eprom = temp;
+  write_array(eprom, idx, machine_word, false);
+}
+
+void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
+                                  uint32_t start_entry, uint32_t end_entry) {
+  const char *prgrm_pntr = prgrm;
+  uint32_t i = 0;
+  if (prgrm_type == SRAM_PRGRM) {
+    i = num_instrs_isrs;
+  } else if (prgrm_type == SRAM_DATA) {
+    i = num_instrs_isrs + num_instrs_prgrm;
+  }
+  uint32_t parsed_entries = 0;
+  uint32_t loaded_entries = 0;
 
   error_context.code_begin = prgrm_pntr;
   while (*prgrm_pntr != '\0') {
     error_context.code_current = prgrm_pntr;
+    bool should_load =
+        parsed_entries >= start_entry &&
+        (end_entry == UINT32_MAX || parsed_entries < end_entry);
     uint32_t memory_word;
     if (parse_numeric_memory_word(&prgrm_pntr, &memory_word)) {
-      switch (prgrm_type) {
-      case SRAM_PRGRM:
-      case ISR_PRGRMS:
-        write_file(sram, i++, memory_word);
-        break;
-      case EPROM_START_PRGRM: {
-        uint32_t *temp;
-        temp = realloc(eprom, sizeof(uint32_t) * i + sizeof(uint32_t));
-        if (temp == NULL) {
-          fprintf(stderr, "Realloc failed\n");
-          free(eprom);
-          exit(EXIT_FAILURE);
-        }
-        eprom = temp;
-        write_array(eprom, i++, memory_word, false);
-      } break;
-      default:
-        fprintf(stderr, "Error: Invalid memory type\n");
+      if (should_load) {
+        write_machine_word(prgrm_type, i++, memory_word);
+        loaded_entries++;
       }
+      parsed_entries++;
       continue;
     }
 
     String_Instruction *str_instr = parse_instr(&prgrm_pntr);
     if (isalpha(*str_instr->op)) {
       // the if solves the problem of empty lines or empty space between ';'
-      uint32_t machine_instr = assembly_to_machine(str_instr);
-      switch (prgrm_type) {
-      case SRAM_PRGRM:
-        write_file(sram, i++, machine_instr);
-        break;
-      case ISR_PRGRMS:
-        if (strcmp(str_instr->op, "IVTE") == 0) {
+      if (should_load) {
+        uint32_t machine_instr = assembly_to_machine(str_instr);
+        if (prgrm_type == ISR_PRGRMS && strcmp(str_instr->op, "IVTE") == 0) {
           ivt_max_idx = i;
         }
-        write_file(sram, i++, machine_instr);
-        break;
-      case EPROM_START_PRGRM: {
-        uint32_t *temp;
-        temp = realloc(eprom, sizeof(uint32_t) * i + sizeof(uint32_t));
-        if (temp == NULL) {
-          fprintf(stderr, "Realloc failed\n");
-          free(eprom);
-          exit(EXIT_FAILURE);
-        }
-        eprom = temp;
-        write_array(eprom, i++, machine_instr, false);
-      } break;
-      default:
-        fprintf(stderr, "Error: Invalid memory type\n");
+        write_machine_word(prgrm_type, i++, machine_instr);
+        loaded_entries++;
       }
+      parsed_entries++;
     }
   }
-  switch (prgrm_type) {
-  case SRAM_PRGRM:
-    num_instrs_prgrm = i - num_instrs_isrs;
-    break;
-  case ISR_PRGRMS:
-    num_instrs_isrs = i;
-    break;
-  case EPROM_START_PRGRM:
-    num_instrs_start_prgrm = i;
-    break;
-  default:
-    fprintf(stderr, "Error: Invalid memory type\n");
+  if (prgrm_type == SRAM_PRGRM) {
+    num_instrs_prgrm = loaded_entries;
+  } else if (prgrm_type == ISR_PRGRMS) {
+    num_instrs_isrs = loaded_entries;
+  } else if (prgrm_type == EPROM_START_PRGRM) {
+    num_instrs_start_prgrm = loaded_entries;
   }
   free(prgrm);
+}
+
+void parse_and_load_program(char *prgrm, Program_Type prgrm_type) {
+  collect_program_comments(prgrm, prgrm_type);
+  parse_and_load_program_range(prgrm, prgrm_type, 0, UINT32_MAX);
 }
 
 void free_program_comments(void) {

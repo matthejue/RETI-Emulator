@@ -7,14 +7,16 @@ TEST_DIR     := unit_test
 OBJ_TEST_DIR := obj_test
 LIB_DIR      := lib
 INCLUDE_DIR  := include
+VENDOR_DIR   := vendor
 
 BIN_SRC  := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
 BIN_TEST := $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(wildcard $(TEST_DIR)/*_test.c))
 SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/*/*.c))
-OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+VENDOR_SRC := $(wildcard $(VENDOR_DIR)/cJSON/*.c)
+OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(VENDOR_SRC:%.c=$(OBJ_DIR)/%.o)
 
 CC			 := gcc
-CPPFLAGS := -I$(INCLUDE_DIR) -MMD -MP
+CPPFLAGS := -I$(INCLUDE_DIR) -I$(VENDOR_DIR)/cJSON -MMD -MP
 CFLAGS   := -Wall
 LDFLAGS  :=
 LDLIBS   := -lm
@@ -62,6 +64,10 @@ $(BIN_DIR)/%_test: $(OBJ_TEST_DIR)/%_test.o $(OBJ_SRC) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	mkdir -p $(dir $@)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 

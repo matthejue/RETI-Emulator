@@ -3,6 +3,7 @@
 #include "../include/interrupt.h"
 #include "../include/parse_args.h"
 #include "../include/parse_instrs.h"
+#include "../include/program_sections.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
 #include "../include/tui.h"
@@ -30,15 +31,36 @@ int main(int argc, char *argv[]) {
     init_tui();
   }
 
-  if (strcmp(isrs_prgrm_path, "") != 0) {
+  Program_Sections sections = load_program_sections_for_reti_path(sram_prgrm_path);
+  bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
+  char *sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
+
+  if (has_explicit_isrs) {
     error_context.filename = isrs_prgrm_path;
     parse_and_load_program(get_prgrm_content(isrs_prgrm_path), ISR_PRGRMS);
+  } else if (sections.exists) {
+    uint32_t code_start_idx = sections.codesegment_start;
+    error_context.filename = sram_prgrm_path;
+    parse_and_load_program_range(allocate_and_copy_string(sram_prgrm_content),
+                                 ISR_PRGRMS, 0, code_start_idx);
   }
 
   init_keypress_interrupt_action_isr();
 
   error_context.filename = sram_prgrm_path;
-  parse_and_load_program(get_prgrm_content(sram_prgrm_path), SRAM_PRGRM);
+  if (sections.exists) {
+    uint32_t code_start_idx = sections.codesegment_start;
+    uint32_t data_start_idx = sections.datasegment_start;
+    collect_program_comments_range(sram_prgrm_content, SRAM_PRGRM,
+                                   code_start_idx, data_start_idx,
+                                   num_instrs_isrs);
+    parse_and_load_program_range(allocate_and_copy_string(sram_prgrm_content),
+                                 SRAM_PRGRM, code_start_idx, data_start_idx);
+    parse_and_load_program_range(sram_prgrm_content, SRAM_DATA, data_start_idx,
+                                 UINT32_MAX);
+  } else {
+    parse_and_load_program(sram_prgrm_content, SRAM_PRGRM);
+  }
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     error_context.filename = eprom_prgrm_path;
