@@ -647,11 +647,11 @@ const char *source_debug_variable_label_for_sram_idx(uint64_t idx) {
   bool wrote_any = false;
 
   if (frame != NULL) {
-    if ((baf & 0x7FFFFFFF) == idx) {
+    if (((baf + 1) & 0x7FFFFFFF) == idx) {
       strcat(label, "[pr. stackfr. addr.");
       wrote_any = true;
     }
-    if (((baf - 1) & 0x7FFFFFFF) == idx) {
+    if (((baf + 2) & 0x7FFFFFFF) == idx) {
       strcat(label, wrote_any ? ", return addr." : "[return addr.");
       wrote_any = true;
     }
@@ -672,9 +672,9 @@ const char *source_debug_variable_label_for_sram_idx(uint64_t idx) {
       if (is_global) {
         symbol_addr = ds + symbol->address + offset;
       } else if (symbol->is_argument) {
-        symbol_addr = baf + 1 + symbol->address + offset;
+        symbol_addr = baf + 3 + symbol->address + offset;
       } else {
-        symbol_addr = baf - 2 - symbol->address - offset;
+        symbol_addr = baf - symbol->address - offset;
       }
 
       if ((symbol_addr & 0x7FFFFFFF) != idx) {
