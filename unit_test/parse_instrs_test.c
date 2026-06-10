@@ -74,6 +74,20 @@ void test_parse_and_load_numeric_memory_words() {
   fin_reti();
 }
 
+void test_parse_and_load_ascii_memory_words() {
+  peripherals_dir = "/tmp";
+  init_reti();
+  parse_and_load_program(allocate_and_copy_string("'e'; '!'; JUMP 0"),
+                         SRAM_PRGRM);
+
+  assert(read_file(sram, 0) == 101);
+  assert(read_file(sram, 1) == 33);
+  assert(strcmp(assembly_to_str(machine_to_assembly(read_file(sram, 2))),
+                "JUMP 0") == 0);
+  assert(num_instrs_prgrm == 3);
+  fin_reti();
+}
+
 void test_parse_and_load_program_ranges() {
   peripherals_dir = "/tmp";
   ivt_max_idx = (uint32_t)-1;
@@ -114,6 +128,7 @@ int main() {
   test_parse_and_load_program();
   test_parse_and_load_program2();
   test_parse_and_load_numeric_memory_words();
+  test_parse_and_load_ascii_memory_words();
   test_parse_and_load_program_ranges();
   return 0;
 }

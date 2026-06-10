@@ -40,7 +40,7 @@ static bool segment_contains_instruction(const char *start, size_t len) {
   }
   return len > 0 &&
          (isalpha((unsigned char)*start) || isdigit((unsigned char)*start) ||
-          *start == '-');
+          *start == '-' || *start == '\'');
 }
 
 static bool is_segment_end(char c) {
@@ -119,6 +119,29 @@ static bool parse_numeric_memory_word(const char **prgrm_pntr,
   }
 
   *value = (uint32_t)unsigned_value;
+  *prgrm_pntr = ptr;
+  skip_to_next_segment(prgrm_pntr);
+  return true;
+}
+
+static bool parse_ascii_memory_word(const char **prgrm_pntr, uint32_t *value) {
+  const char *start = *prgrm_pntr;
+  while (*start == ' ' || *start == '\t') {
+    start++;
+  }
+  if (*start != '\'' || *(start + 2) != '\'') {
+    return false;
+  }
+
+  const char *ptr = start + 3;
+  while (*ptr == ' ' || *ptr == '\t') {
+    ptr++;
+  }
+  if (!is_segment_end(*ptr)) {
+    return false;
+  }
+
+  *value = (uint8_t)*(start + 1);
   *prgrm_pntr = ptr;
   skip_to_next_segment(prgrm_pntr);
   return true;
@@ -350,7 +373,8 @@ void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
         parsed_entries >= start_entry &&
         (end_entry == UINT32_MAX || parsed_entries < end_entry);
     uint32_t memory_word;
-    if (parse_numeric_memory_word(&prgrm_pntr, &memory_word)) {
+    if (parse_numeric_memory_word(&prgrm_pntr, &memory_word) ||
+        parse_ascii_memory_word(&prgrm_pntr, &memory_word)) {
       if (should_load) {
         write_machine_word(prgrm_type, i++, memory_word);
         loaded_entries++;
