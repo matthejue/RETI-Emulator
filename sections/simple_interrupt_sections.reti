@@ -1,13 +1,16 @@
+# interrupt vector table
 IVTE 2 # section 1: interrupt vector table, INT 0 -> line 3
 IVTE 3 # INT 1 -> line 4
 RTI # simple ISR for INT 0
 RTI # simple ISR for INT 1
+# codesegment
 LOADI ACC 72 # section 2: codesegment
 STOREIN DS ACC 0
 INT 0
 JUMP 0
-104 # section 3: datasegment, 'h'
-101 # 'e'
-108 # 'l'
-108 # 'l'
-111 # 'o'
+# datasegment
+'h'
+'e'
+'l'
+'l'
+'o'

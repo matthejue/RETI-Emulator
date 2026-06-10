@@ -151,9 +151,21 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
 }
 
 uint32_t read_file(FILE *dev, uint64_t address) {
-  uint32_t big_endian_buffer;
-  fseek(dev, address * sizeof(uint32_t), SEEK_SET);
-  fread(&big_endian_buffer, sizeof(uint32_t), 1, dev);
+  uint32_t big_endian_buffer = 0;
+  if (fseek(dev, address * sizeof(uint32_t), SEEK_SET) != 0) {
+    perror("Failed to seek storage file");
+    exit(EXIT_FAILURE);
+  }
+
+  size_t bytes_read = fread(&big_endian_buffer, 1, sizeof(uint32_t), dev);
+  if (bytes_read < sizeof(uint32_t)) {
+    if (ferror(dev)) {
+      perror("Failed to read storage file");
+      exit(EXIT_FAILURE);
+    }
+    clearerr(dev);
+    return 0;
+  }
   return swap_endian_32(big_endian_buffer);
 }
 

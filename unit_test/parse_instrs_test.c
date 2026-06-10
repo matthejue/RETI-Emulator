@@ -88,6 +88,17 @@ void test_parse_and_load_ascii_memory_words() {
   fin_reti();
 }
 
+void test_unwritten_sram_words_read_as_zero() {
+  peripherals_dir = "/tmp";
+  init_reti();
+  write_file(sram, 0, 111);
+
+  assert(read_file(sram, 0) == 111);
+  assert(read_file(sram, 1) == 0);
+
+  fin_reti();
+}
+
 void test_parse_and_load_program_ranges() {
   peripherals_dir = "/tmp";
   ivt_max_idx = (uint32_t)-1;
@@ -129,6 +140,7 @@ int main() {
   test_parse_and_load_program2();
   test_parse_and_load_numeric_memory_words();
   test_parse_and_load_ascii_memory_words();
+  test_unwritten_sram_words_read_as_zero();
   test_parse_and_load_program_ranges();
   return 0;
 }
