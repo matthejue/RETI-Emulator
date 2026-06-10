@@ -128,8 +128,51 @@ RETI-Emulator speichert alle Memory-Inhalte des SRAM in einer Datei `sram.bin` a
 
 > *Tipp:* Mittels `-f /tmp` (files) lässt sich das `/tmp` Verzeichnis unter Linux für die Speicherung von `sram.bin` nutzen. Das Verzeichnis `\tmp` ist häufig als **tmpfs**-Partition, welche im Arbeitsspeicher gemounted ist umgesetzt. Dadurch existiert der Inhalt des Verzeichnis nach dem Herunterfahren nicht mehr und das Verzeichnis, indem der RETI-Emulator ausgeführt wird, wird nicht mit unnützen Dateien vollgemüllt.
 
+## Direkte Speicherwerte in `.reti`-Dateien
+Neben RETI-Instruktionen können in einer `.reti`-Datei auch direkte Speicherwerte stehen. Solche Werte werden nicht assembliert, sondern unverändert als 32-Bit-Wort in die nächste SRAM-Zelle geschrieben.
+
+Unterstützt werden dezimale Zahlen und einzelne ASCII-Zeichen in einfachen Anführungszeichen:
+
+```reti
+LOADI ACC 1
+42
+-1
+'e'
+'!'
+JUMP 0
+```
+
+In diesem Beispiel werden `42`, `-1`, der ASCII-Wert von `e` (`101`) und der ASCII-Wert von `!` (`33`) direkt in aufeinanderfolgende Speicherzellen geschrieben. Das ist besonders nützlich für Datensegmente, Strings oder vom Compiler erzeugte Speicherinhalte, die nicht als RETI-Instruktionen interpretiert werden sollen.
+
+## Abschnittsdateien für Compiler-Ausgaben
+Wenn zu einer Datei `program.reti` eine Datei `program.sections` existiert, liest der Emulator diese JSON-Datei ein und verwendet sie, um die `.reti`-Datei in Interrupt-Service-Routinen, Codesegment und Datensegment aufzuteilen.
+
+Beispiel für `program.sections`:
+
+```json
+{
+  "codesegment_start": 40,
+  "datasegment_start": 180
+}
+```
+
+Die Adressen sind nullbasiert und beziehen sich auf die geparsten Speicherwörter bzw. Instruktionen der `.reti`-Datei:
+
+- `0` bis `39`: Interrupt-Vektor-Tabelle und Interrupt-Service-Routinen
+- `40` bis `179`: Codesegment
+- `180` bis Dateiende: Datensegment
+
+Das Codesegment wird wie normale RETI-Instruktionen angezeigt. Das Datensegment wird als rohe Speicherwerte angezeigt, also werden die Inhalte dort nicht in RETI-Instruktionen zurückübersetzt. Direkte Zahlen und ASCII-Zeichen wie `'e'` sind dafür gedacht, in diesem Bereich Daten abzulegen.
+
 ### Interrupt Service Routinen spezifizieren
 Mithilfe der Kommandozeilenoption `-i` (isr code) ist der RETI-Emulator in der Lage die RETI-Befehle für **Interrupt-Service-Routinen** aus einer Datei `interrupt_service_routines.reti` herauszulesen und an den Anfang des simulierten SRAM, vor das geladene Programm aus `program.reti` zu schreiben. Mithilfe von `INT i` kann wie in der Vorlesung erklärt an den Anfang jeder dieser Interrupt-Service-Routinen `i` gesprungen werden. Mittels `RTI` kann am Ende einer Interrupt-Service-Routine wieder an die nächste Stelle im ursprünglichen Programm zurückgesprungen werden, an der dieses mittels `INT i` unterbrochen wurde. 
+
+Falls eine `.sections`-Datei existiert, gibt es zwei Fälle:
+
+- Mit `-i`: Die Interrupt-Service-Routinen werden aus der über `-i` angegebenen Datei geladen. Der ISR-Abschnitt am Anfang der `.reti`-Datei wird übersprungen.
+- Ohne `-i`: Der ISR-Abschnitt am Anfang der `.reti`-Datei wird als Interrupt-Vektor-Tabelle und Interrupt-Service-Routinen geladen.
+
+Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder mit einer explizit angegebenen ISR-Datei kombiniert werden.
 
 Für das Erstellen von Interrupt-Vector-Table-Entries gibt es die Syntax `IVTE <Adresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle> <Gerät> <Priorität für den Interrupt-Controller>`. `IVTE` steht dabei für **I**nterrupt **V**ector **T**able **E**ntry. Die erste Zahl ist die Startadresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle, wobei die SRAM-Konstante automatisch auf diesen Wert draufaddiert wird. `<Gerät>` ist das zugeordnete Gerät und `<Priorität für den Interrupt-Controller>` die Priorität im Interrupt-Controller. Aktuell sind insbesondere `INTTIMER` und `KEYPRESS` relevant: `INTTIMER` ist der automatische Timer-Interrupt, dessen Intervall über `-I` eingestellt wird, und `KEYPRESS` ist die Default-ISR für die Keypress-Aktion im TUI, die durch Drücken von `t` ausgelöst wird. Falls keine `KEYPRESS`-ISR spezifiziert wurde, wird dafür standardmäßig die `INTTIMER`-ISR verwendet.
 
