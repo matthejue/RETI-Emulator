@@ -40,7 +40,6 @@ void init_tui();
 void fin_tui();
 
 #define HEIGHT_REGS_BOX 10
-#define HEIGHT_UART_BOX 11
 
 void reset_box_line(Box *box);
 void make_unneccessary_spaces_visible(Box *box);

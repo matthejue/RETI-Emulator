@@ -143,8 +143,10 @@ void update_term_and_box_sizes() {
   uint16_t box_height = term_height - 1;
 
   uint16_t first_box_height = HEIGHT_REGS_BOX;
-  uint16_t third_box_height = HEIGHT_UART_BOX;
-  uint16_t second_box_height = box_height - first_box_height - third_box_height;
+  uint16_t remaining_first_column_height = box_height - first_box_height;
+  uint16_t second_box_height = remaining_first_column_height / 2;
+  uint16_t third_box_height =
+      remaining_first_column_height - second_box_height;
 
   // regs_box.x = 0;
   // regs_box.y = 0;

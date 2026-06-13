@@ -63,32 +63,12 @@ const uint8_t NUM_ASSIGN_VALUE_REGISTER_ENTRIES =
 const uint8_t LINEWIDTH = 54;
 
 WatchBox eprom_watchbox = {&eprom_box, PC, NULL, 0};
-WatchBox uart_watchbox = {&uart_box, ADDRESS, NULL, 0};
 WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL, 0};
 WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL, 0};
 WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL, 0};
 
 static BoxIdentifier active_box_identifier = EPROM_BOX;
 static bool uart_memory_view = false;
-
-#define UART_STATUS_VIEW UINT8_MAX - 1
-
-static const Menu_Entry uart_memory_watchobject_entries[] = {
-    {"UART status view", UART_STATUS_VIEW},
-    {"PC", PC},
-    {"IN1", IN1},
-    {"IN2", IN2},
-    {"ACC", ACC},
-    {"SP", SP},
-    {"BAF", BAF},
-    {"CS", CS},
-    {"DS", DS},
-    {"Address", ADDRESS},
-};
-
-static const uint8_t NUM_UART_MEMORY_WATCHOBJECT_ENTRIES =
-    sizeof(uart_memory_watchobject_entries) /
-    sizeof(uart_memory_watchobject_entries[0]);
 
 static const BoxIdentifier focus_order[] = {
     REGS_BOX, EPROM_BOX, UART_BOX, SRAM_C_BOX, SRAM_D_BOX, SRAM_S_BOX};
@@ -122,7 +102,6 @@ static bool is_watchobject_highlight(MemType mem_type, uint64_t idx) {
 
 static void reset_all_scroll_offsets(void) {
   eprom_watchbox.scroll_offset = 0;
-  uart_watchbox.scroll_offset = 0;
   sram_c_watchbox.scroll_offset = 0;
   sram_d_watchbox.scroll_offset = 0;
   sram_s_watchbox.scroll_offset = 0;
@@ -266,8 +245,8 @@ uint64_t determine_watchobject_value(WatchBox *watchbox);
 static Box *get_box_for_box_identifier(BoxIdentifier box_identifier);
 
 static void handle_watchobject_assignment(void) {
-  if (active_box_identifier == UART_BOX && !uart_memory_view) {
-    uart_memory_view = true;
+  if (active_box_identifier == UART_BOX) {
+    uart_memory_view = !uart_memory_view;
     draw_tui();
     return;
   }
@@ -282,18 +261,8 @@ static void handle_watchobject_assignment(void) {
     return;
   }
 
-  Register watchobject;
-  if (active_box_identifier == UART_BOX) {
-    watchobject = display_popup_menu(uart_memory_watchobject_entries,
-                                     NUM_UART_MEMORY_WATCHOBJECT_ENTRIES);
-    if (watchobject == UART_STATUS_VIEW) {
-      uart_memory_view = false;
-      draw_tui();
-      return;
-    }
-  } else {
-    watchobject = display_popup_menu(register_entries, NUM_REGISTER_ENTRIES);
-  }
+  Register watchobject = display_popup_menu(register_entries,
+                                            NUM_REGISTER_ENTRIES);
   if (watchobject == CANCEL2) {
     draw_tui();
     return;
@@ -647,7 +616,7 @@ static void scroll_watchbox(WatchBox *watchbox, MemType mem_type,
 }
 
 static void scroll_active_window(int8_t direction) {
-  if (active_box_identifier == UART_BOX && !uart_memory_view) {
+  if (active_box_identifier == UART_BOX) {
     return;
   }
 
@@ -669,7 +638,7 @@ static char *address_idx_to_string(uint64_t idx) {
 }
 
 static void change_active_watchobject(int8_t direction) {
-  if (active_box_identifier == UART_BOX && !uart_memory_view) {
+  if (active_box_identifier == UART_BOX) {
     return;
   }
 
@@ -780,10 +749,10 @@ static void handle_value_assignment(void) {
     draw_tui();
     return;
   }
-  if (active_box_identifier == UART_BOX && !uart_memory_view) {
+  if (active_box_identifier == UART_BOX) {
     display_notification_box(
         "Assign Value",
-        "Press 'a' in the UART box to show the peripheral memory view first.");
+        "The UART box has no assignable watchobject.");
     draw_tui();
     return;
   }
@@ -1221,8 +1190,6 @@ void print_uart_meta_data() {
 
 WatchBox *get_watchbox(BoxIdentifier box_identifier) {
   switch (box_identifier) {
-  case UART_BOX:
-    return &uart_watchbox;
   case EPROM_BOX:
     return &eprom_watchbox;
   case SRAM_C_BOX:
@@ -1496,40 +1463,18 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
   }
 }
 
-static void ensure_uart_watchbox_default(void) {
-  if (uart_watchbox.watchobject_addr == NULL) {
-    uart_watchbox.watchobject_addr = address_idx_to_string(4);
-  }
-}
-
-static void print_uart_memory_watchobject(uint64_t uart_watchobject_int) {
-  uint64_t start;
-  uint64_t end;
-  if (!visible_range_for_watchbox(&uart_watchbox, UART, uart_watchobject_int,
-                                  uart_box.height - 2, &start, &end)) {
-    return;
-  }
-  print_array_with_idcs_from_to(UART, start, end, false);
-}
-
-static void handle_uart_memory_heading(uint64_t uart_watchobject_int) {
-  char title[37];
-  snprintf(title, sizeof(title), "Periph: %s (%lu) [a:UART]",
-           register_or_address_to_identifier[uart_watchbox.watchobject],
-           uart_watchobject_int);
-  uart_box.title = malloc(strlen(title) + 1);
-  strcpy(uart_box.title, title);
+static void print_interrupt_controller_view(void) {
+  handle_heading(true, &uart_box, "Interrupt Controller View [a: UART]", "", 0);
+  print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
+                                NUM_UART_ADDRESSES - 1, false);
 }
 
 bool draw_tui(void) {
   source_debug_update_current_stackframe_function();
   update_active_box_marker();
-  ensure_uart_watchbox_default();
 
   uint64_t eprom_watchobject_int =
       determine_watchobject_value(&eprom_watchbox);
-  uint64_t uart_watchobject_int =
-      determine_watchobject_value(&uart_watchbox);
   uint64_t sram_watchobject_cs_int =
       determine_watchobject_value(&sram_c_watchbox);
   uint64_t sram_watchobject_ds_int =
@@ -1537,7 +1482,6 @@ bool draw_tui(void) {
   uint64_t sram_watchobject_stack_int =
       determine_watchobject_value(&sram_s_watchbox);
   if (eprom_watchobject_int == UINT64_MAX ||
-      uart_watchobject_int == UINT64_MAX ||
       sram_watchobject_cs_int == UINT64_MAX ||
       sram_watchobject_ds_int == UINT64_MAX ||
       sram_watchobject_stack_int == UINT64_MAX) {
@@ -1551,11 +1495,6 @@ bool draw_tui(void) {
                                         &highlight_idx) &&
       highlight_idx <= max_idx_for_mem_type(EPROM)) {
     set_watchobject_highlight(EPROM, highlight_idx);
-  }
-  if (raw_watchobject_has_address_space(&uart_watchbox, UART,
-                                        uart_watchobject_int, &highlight_idx) &&
-      highlight_idx <= max_idx_for_mem_type(UART)) {
-    set_watchobject_highlight(UART, highlight_idx);
   }
   if (raw_watchobject_has_address_space(&sram_c_watchbox, SRAM_C,
                                         sram_watchobject_cs_int,
@@ -1593,10 +1532,9 @@ bool draw_tui(void) {
   print_eprom_watchobject(eprom_watchobject_int);
 
   if (uart_memory_view) {
-    handle_uart_memory_heading(uart_watchobject_int);
-    print_uart_memory_watchobject(uart_watchobject_int);
+    print_interrupt_controller_view();
   } else {
-    handle_heading(true, &uart_box, "UART [a: periph]", "", 0);
+    handle_heading(true, &uart_box, "UART [a: Interrupt Controller]", "", 0);
     print_array_with_idcs_from_to(UART, 0, 2, false);
     print_uart_meta_data();
   }
