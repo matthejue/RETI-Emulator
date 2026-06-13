@@ -208,7 +208,7 @@ void log_statemachine(Event event) {
   free(heap_str);
 
   size_t prio_len = (size_t)isr_num; // number of entries
-  if (isr_to_prio && prio_len > 0) {
+  if (prio_len > 0) {
     char *prio_str = u8_array_to_space_separated(isr_to_prio, prio_len);
     log_variable(s_logfile, "isr_to_prio", prio_str);
     free(prio_str);

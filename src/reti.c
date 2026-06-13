@@ -1,7 +1,7 @@
 #include "../include/reti.h"
 #include "../include/assemble.h"
 #include "../include/core_debug.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_args.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <stdint.h>
@@ -14,7 +14,6 @@ uint32_t *regs, *eprom;
 // FILE *sram, *hdd;
 FILE *sram;
 
-uint32_t ivt_max_idx = -1;
 uint32_t num_instrs_prgrm = 0;
 uint32_t num_instrs_start_prgrm = 0;
 uint32_t num_instrs_isrs = 0;
@@ -120,9 +119,9 @@ void load_adjusted_eprom_prgrm() {
 
 uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
   if (is_uart) {
-    if (!(uart[2] & 0b00000010) && addr == 1) {
+    if (addr < 3 && !(uart[2] & 0b00000010) && addr == 1) {
       fprintf(stderr, "Warning: No new data in the receive register\n");
-    } else if (addr == 0) {
+    } else if (addr < 3 && addr == 0) {
       fprintf(stderr, "Warning: Reading from the send register of the UART makes no sense\n");
     }
     // uart[2] = uart[2] & 0b11111101; has to be done by the programmer
@@ -134,17 +133,21 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
 
 void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
   if (is_uart) {
-    if (!(uart[2] & 0b00000001) && addr == 0) {
+    if (addr < 3 && !(uart[2] & 0b00000001) && addr == 0) {
       // TODO: Tobias fragen, ob er damit agreed
       fprintf(stderr, "Warning: UART does not accept any further data\n");
-    } else if (!(uart[2] & 0b00000001) && addr == 2 && (buffer & 0b00000001)) {
+    } else if (addr < 3 && !(uart[2] & 0b00000001) && addr == 2 && (buffer & 0b00000001)) {
       fprintf(stderr, "Warning: Only the UART should allow sending again\n");
-    } else if (!(uart[2] & 0b00000010) && addr == 2 && (buffer & 0b00000010)) {
+    } else if (addr < 3 && !(uart[2] & 0b00000010) && addr == 2 && (buffer & 0b00000010)) {
       fprintf(stderr, "Warning: Only the UART itself should tell that it received something\n");
-    } else if (addr == 1) {
+    } else if (addr < 3 && addr == 1) {
       fprintf(stderr, "Warning: Writing to the receive register of the UART makes no sense\n");
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
+    if (addr >= INTERRUPT_CONTROLLER_ISR_BASE &&
+        addr < NUM_UART_ADDRESSES) {
+      sync_interrupt_controller_from_memory();
+    }
   } else {
     ((uint32_t *)stor)[addr] = buffer;
   }

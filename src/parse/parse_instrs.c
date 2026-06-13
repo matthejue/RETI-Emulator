@@ -1,8 +1,9 @@
-#include "../include/parse_instrs.h"
-#include "../include/error.h"
-#include "../include/interpr.h"
-#include "../include/reti.h"
-#include "../include/parse_args.h"
+#include "../../include/parse/parse_instrs.h"
+#include "../../include/error.h"
+#include "../../include/interpr.h"
+#include "../../include/interrupt_controller.h"
+#include "../../include/reti.h"
+#include "../../include/parse/parse_args.h"
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -354,6 +355,16 @@ static void write_machine_word(Program_Type prgrm_type, uint32_t idx,
   write_array(eprom, idx, machine_word, false);
 }
 
+static void count_isr_vector_entry(void) {
+  if (isr_num >= INVALID_ISR_NUM) {
+    fprintf(stderr,
+            "Error: There can't be more than %d interrupt service routines\n",
+            INVALID_ISR_NUM);
+    exit(EXIT_FAILURE);
+  }
+  isr_num++;
+}
+
 void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
                                   uint32_t start_entry, uint32_t end_entry) {
   const char *prgrm_pntr = prgrm;
@@ -365,6 +376,7 @@ void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
   }
   uint32_t parsed_entries = 0;
   uint32_t loaded_entries = 0;
+  bool in_isr_vector_table = prgrm_type == ISR_PRGRMS && start_entry == 0;
 
   error_context.code_begin = prgrm_pntr;
   while (*prgrm_pntr != '\0') {
@@ -376,6 +388,9 @@ void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
     if (parse_numeric_memory_word(&prgrm_pntr, &memory_word) ||
         parse_ascii_memory_word(&prgrm_pntr, &memory_word)) {
       if (should_load) {
+        if (in_isr_vector_table) {
+          count_isr_vector_entry();
+        }
         write_machine_word(prgrm_type, i++, memory_word);
         loaded_entries++;
       }
@@ -385,12 +400,10 @@ void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
 
     String_Instruction *str_instr = parse_instr(&prgrm_pntr);
     if (isalpha(*str_instr->op)) {
+      in_isr_vector_table = false;
       // the if solves the problem of empty lines or empty space between ';'
       if (should_load) {
         uint32_t machine_instr = assembly_to_machine(str_instr);
-        if (prgrm_type == ISR_PRGRMS && strcmp(str_instr->op, "IVTE") == 0) {
-          ivt_max_idx = i;
-        }
         write_machine_word(prgrm_type, i++, machine_instr);
         loaded_entries++;
       }

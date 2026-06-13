@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifndef PARSE_ARGS_H
-#define PARSE_ARGS_H
+#ifndef PARSE_PARSE_ARGS_H
+#define PARSE_PARSE_ARGS_H
 
 extern uint32_t sram_size;
 extern uint16_t page_size;
@@ -22,8 +22,9 @@ extern char *peripherals_dir;
 extern char *eprom_prgrm_path;
 extern char *sram_prgrm_path;
 extern char *isrs_prgrm_path;
+extern char *interrupt_controller_config_path;
 
 void parse_args(uint8_t argc, char *argv[]);
 void print_args();
 
-#endif // PARSE_ARGS_H
+#endif // PARSE_PARSE_ARGS_H

@@ -1,8 +1,8 @@
-#include "../include/parse_args.h"
-#include "../include/interpr.h"
-#include "../include/interrupt.h"
-#include "../include/reti.h"
-#include "../include/utils.h"
+#include "../../include/parse/parse_args.h"
+#include "../../include/interpr.h"
+#include "../../include/interrupt.h"
+#include "../../include/reti.h"
+#include "../../include/utils.h"
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,12 +26,14 @@ char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
 char *sram_prgrm_path = "";
 char *isrs_prgrm_path = "";
+char *interrupt_controller_config_path = "";
 
 void print_help(char *bin_name) {
   fprintf(
       stderr,
       "Usage: %s -r ram_size -p page_size -d (debug mode) "
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
+      "-C interrupt_controller_config_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata comments) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
@@ -43,7 +45,7 @@ void print_help(char *bin_name) {
 void parse_args(uint8_t argc, char *argv[]) {
   uint32_t opt;
 
-  while ((opt = getopt(argc, argv, "r:p:f:e:i:w:hdvtmbEcauKI:")) != -1) {
+  while ((opt = getopt(argc, argv, "r:p:f:e:i:C:w:hdvtmbEcauKI:")) != -1) {
     char *endptr;
     int64_t tmp_val;
 
@@ -92,6 +94,9 @@ void parse_args(uint8_t argc, char *argv[]) {
       break;
     case 'i':
       isrs_prgrm_path = optarg;
+      break;
+    case 'C':
+      interrupt_controller_config_path = optarg;
       break;
     case 'w':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -180,5 +185,7 @@ void print_args() {
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);
+  printf("Interrupt controller config path: %s\n",
+         interrupt_controller_config_path);
   printf("SRAM program path: %s\n", sram_prgrm_path);
 }

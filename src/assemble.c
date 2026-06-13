@@ -1,8 +1,8 @@
 #include "../include/error.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
-#include "../include/parse_args.h"
-#include "../include/parse_instrs.h"
+#include "../include/parse/parse_args.h"
+#include "../include/parse/parse_instrs.h"
 #include "../include/utils.h"
 #include <ctype.h>
 #include <errno.h>
@@ -19,7 +19,7 @@ const char *register_code_to_name[] = {
     "PC", "IN1", "IN2",      "ACC",     "SP",       "BAF",
     "CS", "DS",  "INTTIMER", "UARTREC", "UARTSEND", "KEYPRESS"};
 
-uint8_t isr_num = 0;
+uint16_t isr_num = 0;
 
 String_to_Mnemonic mnemonic_to_opcode[] = {
     {"ADDI", ADDI},     {"SUBI", SUBI},     {"MULTI", MULTI},
@@ -35,10 +35,6 @@ String_to_Mnemonic mnemonic_to_opcode[] = {
     {"JUMP!=", JUMPNE}, {"JUMP<>", JUMPNE}, {"JUMP<=", JUMPLE},
     {"JUMP", JUMP},     {"INT", INT},       {"RTI", RTI},
     {"NOP", NOP}};
-
-String_to_Directive mnemonic_to_directive[] = {
-    {"IVTE", IVTE},
-};
 
 uint8_t get_register_code(char *reg) {
   for (uint8_t i = 0;
@@ -60,14 +56,6 @@ uint8_t get_mnemonic(char *mnemonic) {
       return (uint8_t)mnemonic_to_opcode[i].value;
     }
   }
-  for (uint8_t i = 0;
-       i < sizeof(mnemonic_to_directive) / sizeof(mnemonic_to_directive[0]);
-       ++i) {
-    if (strcmp(mnemonic, mnemonic_to_directive[i].name) == 0) {
-      return (uint8_t)mnemonic_to_directive[i].value;
-    }
-  }
-
   display_error_message("SyntaxError", "Invalid mnemonic \"%s\"", mnemonic,
                         Pntr);
   exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -102,12 +90,6 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
       op += 8;
     }
   }
-  if (op == IVTE) {
-    if (strcmp(str_instr->opd2, "") != 0) {
-      op++;
-    }
-  }
-
   // TODO: Add commandline option to only make this check if it's active
   check_instr(op, str_instr);
 
@@ -163,36 +145,8 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
     machine_instr = op << 25 | opd1;
   } else if (op == NOP || op == RTI) {
     machine_instr = op << 25;
-  } else if (op == IVTE) {
-    machine_instr = 0b10 << 30 | opd1;
-    isr_num++;
-  } else if (op == IVTEDP) {
-    machine_instr = 0b10 << 30 | opd1;
-    isr_num++;
-    isr_to_prio = realloc(isr_to_prio, sizeof(uint8_t) * (isr_num));
-    assign_isr_and_prio(opd2, isr_num - 1, opd3);
-    switch (opd2) {
-    case INTERRUPT_TIMER:
-      interrupt_timer_active = true;
-      isr_of_timer_interrupt = isr_num - 1;
-      break;
-    case KEYPRESS:
-      keypress_interrupt_activatable = true;
-      isr_of_keypress_interrupt = isr_num - 1;
-      break;
-    default:
-      fprintf(stderr, "Error: Invalid device\n");
-      exit(EXIT_FAILURE);
-    }
   } else {
     fprintf(stderr, "Error: Invalid opcode\n");
-    exit(EXIT_FAILURE);
-  }
-
-  if (isr_num == INVALID_ISR_NUM) {
-    fprintf(stderr,
-            "Error: There can't be more than %d interrupt service routines\n",
-            INVALID_ISR_NUM);
     exit(EXIT_FAILURE);
   }
 

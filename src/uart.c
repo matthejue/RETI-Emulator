@@ -1,6 +1,7 @@
 #include "../include/uart.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_args.h"
 #include "../include/reti.h"
+#include "../include/interrupt_controller.h"
 #include "../include/special_opts.h"
 #include "../include/statemachine.h"
 #include "../include/utils.h"
@@ -39,9 +40,10 @@ char *current_send_data = NULL;
 uint8_t *uart;
 
 void init_uart() {
-  uart = malloc(sizeof(uint32_t) * NUM_UART_ADDRESSES);
+  uart = malloc(sizeof(uint8_t) * NUM_UART_ADDRESSES);
   memset(uart, 0, sizeof(uint8_t) * NUM_UART_ADDRESSES);
   uart[2] = 0b00000011;
+  init_interrupt_controller();
 }
 
 void uart_send() {

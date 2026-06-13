@@ -1,6 +1,6 @@
 #include "../include/input_output.h"
 #include "../include/core_debug.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_args.h"
 #include "../include/tui.h"
 #include "../include/utils.h"
 #include <ctype.h>

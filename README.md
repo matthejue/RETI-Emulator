@@ -174,17 +174,21 @@ Falls eine `.sections`-Datei existiert, gibt es zwei Fälle:
 
 Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder mit einer explizit angegebenen ISR-Datei kombiniert werden.
 
-Für das Erstellen von Interrupt-Vector-Table-Entries gibt es die Syntax `IVTE <Adresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle> <Gerät> <Priorität für den Interrupt-Controller>`. `IVTE` steht dabei für **I**nterrupt **V**ector **T**able **E**ntry. Die erste Zahl ist die Startadresse der ISR relativ zum Anfang der Interrupt-Vektor-Tabelle, wobei die SRAM-Konstante automatisch auf diesen Wert draufaddiert wird. `<Gerät>` ist das zugeordnete Gerät und `<Priorität für den Interrupt-Controller>` die Priorität im Interrupt-Controller. Aktuell sind insbesondere `INTTIMER` und `KEYPRESS` relevant: `INTTIMER` ist der automatische Timer-Interrupt, dessen Intervall über `-I` eingestellt wird, und `KEYPRESS` ist die Default-ISR für die Keypress-Aktion im TUI, die durch Drücken von `t` ausgelöst wird. Falls keine `KEYPRESS`-ISR spezifiziert wurde, wird dafür standardmäßig die `INTTIMER`-ISR verwendet.
+Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
+
+Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`KEYPRESS`).
+
+Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 KEYPRESS`; `-` bedeutet keine Zuordnung.
 
 Eine Datei mit Interrupt Service Routinen, zum Beispiel `isrs.reti`, kann so aufgebaut sein:
 
 ```reti
 # Interrupt-Vektor-Tabelle
-IVTE 6
-IVTE 20
-IVTE 34
-IVTE 48 KEYPRESS 1
-IVTE 52 INTTIMER 2
+5
+19
+33
+47
+51
 
 # == INT 0 ==
 # Interrupt Service Routine für Software-Interrupt 0
@@ -212,7 +216,7 @@ RTI
 RTI
 ```
 
-Die Datei `isrs.reti` beginnt also mit den `IVTE`-Einträgen der Interrupt-Vektor-Tabelle. Danach folgen die eigentlichen Interrupt Service Routinen im selben File. Jede ISR sollte üblicherweise mit `RTI` enden.
+Die Datei `isrs.reti` beginnt also mit den rohen Adress-Einträgen der Interrupt-Vektor-Tabelle. Danach folgen die eigentlichen Interrupt Service Routinen im selben File. Jede ISR sollte üblicherweise mit `RTI` enden.
 
 ## Debugging
 Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils näcsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. In der untersten Zeile des Text-User-Interfaces (TUI) stehen die Aktionen, die Sie in diesem Debug-Modus ausführen können. 

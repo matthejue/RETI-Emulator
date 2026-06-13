@@ -1,7 +1,7 @@
 #include "../include/tui.h"
 #include "../include/assemble.h"
 #include "../include/interrupt.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_args.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <ncurses.h>

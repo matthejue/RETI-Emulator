@@ -7,7 +7,7 @@
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
 #include "../include/log.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_args.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
@@ -16,12 +16,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-void setup_interrupt(uint32_t ivt_table_addr) {
+void setup_interrupt(uint32_t isr) {
   write_array(regs, SP, read_array(regs, SP, false) - 1, false);
   write_storage(read_array(regs, SP, false) + 1, read_array(regs, PC, false));
-  // TODO: Tobias, wird mit DS ausgefüllt?
-  // write_array(regs, PC, read_storage_ds_fill(assembly_instr->opd1), false);
-  write_array(regs, PC, read_storage_sram_constant_fill(ivt_table_addr), false);
+  write_array(regs, PC, read_storage_sram_constant_fill(isr) | SRAM_CONST << 30,
+              false);
 }
 
 void return_from_interrupt() {

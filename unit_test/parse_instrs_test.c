@@ -1,7 +1,7 @@
 #include "../include/core_debug.h"
 #include "../include/assemble.h"
-#include "../include/parse_instrs.h"
-#include "../include/parse_args.h"
+#include "../include/parse/parse_instrs.h"
+#include "../include/parse/parse_args.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include "assert.h"
@@ -101,19 +101,18 @@ void test_unwritten_sram_words_read_as_zero() {
 
 void test_parse_and_load_program_ranges() {
   peripherals_dir = "/tmp";
-  ivt_max_idx = (uint32_t)-1;
   num_instrs_isrs = 0;
   num_instrs_prgrm = 0;
   isr_num = 0;
   init_reti();
 
-  const char *program = "7; IVTE 3; LOADI ACC 7; ADDI ACC 1; 42; -1";
+  const char *program = "7; 3; LOADI ACC 7; ADDI ACC 1; 42; -1";
   parse_and_load_program_range(allocate_and_copy_string(program), ISR_PRGRMS, 0,
                                2);
   assert(num_instrs_isrs == 2);
-  assert(ivt_max_idx == 1);
+  assert(isr_num == 2);
   assert(read_file(sram, 0) == 7);
-  assert(read_file(sram, 1) == ((uint32_t)0b10 << 30 | 3));
+  assert(read_file(sram, 1) == 3);
 
   parse_and_load_program_range(allocate_and_copy_string(program), SRAM_PRGRM, 2,
                                4);

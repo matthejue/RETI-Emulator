@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include "interrupt_controller.h"
 
 #ifndef ASSEMBLE_H
 #define ASSEMBLE_H
@@ -11,9 +12,7 @@
 
 extern uint8_t isr_of_timer_interrupt;
 extern uint8_t isr_of_keypress_interrupt;
-extern uint8_t isr_num;
-
-#define INVALID_ISR_NUM UINT8_MAX
+extern uint16_t isr_num;
 
 typedef enum {
   PC,
@@ -72,8 +71,6 @@ typedef enum {
   JUMP = 0b1111100,
 } Unique_Opcode;
 
-typedef enum { IVTE = 0b10000000, IVTEDP } Directive;
-
 typedef enum { COMPUTE_M, LOAD_M, STORE_M, JUMP_M } mode;
 
 extern const char *register_code_to_name[];
@@ -82,11 +79,6 @@ typedef struct {
   const char *name;
   Unique_Opcode value;
 } String_to_Mnemonic;
-
-typedef struct {
-  const char *name;
-  Directive value;
-} String_to_Directive;
 
 typedef struct {
   char op[8];

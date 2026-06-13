@@ -1,9 +1,10 @@
 #include "../include/error.h"
 #include "../include/interpr.h"
 #include "../include/interrupt.h"
-#include "../include/parse_args.h"
-#include "../include/parse_instrs.h"
-#include "../include/program_sections.h"
+#include "../include/interrupt_controller.h"
+#include "../include/parse/parse_args.h"
+#include "../include/parse/parse_instrs.h"
+#include "../include/parse/parse_sections.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
 #include "../include/tui.h"
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
     init_tui();
   }
 
-  Program_Sections sections = load_program_sections_for_reti_path(sram_prgrm_path);
+  Program_Sections sections = parse_sections_for_reti_path(sram_prgrm_path);
   bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
   char *sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
 
@@ -45,6 +46,9 @@ int main(int argc, char *argv[]) {
                                  ISR_PRGRMS, 0, code_start_idx);
   }
 
+  if (strcmp(interrupt_controller_config_path, "") != 0) {
+    load_interrupt_controller_config(interrupt_controller_config_path);
+  }
   init_keypress_interrupt_action_isr();
 
   error_context.filename = sram_prgrm_path;

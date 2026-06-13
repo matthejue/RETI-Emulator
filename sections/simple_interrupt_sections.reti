@@ -1,6 +1,6 @@
 # interrupt vector table
-IVTE 2 # section 1: interrupt vector table, INT 0 -> line 3
-IVTE 3 # INT 1 -> line 4
+2 # section 1: interrupt vector table, INT 0 -> line 3
+3 # INT 1 -> line 4
 RTI # simple ISR for INT 0
 RTI # simple ISR for INT 1
 # codesegment

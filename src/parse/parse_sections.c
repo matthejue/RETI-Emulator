@@ -1,6 +1,6 @@
-#include "../include/program_sections.h"
-#include "../include/utils.h"
-#include "cJSON.h"
+#include "../../include/parse/parse_sections.h"
+#include "../../include/utils.h"
+#include "../../vendor/cJSON/cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +14,7 @@ static bool file_exists(const char *path) {
   return true;
 }
 
-char *program_sections_path_for_reti_path(const char *reti_path) {
+char *sections_path_for_reti_path(const char *reti_path) {
   if (strcmp(reti_path, "-") == 0) {
     return NULL;
   }
@@ -40,11 +40,11 @@ char *program_sections_path_for_reti_path(const char *reti_path) {
   return proper_str_cat(reti_path, ".sections");
 }
 
-Program_Sections load_program_sections_for_reti_path(const char *reti_path) {
+Program_Sections parse_sections_for_reti_path(const char *reti_path) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
                                .datasegment_start = 0};
-  char *sections_path = program_sections_path_for_reti_path(reti_path);
+  char *sections_path = sections_path_for_reti_path(reti_path);
   if (sections_path == NULL) {
     return sections;
   }

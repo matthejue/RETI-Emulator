@@ -1,5 +1,5 @@
 #include "../include/assemble.h"
-#include "../include/parse_args.h"
+#include "parse/parse_args.h"
 #include "../include/statemachine.h"
 
 #ifndef INTERPRET_H
@@ -11,7 +11,7 @@
 
 void interpr_instr(Instruction *assembly_instr);
 void interpr_prgrm();
-void setup_interrupt(uint32_t ivt_table_addr);
+void setup_interrupt(uint32_t isr);
 void return_from_interrupt();
 
 #endif // INTERPRET_H

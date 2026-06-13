@@ -1,8 +1,8 @@
 #include "../include/assert.h"
 #include "../include/core_debug.h"
 #include "../include/interpr.h"
-#include "../include/parse_args.h"
-#include "../include/parse_instrs.h"
+#include "../include/parse/parse_args.h"
+#include "../include/parse/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include <stdlib.h>

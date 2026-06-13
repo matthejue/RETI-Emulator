@@ -1,8 +1,8 @@
-#include "../include/assemble.h"
+#include "../assemble.h"
 #include <stdbool.h>
 
-#ifndef PARSE_H
-#define PARSE_H
+#ifndef PARSE_PARSE_INSTRS_H
+#define PARSE_PARSE_INSTRS_H
 
 typedef enum {
   EPROM_START_PRGRM,
@@ -33,4 +33,4 @@ void parse_and_load_program_range(char *prgrm, Program_Type memory_type,
                                   uint32_t start_entry, uint32_t end_entry);
 void free_program_comments(void);
 
-#endif
+#endif // PARSE_PARSE_INSTRS_H
