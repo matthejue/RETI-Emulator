@@ -57,21 +57,21 @@ static void update_info_box_text(void) {
                      "(d)ebug source, "
                      "(S)napshot, (o)ther actions");
     } else {
-      uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
-      if (keypress_action_isr == INVALID_ISR_NUM) {
+      uint8_t custom_action_isr = get_custom_interrupt_action_isr();
+      if (custom_action_isr == INVALID_ISR_NUM) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
             tui_snapshot_available
                 ? "(C)enter, (J/K) to in/decrease watchobject, "
                   "(a)ssign watchobject, "
                   "(A)ssign value, "
-                  "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(t)rigger isr none, (e)xchange isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
                 : "(C)enter, (J/K) to in/decrease watchobject, "
                   "(a)ssign watchobject, "
                   "(A)ssign value, "
-                  "(t)rigger isr none, (e)xchange keypress isr, "
+                  "(t)rigger isr none, (e)xchange isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions");
       } else {
@@ -81,16 +81,16 @@ static void update_info_box_text(void) {
                 ? "(C)enter, (J/K) to in/decrease watchobject, "
                   "(a)ssign watchobject, "
                   "(A)ssign value, "
-                  "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(t)rigger isr %u, (e)xchange isr, "
                   "(d)ebug source, "
                   "(S)napshot, (R)estore, (o)ther actions"
                 : "(C)enter, (J/K) to in/decrease watchobject, "
                   "(a)ssign watchobject, "
                   "(A)ssign value, "
-                  "(t)rigger isr %u, (e)xchange keypress isr, "
+                  "(t)rigger isr %u, (e)xchange isr, "
                   "(d)ebug source, "
                   "(S)napshot, (o)ther actions",
-            keypress_action_isr);
+            custom_action_isr);
       }
     }
     info_box.title = info_box_second_page;

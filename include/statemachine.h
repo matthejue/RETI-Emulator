@@ -46,7 +46,7 @@ extern bool isr_step_into;
 extern uint8_t finished_isr_here;
 extern uint8_t not_stepped_into_isr_here;
 
-extern uint8_t deactivated_keypress_interrupt_here;
+extern uint8_t deactivated_custom_interrupt_here;
 extern uint8_t deactivated_timer_interrupt_here;
 
 extern uint8_t latest_isr;

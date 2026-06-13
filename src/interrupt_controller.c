@@ -15,8 +15,8 @@ static int parse_device_slot(const char *str) {
   if (strcmp(str, "INTTIMER") == 0) {
     return INTERRUPT_TIMER;
   }
-  if (strcmp(str, "KEYPRESS") == 0) {
-    return KEYPRESS;
+  if (strcmp(str, "CUSTOM") == 0) {
+    return CUSTOM;
   }
 
   char *endptr;
@@ -43,9 +43,9 @@ void sync_interrupt_controller_from_memory(void) {
   }
 
   isr_of_timer_interrupt = device_to_isr[INTERRUPT_TIMER];
-  isr_of_keypress_interrupt = device_to_isr[KEYPRESS];
+  isr_of_custom_interrupt = device_to_isr[CUSTOM];
   interrupt_timer_active = isr_of_timer_interrupt != INVALID_ISR_NUM;
-  keypress_interrupt_activatable = isr_of_keypress_interrupt != INVALID_ISR_NUM;
+  custom_interrupt_activatable = isr_of_custom_interrupt != INVALID_ISR_NUM;
 }
 
 void init_interrupt_controller(void) {

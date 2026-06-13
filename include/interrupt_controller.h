@@ -8,7 +8,7 @@
 
 typedef enum {
   INTERRUPT_TIMER = 0,
-  KEYPRESS
+  CUSTOM
 } Hardware_Interrupt_Signal_Line;
 
 #define NUM_UART_REGISTERS 3

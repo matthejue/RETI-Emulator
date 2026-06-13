@@ -11,7 +11,7 @@
 #define REGISTER_MASK 0x7
 
 extern uint8_t isr_of_timer_interrupt;
-extern uint8_t isr_of_keypress_interrupt;
+extern uint8_t isr_of_custom_interrupt;
 extern uint16_t isr_num;
 
 typedef enum {

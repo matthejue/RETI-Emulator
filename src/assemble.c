@@ -12,12 +12,12 @@
 #include <string.h>
 
 uint8_t isr_of_timer_interrupt = INVALID_ISR_NUM; // unreachable value
-uint8_t isr_of_keypress_interrupt = INVALID_ISR_NUM;
+uint8_t isr_of_custom_interrupt = INVALID_ISR_NUM;
 
 // TODO: wrong name
 const char *register_code_to_name[] = {
     "PC", "IN1", "IN2",      "ACC",     "SP",       "BAF",
-    "CS", "DS",  "INTTIMER", "UARTREC", "UARTSEND", "KEYPRESS"};
+    "CS", "DS",  "INTTIMER", "UARTREC", "UARTSEND", "CUSTOM"};
 
 uint16_t isr_num = 0;
 

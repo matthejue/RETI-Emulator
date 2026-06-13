@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
   if (strcmp(interrupt_controller_config_path, "") != 0) {
     load_interrupt_controller_config(interrupt_controller_config_path);
   }
-  init_keypress_interrupt_action_isr();
+  init_custom_interrupt_action_isr();
 
   error_context.filename = sram_prgrm_path;
   if (sections.exists) {

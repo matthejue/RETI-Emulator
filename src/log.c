@@ -181,8 +181,8 @@ void log_statemachine(Event event) {
   LOG_U8(s_logfile, "finished_isr_here", finished_isr_here);
   LOG_BOOL(s_logfile, "not_stepped_into_isr_here", not_stepped_into_isr_here);
 
-  LOG_U8(s_logfile, "deactivated_keypress_interrupt_here",
-         deactivated_keypress_interrupt_here);
+  LOG_U8(s_logfile, "deactivated_custom_interrupt_here",
+         deactivated_custom_interrupt_here);
   LOG_U8(s_logfile, "deactivated_timer_interrupt_here",
          deactivated_timer_interrupt_here);
 
@@ -195,7 +195,7 @@ void log_statemachine(Event event) {
 
   LOG_U8(s_logfile, "timer_cnt", timer_cnt);
   LOG_BOOL(s_logfile, "interrupt_timer_active", interrupt_timer_active);
-  LOG_BOOL(s_logfile, "keypress_interrupt_active", keypress_interrupt_active);
+  LOG_BOOL(s_logfile, "custom_interrupt_active", custom_interrupt_active);
 
   size_t stack_len = MIN((size_t)MAX_STACK_SIZE, (size_t)MAX_STACK_INDEX + 1);
   char *stack_str = u8_array_to_space_separated(hardware_isr_stack, stack_len);

@@ -1006,12 +1006,12 @@ static const char *uart_cell_label(uint64_t idx) {
     return "UART status";
   case INTERRUPT_CONTROLLER_ISR_BASE + INTERRUPT_TIMER:
     return "timer isr";
-  case INTERRUPT_CONTROLLER_ISR_BASE + KEYPRESS:
-    return "keypress isr";
+  case INTERRUPT_CONTROLLER_ISR_BASE + CUSTOM:
+    return "custom isr";
   case INTERRUPT_CONTROLLER_PRIO_BASE + INTERRUPT_TIMER:
     return "timer priority";
-  case INTERRUPT_CONTROLLER_PRIO_BASE + KEYPRESS:
-    return "keypress priority";
+  case INTERRUPT_CONTROLLER_PRIO_BASE + CUSTOM:
+    return "custom priority";
   default:
     return "peripheral reserved";
   }
@@ -1334,7 +1334,7 @@ void evaluate_keyboard_input(void) {
       continue;
     } else if (key == 't') {
       reset_all_scroll_offsets();
-      bool success = keypress_interrupt_trigger();
+      bool success = custom_interrupt_trigger();
       if (success) {
         return;
       }
@@ -1389,7 +1389,7 @@ void evaluate_keyboard_input(void) {
       continue;
     } else if (key == 'e') {
       reset_all_scroll_offsets();
-      if (cycle_keypress_interrupt_action_isr()) {
+      if (cycle_custom_interrupt_action_isr()) {
         draw_tui();
       }
       continue;

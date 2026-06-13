@@ -14,32 +14,32 @@ uint32_t interrupt_timer_interval = 10;
 
 bool interrupt_timer_active = false;
 
-bool keypress_interrupt_active = false;
-bool keypress_interrupt_activatable = false;
+bool custom_interrupt_active = false;
+bool custom_interrupt_activatable = false;
 
-void init_keypress_interrupt_action_isr(void) {
+void init_custom_interrupt_action_isr(void) {
   sync_interrupt_controller_from_memory();
 }
 
-uint8_t get_keypress_interrupt_action_isr(void) {
+uint8_t get_custom_interrupt_action_isr(void) {
   sync_interrupt_controller_from_memory();
-  return device_to_isr[KEYPRESS];
+  return device_to_isr[CUSTOM];
 }
 
-bool cycle_keypress_interrupt_action_isr(void) {
+bool cycle_custom_interrupt_action_isr(void) {
   if (isr_num == 0) {
     display_notification_box(
-        "Error", "No Interrupt Service Routine available for keypress action");
+        "Error", "No Interrupt Service Routine available for custom action");
     return false;
   }
 
-  uint8_t keypress_isr = get_keypress_interrupt_action_isr();
-  if (keypress_isr == INVALID_ISR_NUM || keypress_isr >= isr_num) {
-    keypress_isr = 0;
+  uint8_t custom_isr = get_custom_interrupt_action_isr();
+  if (custom_isr == INVALID_ISR_NUM || custom_isr >= isr_num) {
+    custom_isr = 0;
   } else {
-    keypress_isr = (keypress_isr + 1) % isr_num;
+    custom_isr = (custom_isr + 1) % isr_num;
   }
-  set_interrupt_device_isr(KEYPRESS, keypress_isr);
+  set_interrupt_device_isr(CUSTOM, custom_isr);
 
   return true;
 }
@@ -60,23 +60,23 @@ bool timer_interrupt_check() {
   return success;
 }
 
-bool keypress_interrupt_trigger() {
-  uint8_t keypress_action_isr = get_keypress_interrupt_action_isr();
+bool custom_interrupt_trigger() {
+  uint8_t custom_action_isr = get_custom_interrupt_action_isr();
 
-  if (keypress_interrupt_active) {
+  if (custom_interrupt_active) {
     display_notification_box("Error",
                              "Interrupt can't be interrupted by interrupt "
                              "that was triggered by same signal");
 
     return false;
   }
-  if (keypress_action_isr == INVALID_ISR_NUM) {
+  if (custom_action_isr == INVALID_ISR_NUM) {
     display_notification_box(
         "Error",
-        "Keyboard Interrupt has no assigned Interrupt Service Routine");
+        "Custom Interrupt has no assigned Interrupt Service Routine");
     return false;
   }
-  in.arg8 = keypress_action_isr;
+  in.arg8 = custom_action_isr;
   update_state(HARDWARE_INTERRUPT);
   bool should_cont = out.retbool2;
   return should_cont;

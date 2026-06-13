@@ -29,7 +29,7 @@ static bool source_debug_active = false;
 uint8_t finished_isr_here;
 uint8_t not_stepped_into_isr_here;
 
-uint8_t deactivated_keypress_interrupt_here;
+uint8_t deactivated_custom_interrupt_here;
 uint8_t deactivated_timer_interrupt_here;
 
 uint8_t latest_isr;
@@ -96,16 +96,16 @@ void do_step_into_isr() {
   isr_step_into = false;
 }
 
-void check_deactivation_keypress_interrupt() {
+void check_deactivation_custom_interrupt() {
   if (latest_isr == isr_of_timer_interrupt) {
-    deactivated_keypress_interrupt_here = stacked_isrs_cnt;
-    keypress_interrupt_active = true;
+    deactivated_custom_interrupt_here = stacked_isrs_cnt;
+    custom_interrupt_active = true;
   }
 }
 
-void check_reactivation_keypress_interrupt() {
-  if (deactivated_keypress_interrupt_here == stacked_isrs_cnt) {
-    keypress_interrupt_active = false;
+void check_reactivation_custom_interrupt() {
+  if (deactivated_custom_interrupt_here == stacked_isrs_cnt) {
+    custom_interrupt_active = false;
   }
 }
 
@@ -131,9 +131,9 @@ bool setup_hardware_interrupt(uint8_t isr) {
   bool should_cont = false;
 
   const char *title = NULL;
-  if (isr == get_keypress_interrupt_action_isr() ||
-      isr == isr_of_keypress_interrupt) {
-    title = "Keyboard Interrupt";
+  if (isr == get_custom_interrupt_action_isr() ||
+      isr == isr_of_custom_interrupt) {
+    title = "Custom Interrupt";
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
   } else {
@@ -249,7 +249,7 @@ void update_state(Event event) {
   case HARDWARE_INTERRUPT:
     if ((out.retbool1 = decide_prio_higher_stack(in.arg8))) {
       latest_isr = in.arg8;
-      check_deactivation_keypress_interrupt();
+      check_deactivation_custom_interrupt();
       check_deactivation_interrupt_timer();
       update_hardware_interrupt_stack(in.arg8);
       out.retbool2 = setup_hardware_interrupt(in.arg8);
@@ -272,7 +272,7 @@ void update_state(Event event) {
   case RETURN_FROM_INTERRUPT:
     stacked_isrs_cnt--;
     return_from_interrupt();
-    check_reactivation_keypress_interrupt();
+    check_reactivation_custom_interrupt();
     check_reactivation_interrupt_timer();
     check_finished_isr_completed();
     check_not_stepped_into_isr_completed();

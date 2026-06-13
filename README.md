@@ -54,8 +54,8 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `o` ther actions
   - Wechselt in der Infobox zyklisch zur nächsten Hilfeseite
 - `t` rigger isr
-  - Löst die aktuell für die Keypress-Aktion ausgewählte ISR aus
-- `e` xchange keypress isr
+  - Löst die aktuell für die Custom-Aktion ausgewählte ISR aus
+- `e` xchange isr
   - Wechselt zyklisch zwischen allen per `-i` geladenen ISR-Nummern, die durch `t` ausgelöst werden können
 
 # Installation und Updates
@@ -176,9 +176,9 @@ Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder m
 
 Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
 
-Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`KEYPRESS`).
+Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`CUSTOM`).
 
-Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 KEYPRESS`; `-` bedeutet keine Zuordnung.
+Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 CUSTOM`; `-` bedeutet keine Zuordnung.
 
 Eine Datei mit Interrupt Service Routinen, zum Beispiel `isrs.reti`, kann so aufgebaut sein:
 
@@ -205,7 +205,7 @@ RTI
 ...
 RTI
 
-# == KEYPRESS ==
+# == CUSTOM ==
 # Interrupt Service Routine für den durch 't' im TUI ausgelösten Interrupt
 ...
 RTI
@@ -221,7 +221,7 @@ Die Datei `isrs.reti` beginnt also mit den rohen Adress-Einträgen der Interrupt
 ## Debugging
 Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils näcsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. In der untersten Zeile des Text-User-Interfaces (TUI) stehen die Aktionen, die Sie in diesem Debug-Modus ausführen können. 
 
-Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(t)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `t` ausgelöst wird. Mit `e` (`e`xchange keypress isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden.
+Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(t)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `t` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden.
 
 Mit `-c` werden zusätzlich Quellkommentare im Debugmode angezeigt. Dazu werden Kommentare beim Parsen in einer internen Struktur mit Ziel-Speicherbereich, referenziertem Instruktionsindex und Anzeigeposition gespeichert. Beim Anzeigen einer Instruktion wird geprüft, welche gespeicherten Kommentare diesem Instruktionsindex im aktuellen Speicherbereich zugeordnet sind, und diese werden dann vor oder nach der Instruktion ausgegeben.
 
