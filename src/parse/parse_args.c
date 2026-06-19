@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <string.h>
 #include <unistd.h>
 
 uint32_t sram_size = 65536;
@@ -23,6 +24,7 @@ uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool ds_vals_unsigned = false;
 bool keep_tui_alive_after_halt = false;
+bool has_sram_prgrm = false;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -40,7 +42,7 @@ void print_help(char *bin_name) {
       "-b (binary mode) -E (extended features) -a, --assemble (write encoded .bin and exit) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
       "-I timer_interrupt_interval -h (help page) "
-      "prgrm_path\n",
+      "[prgrm_path]\n",
       bin_name);
 }
 
@@ -159,13 +161,27 @@ void parse_args(int argc, char *argv[]) {
     }
   }
 
-  if (optind >= argc) {
-    fprintf(stderr, "Expected argument after options\n");
+  if (optind < argc) {
+    sram_prgrm_path = argv[optind];
+    has_sram_prgrm = true;
+  }
+
+  if (!has_sram_prgrm && strcmp(eprom_prgrm_path, "") == 0) {
+    fprintf(stderr,
+            "Expected SRAM program argument or EPROM start program via -e\n");
     print_help(argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  sram_prgrm_path = argv[optind];
+  if (assemble_mode && !has_sram_prgrm) {
+    fprintf(stderr, "Error: Assemble mode requires an SRAM program argument\n");
+    exit(EXIT_FAILURE);
+  }
+
+  if (read_metadata && !has_sram_prgrm) {
+    fprintf(stderr, "Error: Reading metadata requires an SRAM program argument\n");
+    exit(EXIT_FAILURE);
+  }
 }
 
 void print_args() {
@@ -185,6 +201,7 @@ void print_args() {
   printf("Extended features: %s\n", extended_features ? "true" : "false");
   printf("Keep TUI alive after halt: %s\n",
          keep_tui_alive_after_halt ? "true" : "false");
+  printf("Has SRAM program: %s\n", has_sram_prgrm ? "true" : "false");
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);

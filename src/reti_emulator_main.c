@@ -16,10 +16,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void load_interrupt_setup(void) {
+  if (strcmp(interrupt_controller_config_path, "") != 0) {
+    load_interrupt_controller_config(interrupt_controller_config_path);
+  }
+  init_custom_interrupt_action_isr();
+}
+
 static void load_sram_program(void) {
-  Program_Sections sections = parse_sections_for_reti_path(sram_prgrm_path);
+  Program_Sections sections = {.exists = false,
+                               .codesegment_start = 0,
+                               .datasegment_start = 0};
   bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
-  char *sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
+  char *sram_prgrm_content = NULL;
+
+  if (has_sram_prgrm) {
+    sections = parse_sections_for_reti_path(sram_prgrm_path);
+    sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
+  }
 
   if (has_explicit_isrs) {
     error_context.filename = isrs_prgrm_path;
@@ -31,10 +45,11 @@ static void load_sram_program(void) {
                                  ISR_PRGRMS, 0, code_start_idx);
   }
 
-  if (strcmp(interrupt_controller_config_path, "") != 0) {
-    load_interrupt_controller_config(interrupt_controller_config_path);
+  load_interrupt_setup();
+
+  if (!has_sram_prgrm) {
+    return;
   }
-  init_custom_interrupt_action_isr();
 
   error_context.filename = sram_prgrm_path;
   if (sections.exists) {
