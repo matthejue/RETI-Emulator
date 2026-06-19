@@ -67,6 +67,10 @@ WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL, 0};
 WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL, 0};
 WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL, 0};
 
+static bool eprom_only_sram_sections_exist = false;
+static uint32_t eprom_only_sram_codesegment_start = 0;
+static uint32_t eprom_only_sram_datasegment_start = 0;
+
 static BoxIdentifier active_box_identifier = EPROM_BOX;
 static bool uart_memory_view = false;
 
@@ -76,6 +80,13 @@ static const uint8_t NUM_FOCUS_BOXES =
     sizeof(focus_order) / sizeof(focus_order[0]);
 
 WatchBox *get_watchbox(BoxIdentifier box_identifier);
+
+void set_eprom_only_sram_debug_sections(bool exists, uint32_t codesegment_start,
+                                        uint32_t datasegment_start) {
+  eprom_only_sram_sections_exist = exists;
+  eprom_only_sram_codesegment_start = codesegment_start;
+  eprom_only_sram_datasegment_start = datasegment_start;
+}
 
 static bool highlighted_watchobject_idx_valid[] = {
     false, false, false, false, false, false};
@@ -1136,6 +1147,51 @@ void print_eprom_watchobject(uint64_t eprom_watchobject) {
   }
 }
 
+static uint32_t infer_interrupt_vector_table_end(uint32_t codesegment_start) {
+  uint32_t first_isr = codesegment_start;
+
+  for (uint32_t i = 0; i < codesegment_start; i++) {
+    uint32_t vector_entry = read_file(sram, i);
+    if (vector_entry > i && vector_entry < first_isr) {
+      first_isr = vector_entry;
+    }
+  }
+
+  return first_isr;
+}
+
+static void print_eprom_only_sram_watchobject(MemType mem_type, uint64_t start,
+                                              uint64_t end) {
+  if (!eprom_only_sram_sections_exist) {
+    print_file_with_idcs(mem_type, start, end, true, false);
+    return;
+  }
+
+  uint64_t instruction_start = infer_interrupt_vector_table_end(
+      eprom_only_sram_codesegment_start);
+  bool has_instruction_range =
+      instruction_start < eprom_only_sram_datasegment_start;
+  uint64_t instruction_end = has_instruction_range
+                                 ? eprom_only_sram_datasegment_start - 1
+                                 : 0;
+
+  if (start < instruction_start) {
+    print_file_with_idcs(mem_type, start, min(end, instruction_start - 1), true,
+                         false);
+  }
+  if (has_instruction_range && end >= instruction_start &&
+      start <= instruction_end) {
+    print_file_with_idcs(mem_type, max(instruction_start, start),
+                         min(end, instruction_end), false, true);
+  }
+  if (end >= eprom_only_sram_datasegment_start) {
+    print_file_with_idcs(mem_type,
+                         max((uint64_t)eprom_only_sram_datasegment_start,
+                             start),
+                         end, true, false);
+  }
+}
+
 void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
   WatchBox *watchbox = NULL;
   switch (mem_type) {
@@ -1156,6 +1212,11 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
   uint64_t end;
   if (!visible_range_for_watchbox(watchbox, mem_type, sram_watchobject_x,
                                   sram_c_box.height - 2, &start, &end)) {
+    return;
+  }
+
+  if (!has_sram_prgrm) {
+    print_eprom_only_sram_watchobject(mem_type, start, end);
     return;
   }
 

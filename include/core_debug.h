@@ -67,6 +67,8 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
 
 void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
+void set_eprom_only_sram_debug_sections(bool exists, uint32_t codesegment_start,
+                                        uint32_t datasegment_start);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
 void wait_for_tui_quit(void);
