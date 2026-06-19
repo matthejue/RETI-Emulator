@@ -824,9 +824,33 @@ static void print_uart_byte_for_tui(uint8_t byte) {
   print_formatted_to_box("%s", &uart_box, format_uart_byte(byte, buffer));
 }
 
-static void print_uart_bytes_for_tui(const uint8_t *bytes, uint16_t len) {
-  for (uint16_t i = 0; i < len; i++) {
+static size_t uart_meta_data_limit_for_label(const char *label) {
+  size_t inner_width = uart_box.width > 2 ? uart_box.width - 2 : 0;
+  size_t label_len = strlen(label);
+  size_t current_line_space =
+      inner_width > label_len ? inner_width - label_len : 0;
+  return current_line_space + inner_width;
+}
+
+static void print_uart_bytes_for_tui(const uint8_t *bytes, size_t len) {
+  for (size_t i = 0; i < len; i++) {
     print_uart_byte_for_tui(bytes[i]);
+  }
+}
+
+static void print_uart_bytes_limited_for_tui(const uint8_t *bytes, size_t len,
+                                             size_t max_chars) {
+  size_t chars_written = 0;
+  for (size_t i = 0; i < len; i++) {
+    char buffer[6];
+    const char *formatted_byte = format_uart_byte(bytes[i], buffer);
+    size_t formatted_len = strlen(formatted_byte);
+    if (chars_written + formatted_len > max_chars) {
+      break;
+    }
+
+    print_formatted_to_box("%s", &uart_box, formatted_byte);
+    chars_written += formatted_len;
   }
 }
 
@@ -1161,9 +1185,12 @@ void print_uart_meta_data() {
                              current_send_data_len);
   }
   print_formatted_to_box("\n", &uart_box);
-  print_formatted_to_box("All send data: ", &uart_box);
+  const char *all_send_label = "All send data: ";
+  print_formatted_to_box("%s", &uart_box, all_send_label);
   if (all_send_data != NULL) {
-    print_uart_bytes_for_tui((uint8_t *)all_send_data, all_send_data_len);
+    print_uart_bytes_limited_for_tui(
+        (uint8_t *)all_send_data, all_send_data_len,
+        uart_meta_data_limit_for_label(all_send_label));
   }
   print_formatted_to_box("\n", &uart_box);
   print_formatted_to_box("Waiting time sending: ", &uart_box);
@@ -1177,9 +1204,12 @@ void print_uart_meta_data() {
   } else {
     print_formatted_to_box("Current input:\n", &uart_box);
   }
-  print_formatted_to_box("Remaining input: ", &uart_box);
+  const char *remaining_input_label = "Remaining input: ";
+  print_formatted_to_box("%s", &uart_box, remaining_input_label);
   if (input_idx < input_len) {
-    print_uart_bytes_for_tui(uart_input + input_idx, input_len - input_idx);
+    print_uart_bytes_limited_for_tui(
+        uart_input + input_idx, input_len - input_idx,
+        uart_meta_data_limit_for_label(remaining_input_label));
   }
   print_formatted_to_box("\n", &uart_box);
 }

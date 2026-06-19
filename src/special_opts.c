@@ -16,7 +16,7 @@
 FILE *out_file = NULL;
 FILE *err_file = NULL;
 
-uint8_t *extract_input_from_comment(const char *line, uint16_t *len) {
+uint8_t *extract_input_from_comment(const char *line, size_t *len) {
   const char *prefix;
   if (!strncmp(line, "# input:", strlen("# input:"))) {
     prefix = "# input:";
@@ -36,7 +36,7 @@ uint8_t *extract_input_from_comment(const char *line, uint16_t *len) {
   *len = strcspn(ptr, "\n");
   uint8_t *input = malloc(*len + 2);
   memcpy(input, ptr, *len);
-  *len = decode_uart_input_escapes(input, *len);
+  *len = decode_uart_input_escapes(input, (uint16_t)*len);
   input[(*len)++] = '\n';
   input[*len] = '\0';
   return input;
@@ -44,7 +44,7 @@ uint8_t *extract_input_from_comment(const char *line, uint16_t *len) {
 
 bool first_line_over = false;
 
-uint8_t *extract_comment_metadata(const char *prgrm_path, uint16_t *len) {
+uint8_t *extract_comment_metadata(const char *prgrm_path, size_t *len) {
   error_context.filename = prgrm_path;
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {

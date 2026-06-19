@@ -245,8 +245,8 @@ void write_text_into_box(Box *box, const char *text) {
 }
 
 void write_text_into_box_with_attr(Box *box, const char *text, int attr) {
-  uint8_t text_len = strlen(text);
-  for (uint8_t i = 0; i < text_len; i++) {
+  size_t text_len = strlen(text);
+  for (size_t i = 0; i < text_len; i++) {
     if (box->line >= (box->height - 1)) {
       break; // Stop if we exceed the box height
     }

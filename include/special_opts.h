@@ -5,7 +5,7 @@
 #ifndef SPECIAL_OPTS_H
 #define SPECIAL_OPTS_H
 
-uint8_t *extract_comment_metadata(const char *prgrm_path, uint16_t *len);
+uint8_t *extract_comment_metadata(const char *prgrm_path, size_t *len);
 
 void create_out_and_err_file();
 void adjust_print(bool is_stdout, const char *format,

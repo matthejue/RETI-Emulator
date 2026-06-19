@@ -4,14 +4,16 @@
 #include "../../include/interrupt_controller.h"
 #include "../../include/input_output.h"
 #include "../../include/special_opts.h"
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 uint8_t *uart_input = NULL;
-uint16_t input_len = 0;
-uint16_t input_idx = 0;
+size_t input_len = 0;
+size_t input_idx = 0;
 
 uint8_t receive_current_byte = '\0';
 
@@ -25,14 +27,20 @@ static Uart_State receive_state = UART_IDLE;
 
 char *all_send_data = NULL;
 char *current_send_data = NULL;
-uint16_t all_send_data_len = 0;
-uint16_t current_send_data_len = 0;
+size_t all_send_data_len = 0;
+size_t current_send_data_len = 0;
 
 uint8_t *uart;
 
 #define UART_SEND_READY 0b00000001
 #define UART_RECEIVE_READY 0b00000010
 #define UART_INPUT_BOX_LEN 80
+#define UART_LOAD_COMMAND_PREFIX "load "
+#define UART_LOAD_COMMAND_MAX 4096
+
+static char uart_load_command[UART_LOAD_COMMAND_MAX + 1];
+static size_t uart_load_command_len = 0;
+static bool uart_load_command_candidate = true;
 
 static bool is_visible_terminal_ascii(uint8_t byte) {
   return byte >= 32 && byte <= 126;
@@ -96,12 +104,12 @@ static bool is_digit(uint8_t ch) {
   return ch >= '0' && ch <= '9';
 }
 
-static void append_newline(uint8_t *input, uint16_t *len) {
+static void append_newline(uint8_t *input, size_t *len) {
   input[(*len)++] = '\n';
   input[*len] = '\0';
 }
 
-static void append_byte_to_buffer(char **buffer, uint16_t *len, uint8_t byte) {
+static void append_byte_to_buffer(char **buffer, size_t *len, uint8_t byte) {
   *buffer = realloc(*buffer, *len + 1);
   (*buffer)[(*len)++] = byte;
 }
@@ -116,6 +124,126 @@ static void remember_sent_byte(uint8_t sent_byte) {
   current_send_data_len = 0;
   append_byte_to_buffer(&current_send_data, &current_send_data_len, sent_byte);
   append_byte_to_buffer(&all_send_data, &all_send_data_len, sent_byte);
+}
+
+static void append_uart_input_bytes(const uint8_t *input, size_t len) {
+  if (len == 0) {
+    return;
+  }
+  if (SIZE_MAX - input_len <= len) {
+    fprintf(stderr, "Error: UART input buffer too large\n");
+    exit(EXIT_FAILURE);
+  }
+
+  uint8_t *new_input = realloc(uart_input, input_len + len + 1);
+  if (new_input == NULL) {
+    fprintf(stderr, "Error: Couldn't allocate UART input buffer\n");
+    exit(EXIT_FAILURE);
+  }
+
+  memcpy(new_input + input_len, input, len);
+  input_len += len;
+  new_input[input_len] = '\0';
+  uart_input = new_input;
+}
+
+static void load_file_into_uart_input(const char *path, size_t len) {
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    fprintf(stderr, "Warning: Couldn't load UART input file %s: %s\n", path,
+            strerror(errno));
+    return;
+  }
+
+  uint8_t *buffer = malloc(len == 0 ? 1 : len);
+  if (buffer == NULL) {
+    fclose(file);
+    fprintf(stderr, "Error: Couldn't allocate UART input file buffer\n");
+    exit(EXIT_FAILURE);
+  }
+
+  size_t bytes_read = fread(buffer, 1, len, file);
+  if (bytes_read != len) {
+    fprintf(stderr, "Warning: Couldn't read complete UART input file %s\n",
+            path);
+  }
+  fclose(file);
+
+  append_uart_input_bytes(buffer, bytes_read);
+  free(buffer);
+}
+
+static void process_uart_load_command(void) {
+  const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
+  if (strncmp(uart_load_command, UART_LOAD_COMMAND_PREFIX, prefix_len) != 0) {
+    return;
+  }
+
+  char *path = uart_load_command + prefix_len;
+  while (*path == ' ' || *path == '\t') {
+    path++;
+  }
+
+  char *end = path + strlen(path);
+  while (end > path && (end[-1] == ' ' || end[-1] == '\t')) {
+    *--end = '\0';
+  }
+  if (*path == '\0') {
+    return;
+  }
+
+  struct stat st;
+  if (stat(path, &st) != 0) {
+    return;
+  }
+  if (S_ISDIR(st.st_mode)) {
+    fprintf(stderr,
+            "Warning: UART load directory chooser is not implemented; send "
+            "load <file> instead\n");
+    return;
+  }
+  if (!S_ISREG(st.st_mode)) {
+    return;
+  }
+  if (st.st_size < 0 || (uintmax_t)st.st_size > SIZE_MAX) {
+    fprintf(stderr, "Warning: UART input file %s is too large to load\n", path);
+    return;
+  }
+
+  load_file_into_uart_input(path, (size_t)(uintmax_t)st.st_size);
+}
+
+void uart_handle_sent_byte_for_load_command(uint8_t byte) {
+  if (byte == '\n' || byte == '\r') {
+    if (uart_load_command_candidate) {
+      uart_load_command[uart_load_command_len] = '\0';
+      process_uart_load_command();
+    }
+    uart_load_command_len = 0;
+    uart_load_command[0] = '\0';
+    uart_load_command_candidate = true;
+    return;
+  }
+
+  if (!uart_load_command_candidate) {
+    return;
+  }
+  if (uart_load_command_len >= UART_LOAD_COMMAND_MAX) {
+    uart_load_command_len = 0;
+    uart_load_command[0] = '\0';
+    uart_load_command_candidate = false;
+    return;
+  }
+
+  uart_load_command[uart_load_command_len++] = byte;
+  size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
+  if (uart_load_command_len <= prefix_len &&
+      strncmp(uart_load_command, UART_LOAD_COMMAND_PREFIX,
+              uart_load_command_len) != 0) {
+    uart_load_command_len = 0;
+    uart_load_command[0] = '\0';
+    uart_load_command_candidate = false;
+  }
 }
 
 static bool uart_send_requested(void) {
@@ -135,6 +263,7 @@ static void complete_send(void) {
     adjust_print(true, "%c", "%c", sent_byte);
   }
   remember_sent_byte(sent_byte);
+  uart_handle_sent_byte_for_load_command(sent_byte);
   uart[2] = uart[2] | UART_SEND_READY;
   send_state = UART_IDLE;
 }
@@ -160,7 +289,7 @@ static void update_uart_send(void) {
   }
 }
 
-static void set_uart_input_buffer(const uint8_t *input, uint16_t len) {
+static void set_uart_input_buffer(const uint8_t *input, size_t len) {
   free(uart_input);
   uart_input = malloc(len + 1);
   memcpy(uart_input, input, len);
@@ -242,7 +371,7 @@ static void ask_for_uart_input(void) {
   display_input_box((char *)input, "UART input (empty = newline):",
                     UART_INPUT_BOX_LEN);
 
-  uint16_t len;
+  size_t len;
   if (input[0] == '\0') {
     input[0] = '\n';
     input[1] = '\0';
