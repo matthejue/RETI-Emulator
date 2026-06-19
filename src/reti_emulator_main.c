@@ -23,15 +23,18 @@ static void load_interrupt_setup(void) {
   init_custom_interrupt_action_isr();
 }
 
-static void load_sram_program(void) {
+static void load_sram_program(Program_Sections *forced_sections) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
-                               .datasegment_start = 0};
+                               .datasegment_start = 0,
+                               .stack_start = 0,
+                               .has_stack_start = false};
   bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
   char *sram_prgrm_content = NULL;
 
   if (has_sram_prgrm) {
-    sections = parse_sections_for_reti_path(sram_prgrm_path);
+    sections = forced_sections == NULL ? parse_sections_for_reti_path(sram_prgrm_path)
+                                       : *forced_sections;
     sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
   }
 
@@ -85,7 +88,8 @@ static char *binary_output_path_for_reti_path(const char *reti_path) {
 }
 
 static void assemble_sram_program_to_binary(void) {
-  load_sram_program();
+  Program_Sections sections = parse_required_section_for_reti_path(sram_prgrm_path);
+  load_sram_program(&sections);
 
   char *bin_path = binary_output_path_for_reti_path(sram_prgrm_path);
   FILE *bin_file = fopen(bin_path, "w+b");
@@ -96,14 +100,16 @@ static void assemble_sram_program_to_binary(void) {
   }
 
   uint32_t num_words = num_instrs_isrs + num_instrs_prgrm + num_instrs_data;
+  write_file(bin_file, 0, sections.codesegment_start);
+  write_file(bin_file, 1, sections.datasegment_start);
+  write_file(bin_file, 2, sections.stack_start);
   for (uint32_t i = 0; i < num_words; i++) {
-    write_file(bin_file, i, read_file(sram, i));
+    write_file(bin_file, i + 3, read_file(sram, i));
   }
   fclose(bin_file);
 
-  if (verbose) {
-    printf("Wrote %u words to %s\n", num_words, bin_path);
-  }
+  printf("Wrote %u section words and %u SRAM words to %s\n", 3, num_words,
+         bin_path);
   free(bin_path);
 }
 
@@ -132,7 +138,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  load_sram_program();
+  load_sram_program(NULL);
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     error_context.filename = eprom_prgrm_path;

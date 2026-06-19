@@ -34,8 +34,36 @@ void test_parse_sections_for_reti_path(void) {
   assert(sections.exists);
   assert(sections.codesegment_start == 40);
   assert(sections.datasegment_start == 180);
+  assert(!sections.has_stack_start);
 
   remove(sections_path);
+}
+
+void test_section_path_for_reti_path(void) {
+  char *path = section_path_for_reti_path("/tmp/example.reti");
+  assert(strcmp(path, "/tmp/example.section") == 0);
+  free(path);
+
+  path = section_path_for_reti_path("/tmp/example");
+  assert(strcmp(path, "/tmp/example.section") == 0);
+  free(path);
+}
+
+void test_parse_required_section_for_reti_path(void) {
+  const char *reti_path = "/tmp/reti_required_section_test.reti";
+  const char *section_path = "/tmp/reti_required_section_test.section";
+  write_test_file(section_path,
+                  "{ \"codesegment_start\": 0, \"datasegment_start\": 4572, "
+                  "\"stack_start\": 8000 }");
+
+  Program_Sections sections = parse_required_section_for_reti_path(reti_path);
+  assert(sections.exists);
+  assert(sections.codesegment_start == 0);
+  assert(sections.datasegment_start == 4572);
+  assert(sections.stack_start == 8000);
+  assert(sections.has_stack_start);
+
+  remove(section_path);
 }
 
 void test_missing_parse_sections_file(void) {
@@ -46,7 +74,9 @@ void test_missing_parse_sections_file(void) {
 
 int main(void) {
   test_sections_path_for_reti_path();
+  test_section_path_for_reti_path();
   test_parse_sections_for_reti_path();
+  test_parse_required_section_for_reti_path();
   test_missing_parse_sections_file();
   return 0;
 }

@@ -1,6 +1,7 @@
 #include "../../include/parse/parse_sections.h"
 #include "../../include/utils.h"
 #include "../../vendor/cJSON/cJSON.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,8 @@ static bool file_exists(const char *path) {
   return true;
 }
 
-char *sections_path_for_reti_path(const char *reti_path) {
+static char *path_for_reti_path_with_extension(const char *reti_path,
+                                               const char *extension) {
   if (strcmp(reti_path, "-") == 0) {
     return NULL;
   }
@@ -26,24 +28,89 @@ char *sections_path_for_reti_path(const char *reti_path) {
   if (path_len >= suffix_len &&
       strcmp(reti_path + path_len - suffix_len, reti_suffix) == 0) {
     size_t basename_len = path_len - suffix_len;
-    char *sections_path = malloc(basename_len + strlen(".sections") + 1);
+    char *sections_path = malloc(basename_len + strlen(extension) + 1);
     if (sections_path == NULL) {
       fprintf(stderr, "Failed to allocate memory\n");
       exit(EXIT_FAILURE);
     }
     strncpy(sections_path, reti_path, basename_len);
     sections_path[basename_len] = '\0';
-    strcat(sections_path, ".sections");
+    strcat(sections_path, extension);
     return sections_path;
   }
 
-  return proper_str_cat(reti_path, ".sections");
+  return proper_str_cat(reti_path, extension);
+}
+
+char *sections_path_for_reti_path(const char *reti_path) {
+  return path_for_reti_path_with_extension(reti_path, ".sections");
+}
+
+char *section_path_for_reti_path(const char *reti_path) {
+  return path_for_reti_path_with_extension(reti_path, ".section");
+}
+
+static uint32_t read_uint32_section_value(cJSON *root, const char *key,
+                                          const char *path, bool required,
+                                          bool *exists) {
+  cJSON *item = cJSON_GetObjectItemCaseSensitive(root, key);
+  if (item == NULL) {
+    if (required) {
+      fprintf(stderr, "Error: Missing \"%s\" in %s\n", key, path);
+      exit(EXIT_FAILURE);
+    }
+    *exists = false;
+    return 0;
+  }
+
+  if (!cJSON_IsNumber(item) || item->valuedouble < 0 ||
+      item->valuedouble > UINT32_MAX ||
+      item->valuedouble != (uint32_t)item->valuedouble) {
+    fprintf(stderr, "Error: \"%s\" in %s must be an unsigned 32-bit integer\n",
+            key, path);
+    exit(EXIT_FAILURE);
+  }
+
+  *exists = true;
+  return (uint32_t)item->valuedouble;
+}
+
+static Program_Sections parse_sections_file(const char *sections_path,
+                                            bool require_stack_start) {
+  Program_Sections sections = {.exists = false,
+                               .codesegment_start = 0,
+                               .datasegment_start = 0,
+                               .stack_start = 0,
+                               .has_stack_start = false};
+  char *content = read_file_content(sections_path);
+  cJSON *root = cJSON_Parse(content);
+  if (root == NULL) {
+    fprintf(stderr, "Error: Failed to parse %s as JSON\n", sections_path);
+    free(content);
+    exit(EXIT_FAILURE);
+  }
+
+  bool exists;
+  sections.exists = true;
+  sections.codesegment_start = read_uint32_section_value(
+      root, "codesegment_start", sections_path, true, &exists);
+  sections.datasegment_start = read_uint32_section_value(
+      root, "datasegment_start", sections_path, true, &exists);
+  sections.stack_start = read_uint32_section_value(
+      root, "stack_start", sections_path, require_stack_start,
+      &sections.has_stack_start);
+
+  cJSON_Delete(root);
+  free(content);
+  return sections;
 }
 
 Program_Sections parse_sections_for_reti_path(const char *reti_path) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
-                               .datasegment_start = 0};
+                               .datasegment_start = 0,
+                               .stack_start = 0,
+                               .has_stack_start = false};
   char *sections_path = sections_path_for_reti_path(reti_path);
   if (sections_path == NULL) {
     return sections;
@@ -53,23 +120,21 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
     return sections;
   }
 
-  char *content = read_file_content(sections_path);
-  cJSON *root = cJSON_Parse(content);
-  if (root == NULL) {
-    fprintf(stderr, "Error: Failed to parse %s as JSON\n", sections_path);
-    free(content);
-    free(sections_path);
+  sections = parse_sections_file(sections_path, false);
+  free(sections_path);
+  return sections;
+}
+
+Program_Sections parse_required_section_for_reti_path(const char *reti_path) {
+  char *section_path = section_path_for_reti_path(reti_path);
+  if (section_path == NULL || !file_exists(section_path)) {
+    fprintf(stderr, "Error: Assemble mode requires section file %s\n",
+            section_path == NULL ? "<stdin>.section" : section_path);
+    free(section_path);
     exit(EXIT_FAILURE);
   }
 
-  sections.exists = true;
-  sections.codesegment_start =
-      cJSON_GetObjectItemCaseSensitive(root, "codesegment_start")->valueint;
-  sections.datasegment_start =
-      cJSON_GetObjectItemCaseSensitive(root, "datasegment_start")->valueint;
-
-  cJSON_Delete(root);
-  free(content);
-  free(sections_path);
+  Program_Sections sections = parse_sections_file(section_path, true);
+  free(section_path);
   return sections;
 }
