@@ -385,20 +385,44 @@ uint16_t decode_uart_input_escapes(uint8_t *input, uint16_t len) {
   return write_idx;
 }
 
-static void ask_for_uart_input(void) {
-  uint8_t input[UART_INPUT_BOX_LEN + 2];
-  display_input_box((char *)input, "UART input (empty = newline):",
-                    UART_INPUT_BOX_LEN);
-
-  size_t len;
+static void normalize_uart_input(uint8_t *input, size_t *len) {
   if (input[0] == '\0') {
     input[0] = '\n';
     input[1] = '\0';
-    len = 1;
+    *len = 1;
   } else {
-    len = decode_uart_input_escapes(input, strlen((char *)input));
-    append_newline(input, &len);
+    *len = decode_uart_input_escapes(input, strlen((char *)input));
+    append_newline(input, len);
   }
+}
+
+static void ask_for_uart_input(void) {
+  uint8_t input[UART_INPUT_BOX_LEN + 2];
+  size_t len;
+
+  if (debug_mode) {
+    display_input_box((char *)input, "UART input (empty = newline):",
+                      UART_INPUT_BOX_LEN);
+  } else {
+    fflush(stdout);
+    printf("\nUART input (empty = newline): ");
+    fflush(stdout);
+
+    if (fgets((char *)input, UART_INPUT_BOX_LEN + 1, stdin) == NULL) {
+      input[0] = '\0';
+    } else {
+      len = strlen((char *)input);
+      if (len > 0 && input[len - 1] == '\n') {
+        input[len - 1] = '\0';
+      } else {
+        int ch;
+        while ((ch = getchar()) != '\n' && ch != EOF) {
+        }
+      }
+    }
+  }
+
+  normalize_uart_input(input, &len);
 
   set_uart_input_buffer(input, len);
 }
