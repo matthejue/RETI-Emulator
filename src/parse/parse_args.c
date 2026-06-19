@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <unistd.h>
 
 uint32_t sram_size = 65536;
@@ -17,6 +18,7 @@ bool binary_mode = false;
 bool extended_features = false;
 bool read_metadata = false;
 bool collect_comments = false;
+bool assemble_mode = false;
 uint8_t max_waiting_instrs = 10;
 bool verbose = false;
 bool ds_vals_unsigned = false;
@@ -35,28 +37,28 @@ void print_help(char *bin_name) {
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-C interrupt_controller_config_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata comments) -c (show source comments in tui) -v (verbose) "
-      "-b (binary mode) -E (extended features) -a (all) -u (ds vals unsigned) "
+      "-b (binary mode) -E (extended features) -a, --assemble (write encoded .bin and exit) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
       "-I timer_interrupt_interval -h (help page) "
       "prgrm_path\n",
       bin_name);
 }
 
-void parse_args(uint8_t argc, char *argv[]) {
+void parse_args(int argc, char *argv[]) {
   uint32_t opt;
+  static struct option long_options[] = {
+      {"assemble", no_argument, NULL, 'a'},
+      {0, 0, 0, 0},
+  };
 
-  while ((opt = getopt(argc, argv, "r:p:f:e:i:C:w:hdvtmbEcauKI:")) != -1) {
+  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:w:hdvtmbEcauKI:",
+                            long_options, NULL)) != -1) {
     char *endptr;
     int64_t tmp_val;
 
     switch (opt) {
     case 'a':
-      debug_mode = true;
-      peripherals_dir = "/tmp";
-      verbose = true;
-      read_metadata = true;
-      binary_mode = true;
-      collect_comments = true;
+      assemble_mode = true;
       break;
     case 'r':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -174,6 +176,7 @@ void print_args() {
   printf("Debug mode: %s\n", debug_mode ? "true" : "false");
   printf("Read metadata: %s\n", read_metadata ? "true" : "false");
   printf("Collect comments: %s\n", collect_comments ? "true" : "false");
+  printf("Assemble mode: %s\n", assemble_mode ? "true" : "false");
   printf("Test mode: %s\n", test_mode ? "true" : "false");
   printf("Binary mode: %s\n", binary_mode ? "true" : "false");
   printf("Verbose: %s\n", verbose ? "true" : "false");

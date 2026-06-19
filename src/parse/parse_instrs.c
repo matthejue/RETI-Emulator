@@ -416,6 +416,8 @@ void parse_and_load_program_range(char *prgrm, Program_Type prgrm_type,
     num_instrs_isrs = loaded_entries;
   } else if (prgrm_type == EPROM_START_PRGRM) {
     num_instrs_start_prgrm = loaded_entries;
+  } else if (prgrm_type == SRAM_DATA) {
+    num_instrs_data = loaded_entries;
   }
   free(prgrm);
 }

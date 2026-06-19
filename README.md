@@ -33,13 +33,13 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
 - `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
+- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt die Maschinenwörter binär kodiert wie in `sram.bin`
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts
 - `-h`: Zeigt Verwendungshinweise an
 
 <!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
 <!-- - `-r radius`: Setzt Radius an Speicherzellen, die in der Legacy Debug TUI um einen observierten Addresspointer herum angezeigt werden sollen -->
-<!-- - `-a`: Aktiviert die Kommandozeilenoptionen, welche für die meisten Verwendungszwecke nützlich sind -->
 <!-- - `-l`: Zeigt das Legacy Debug Interface anstelle -->
 
 ## TUI Aktionen

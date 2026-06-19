@@ -17,6 +17,7 @@ FILE *sram;
 uint32_t num_instrs_prgrm = 0;
 uint32_t num_instrs_start_prgrm = 0;
 uint32_t num_instrs_isrs = 0;
+uint32_t num_instrs_data = 0;
 
 void init_reti() {
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);

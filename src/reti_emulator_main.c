@@ -11,27 +11,12 @@
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include "../include/core_debug.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char *argv[]) {
-  gargv = argv;
-
-  parse_args(argc, argv);
-  if (verbose) {
-    print_args();
-  }
-  if (test_mode) {
-    create_out_and_err_file();
-  }
-  if (read_metadata) {
-    uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
-  }
-
-  init_reti();
-  if (debug_mode) {
-    init_tui();
-  }
-
+static void load_sram_program(void) {
   Program_Sections sections = parse_sections_for_reti_path(sram_prgrm_path);
   bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
   char *sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
@@ -65,6 +50,74 @@ int main(int argc, char *argv[]) {
   } else {
     parse_and_load_program(sram_prgrm_content, SRAM_PRGRM);
   }
+}
+
+static char *binary_output_path_for_reti_path(const char *reti_path) {
+  char *bin_path = malloc(strlen(reti_path) + strlen(".bin") + 1);
+  if (bin_path == NULL) {
+    fprintf(stderr, "Malloc failed\n");
+    exit(EXIT_FAILURE);
+  }
+
+  strcpy(bin_path, reti_path);
+  char *last_slash = strrchr(bin_path, '/');
+  char *ext = strrchr(last_slash == NULL ? bin_path : last_slash + 1, '.');
+  if (ext != NULL) {
+    *ext = '\0';
+  }
+  strcat(bin_path, ".bin");
+  return bin_path;
+}
+
+static void assemble_sram_program_to_binary(void) {
+  load_sram_program();
+
+  char *bin_path = binary_output_path_for_reti_path(sram_prgrm_path);
+  FILE *bin_file = fopen(bin_path, "w+b");
+  if (bin_file == NULL) {
+    fprintf(stderr, "Error: Couldn't open binary output file %s\n", bin_path);
+    free(bin_path);
+    exit(EXIT_FAILURE);
+  }
+
+  uint32_t num_words = num_instrs_isrs + num_instrs_prgrm + num_instrs_data;
+  for (uint32_t i = 0; i < num_words; i++) {
+    write_file(bin_file, i, read_file(sram, i));
+  }
+  fclose(bin_file);
+
+  if (verbose) {
+    printf("Wrote %u words to %s\n", num_words, bin_path);
+  }
+  free(bin_path);
+}
+
+int main(int argc, char *argv[]) {
+  gargv = argv;
+
+  parse_args(argc, argv);
+  if (verbose) {
+    print_args();
+  }
+  if (test_mode) {
+    create_out_and_err_file();
+  }
+  if (read_metadata) {
+    uart_input = extract_comment_metadata(sram_prgrm_path, &input_len);
+  }
+
+  init_reti();
+  if (debug_mode && !assemble_mode) {
+    init_tui();
+  }
+
+  if (assemble_mode) {
+    assemble_sram_program_to_binary();
+    finalize();
+    return 0;
+  }
+
+  load_sram_program();
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     error_context.filename = eprom_prgrm_path;

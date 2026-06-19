@@ -13,6 +13,7 @@ extern bool binary_mode;
 extern bool extended_features;
 extern bool read_metadata;
 extern bool collect_comments;
+extern bool assemble_mode;
 extern uint8_t max_waiting_instrs;
 extern bool verbose;
 extern bool ds_vals_unsigned;
@@ -24,7 +25,7 @@ extern char *sram_prgrm_path;
 extern char *isrs_prgrm_path;
 extern char *interrupt_controller_config_path;
 
-void parse_args(uint8_t argc, char *argv[]);
+void parse_args(int argc, char *argv[]);
 void print_args();
 
 #endif // PARSE_PARSE_ARGS_H
