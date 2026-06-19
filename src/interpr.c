@@ -423,7 +423,6 @@ void interpr_prgrm() {
       free(assembly_instr);
     }
 
-    uart_receive();
-    uart_send();
+    update_uart();
   }
 }

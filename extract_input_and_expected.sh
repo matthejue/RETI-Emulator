@@ -9,11 +9,17 @@ else
 fi
 
 for test in "${paths[@]}"; do
-  if [[ $(sed -n "1p" "$test") =~ ^#\ output: ]]; then
-    sed -n '1p' "$test" | tr '\t' ' ' | sed -e 's/^# output: *//' | tr '\n' ' ' > "${test%.reti}.expected_output"
-  elif [[ $(sed -n "2p" "$test") =~ ^#\ output: ]]; then
-    sed -n '2p' "$test" | tr '\t' ' ' | sed -e 's/^# output: *//' | tr '\n' ' ' > "${test%.reti}.expected_output"
-  elif [[ $(sed -n "3p" "$test") =~ ^#\ output: ]]; then
-    sed -n '3p' "$test" | tr '\t' ' ' | sed -e 's/^# output: *//' | tr '\n' ' ' > "${test%.reti}.expected_output"
+  output_line=$(
+    sed -n '1,3p' "$test" \
+      | awk '/^# output:/ {
+          sub(/^# output:[ \t]*/, "")
+          gsub(/\t/, " ")
+          printf "%s", $0
+          exit
+        }'
+  )
+
+  if [[ -n "$output_line" ]]; then
+    printf '%s' "$output_line" > "${test%.reti}.expected_output"
   fi
 done

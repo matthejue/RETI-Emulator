@@ -16,7 +16,7 @@ typedef enum {
 #define INTERRUPT_CONTROLLER_ISR_BASE NUM_UART_REGISTERS
 #define INTERRUPT_CONTROLLER_PRIO_BASE                                      \
   (INTERRUPT_CONTROLLER_ISR_BASE + NUM_HARDWARE_INTERRUPT_SIGNAL_LINES)
-#define NUM_UART_ADDRESSES                                                   \
+#define NUM_PERIPHERY_ADDRESSES                                              \
   (NUM_UART_REGISTERS + 2 * NUM_HARDWARE_INTERRUPT_SIGNAL_LINES)
 #define NUM_ISR_SLOTS INVALID_ISR_NUM
 

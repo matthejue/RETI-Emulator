@@ -509,7 +509,7 @@ LOADIN SP IN1 1
 ADDI IN1 1
 STOREIN SP IN1 1
 # Exp(Call(Name('input'), []))
-INT 2
+INT 1
 SUBI SP 1
 STOREIN SP ACC 1
 # Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))
@@ -539,7 +539,7 @@ LOADIN SP IN1 1
 ADDI IN1 1
 STOREIN SP IN1 1
 # Exp(Call(Name('input'), []))
-INT 2
+INT 1
 SUBI SP 1
 STOREIN SP ACC 1
 # Ref(Subscr(Stack(Num('2')), Stack(Num('1'))))

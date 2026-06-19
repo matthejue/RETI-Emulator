@@ -1,4 +1,4 @@
 # input: 2147483647 a 2147483648
 # output: InputError
-INT 2
+INT 1
 JUMP 0

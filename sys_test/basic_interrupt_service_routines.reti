@@ -1,0 +1,9 @@
+# input:49
+# output:4B9
+INT 1
+INT 0
+LOADI ACC 66
+INT 0
+INT 1
+INT 0
+JUMP 0

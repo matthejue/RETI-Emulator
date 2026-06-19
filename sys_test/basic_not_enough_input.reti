@@ -1,0 +1,9 @@
+# input:10
+# output:10\n
+INT 1
+INT 0
+INT 1
+INT 0
+INT 1
+INT 0
+JUMP 0

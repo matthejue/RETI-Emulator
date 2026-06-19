@@ -1,7 +1,7 @@
 # input: 42
 # output: 42 42 42 42 42
 INT 3
-INT 2
+INT 1
 INT 0
 INT 0
 INT 0

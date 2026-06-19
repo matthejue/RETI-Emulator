@@ -1,7 +1,7 @@
-# input: 10
-# output: 10
+# input:a
+# output:a
 # aädf æsd: @asd; asdfasdf;
-INT 2 # A really important comment 
+INT 1 # A really important comment 
 INT 3
 INT 0;# A really close important comment   
 # Another really important comment

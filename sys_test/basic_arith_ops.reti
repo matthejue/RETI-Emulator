@@ -1,6 +1,6 @@
-# input: 42
-# output: 37
-INT 2
+# input:*
+# output:%
+INT 1
 ADDI ACC 1
 MULTI ACC 2
 SUBI ACC 12

@@ -1,0 +1,55 @@
+# input:Hello World
+# output:dlroW olleH
+# == Print Hello World over UART ==
+# SAVE DS
+  .text
+PUSH DS
+# Save letters for "Hello World"
+INT 1 # H
+PUSH ACC
+INT 1 # e
+PUSH ACC
+INT 1 # l
+PUSH ACC
+INT 1 # l
+PUSH ACC
+INT 1 # o
+PUSH ACC
+INT 1 # " "
+PUSH ACC
+INT 1 # W
+PUSH ACC
+INT 1 # o
+PUSH ACC
+INT 1 # r
+PUSH ACC
+INT 1 # l
+PUSH ACC
+INT 1 # d
+PUSH ACC
+# Print over uart
+POP ACC # d
+INT 0
+POP ACC # l
+INT 0
+POP ACC # r
+INT 0
+POP ACC # o
+INT 0
+POP ACC # W
+INT 0
+POP ACC # " " 
+INT 0
+POP ACC # o
+INT 0
+POP ACC # l
+INT 0
+POP ACC # l
+INT 0
+POP ACC # e
+INT 0
+POP ACC # H
+INT 0
+# RESTORE DS
+POP DS
+JUMP 0

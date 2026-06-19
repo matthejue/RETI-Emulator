@@ -1,7 +1,7 @@
-#include "../include/interrupt_controller.h"
-#include "../include/assemble.h"
-#include "../include/interrupt.h"
-#include "../include/uart.h"
+#include "../../include/interrupt_controller.h"
+#include "../../include/assemble.h"
+#include "../../include/interrupt.h"
+#include "../../include/uart.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

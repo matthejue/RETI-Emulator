@@ -145,7 +145,7 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
     if (addr >= INTERRUPT_CONTROLLER_ISR_BASE &&
-        addr < NUM_UART_ADDRESSES) {
+        addr < NUM_PERIPHERY_ADDRESSES) {
       sync_interrupt_controller_from_memory();
     }
   } else {

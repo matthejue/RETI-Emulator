@@ -14,3 +14,12 @@ test_results
 *.pdf
 source_debug_assignment/simple_assignment.debuginfo
 source_debug_assignment/simple_assignment.reti
+.bak/Makefile.bak
+.bak/run_sys_tests.sh.bak
+.bak/todo.norg
+.bak/sections/simple_interrupt_sections.reti
+.bak/sections/simple_interrupt_sections.sections
+.bak/source_debug_assignment/simple_assignment.debuginfo
+.bak/source_debug_assignment/simple_assignment.picoc
+.bak/source_debug_assignment/simple_assignment.reti
+.bak/run_sys_tests

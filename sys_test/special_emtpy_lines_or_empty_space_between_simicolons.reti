@@ -1,6 +1,6 @@
 # input: 41
 # output: 42
-INT 2
+INT 1
 
 DIVI ACC 2; ; # don't care about readable code
 

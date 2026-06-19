@@ -387,7 +387,7 @@ static uint64_t max_idx_for_mem_type(MemType mem_type) {
   case EPROM:
     return EPROM_SIZE - 1;
   case UART:
-    return NUM_UART_ADDRESSES - 1;
+    return NUM_PERIPHERY_ADDRESSES - 1;
   case SRAM_C:
   case SRAM_D:
   case SRAM_S:
@@ -708,7 +708,7 @@ static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
     write_array(eprom, idx, value, false);
     return true;
   case UART:
-    if (idx >= NUM_UART_ADDRESSES) {
+    if (idx >= NUM_PERIPHERY_ADDRESSES) {
       display_notification_box(
           "Assign Value",
           "Peripheral address is outside the mapped UART/controller area.");
@@ -819,6 +819,17 @@ void print_formatted_to_box(const char *format, Box *box, ...) {
   va_end(args);
 }
 
+static void print_uart_byte_for_tui(uint8_t byte) {
+  char buffer[6];
+  print_formatted_to_box("%s", &uart_box, format_uart_byte(byte, buffer));
+}
+
+static void print_uart_bytes_for_tui(const uint8_t *bytes, uint16_t len) {
+  for (uint16_t i = 0; i < len; i++) {
+    print_uart_byte_for_tui(bytes[i]);
+  }
+}
+
 static void print_full_width_line_to_box_with_attr(Box *box, int attr,
                                                    const char *line) {
   int inner_width = max(0, box->width - 2);
@@ -869,7 +880,7 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   case UART:
     snprintf(idx_str, sizeof(idx_str),
              proper_str_cat(proper_str_cat("%0", num_digits_for_idx_str(
-                                                     NUM_UART_ADDRESSES)),
+                                                     NUM_PERIPHERY_ADDRESSES)),
                             "zu"),
              idx);
     break;
@@ -1144,46 +1155,31 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
 }
 
 void print_uart_meta_data() {
-  print_formatted_to_box("Current send data: %s\n", &uart_box,
-                         current_send_data ? current_send_data : "");
-  print_formatted_to_box("All send data: %s\n", &uart_box,
-                         all_send_data ? all_send_data : "");
+  print_formatted_to_box("Current send data: ", &uart_box);
+  if (current_send_data != NULL) {
+    print_uart_bytes_for_tui((uint8_t *)current_send_data,
+                             current_send_data_len);
+  }
+  print_formatted_to_box("\n", &uart_box);
+  print_formatted_to_box("All send data: ", &uart_box);
+  if (all_send_data != NULL) {
+    print_uart_bytes_for_tui((uint8_t *)all_send_data, all_send_data_len);
+  }
+  print_formatted_to_box("\n", &uart_box);
   print_formatted_to_box("Waiting time sending: ", &uart_box);
   print_formatted_to_box("%d\n", &uart_box, sending_waiting_time);
   print_formatted_to_box("Waiting time receiving: ", &uart_box);
   print_formatted_to_box("%d\n", &uart_box, receiving_waiting_time);
   if (receiving_waiting_time > 0) {
-    print_formatted_to_box("Current input: %u\n", &uart_box, received_num_part);
+    print_formatted_to_box("Current input: ", &uart_box);
+    print_uart_byte_for_tui(receive_current_byte);
+    print_formatted_to_box("\n", &uart_box);
   } else {
     print_formatted_to_box("Current input:\n", &uart_box);
   }
   print_formatted_to_box("Remaining input: ", &uart_box);
-  if (read_metadata && input_idx < input_len) {
-    for (uint8_t i = input_idx; i < input_len; i++) {
-      if (i == input_idx && (int8_t)received_num_idx >= 0) {
-        print_formatted_to_box("%d(", &uart_box, received_num);
-        for (uint8_t j = received_num_idx; j != 0; j--) {
-          uint8_t received_num_part =
-              (received_num & (0xFF << (j * 8))) >> (j * 8);
-          print_formatted_to_box("%u ", &uart_box, received_num_part);
-        }
-        uint8_t received_num_part = received_num & 0xFF;
-        print_formatted_to_box("%u) ", &uart_box, received_num_part);
-      } else {
-        print_formatted_to_box("%d ", &uart_box, uart_input[i]);
-      }
-    }
-  } else {
-    if ((int8_t)received_num_idx >= 0) {
-      print_formatted_to_box("%d(", &uart_box, received_num);
-      for (uint8_t j = received_num_idx; j != 0; j--) {
-        uint8_t received_num_part =
-            (received_num & (0xFF << (j * 8))) >> (j * 8);
-        print_formatted_to_box("%u ", &uart_box, received_num_part);
-      }
-      uint8_t received_num_part = received_num & 0xFF;
-      print_formatted_to_box("%u)", &uart_box, received_num_part);
-    }
+  if (input_idx < input_len) {
+    print_uart_bytes_for_tui(uart_input + input_idx, input_len - input_idx);
   }
   print_formatted_to_box("\n", &uart_box);
 }
@@ -1466,7 +1462,7 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 static void print_interrupt_controller_view(void) {
   handle_heading(true, &uart_box, "Interrupt Controller View [a: UART]", "", 0);
   print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
-                                NUM_UART_ADDRESSES - 1, false);
+                                NUM_PERIPHERY_ADDRESSES - 1, false);
 }
 
 bool draw_tui(void) {

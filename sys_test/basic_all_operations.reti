@@ -1,5 +1,5 @@
-# input: 1 0 0 -1 0 -1 -1 0 1 0 0 1
-# output: -2147483641 0 -1 -1 0 0 1
+# input:\d001\d000\d000\d255\d000\d001\d255\d000\d001\d000\d000\d001
+# output:\d004\0\d255\d255\0\0\d001
 INT 3
 # Compute Immediate
 ADDI IN1 -42
@@ -39,22 +39,26 @@ MOVE BAF ACC
 # Jump
 NOP
 INT 0
-INT 2
+INT 1
 JUMP> -1
 INT 0
-INT 2
+INT 1
 JUMP== -1
 INT 0
-INT 2
-JUMP>= -1
+INT 1
+JUMP== 2
+MULTI ACC -1
+JUMP>= -3
 INT 0
-INT 2
-JUMP< -1
+INT 1
+JUMP== 2
+MULTI ACC -1
+JUMP< -3
 INT 0
-INT 2
+INT 1
 JUMP!= -1
 INT 0
-INT 2
+INT 1
 JUMP<= -1
 INT 3
 INT 0

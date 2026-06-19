@@ -15,7 +15,7 @@ SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c) $(wildcar
 VENDOR_SRC := $(wildcard $(VENDOR_DIR)/cJSON/*.c)
 OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(VENDOR_SRC:%.c=$(OBJ_DIR)/%.o)
 
-CC			 := gcc
+CC       := gcc
 CPPFLAGS := -I$(INCLUDE_DIR) -I$(VENDOR_DIR)/cJSON -MMD -MP
 CFLAGS   := -Wall
 LDFLAGS  :=
@@ -25,7 +25,7 @@ ifeq ($(LINUX_STATIC), 1)
 	CPPFLAGS += -I$(INCLUDE_DIR)/ncursesw
 	LDFLAGS  += -static -L$(LIB_DIR)
 	LDLIBS   += -lncursesw
-else 
+else
 	ifeq ($(LINUX), 1)
 		LDLIBS += -lncurses
 	else
@@ -46,16 +46,36 @@ else
 endif
 
 .PRECIOUS: $(OBJ_DIR)/%.o $(OBJ_TEST_DIR)/%.o
-.PHONY: all sys-test unit-test run clean clean-directories clean-files debug install-linux
+
+.PHONY: \
+	all \
+	sys-test \
+	test_no_passed \
+	unit-test \
+	run \
+	clean \
+	clean-directories \
+	clean-files \
+	debug \
+	run_send_keypresses \
+	debug_send_keypresses \
+	install-linux-local \
+	pull-latest-version \
+	update-linux-local \
+	uninstall-linux-local \
+	install-linux-global \
+	update-linux-global \
+	uninstall-linux-global
 
 all: $(BIN_SRC)
 
 SHELL := /bin/bash -x
+
 unit-test: $(BIN_TEST)
-		@bash -c 'for T in $(BIN_TEST); do \
-			echo "Running $$T"; \
-			./$$T || echo "$$T failed with exit code $$?"; \
-		done'
+	@bash -c 'for T in $(BIN_TEST); do \
+		echo "Running $$T"; \
+		./$$T || echo "$$T failed with exit code $$?"; \
+	done'
 
 $(BIN_DIR)/%_main: $(OBJ_DIR)/%_main.o $(OBJ_SRC) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -79,12 +99,17 @@ $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR):
 
 sys-test: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
-	./run_sys_tests.sh $${COLUMNS} $(shell cat ./opts/test_pattern.txt) $(EXTRA_ARGS);
+	./run_sys_tests.sh "$${COLUMNS}" "$(shell cat ./opts/test_pattern.txt)" "$(EXTRA_ARGS)"
+
+test_no_passed: $(BIN_SRC)
+	./export_environment_vars_for_makefile.sh;\
+	./run_sys_tests.sh --not-passed "$${COLUMNS}" "" "$(EXTRA_ARGS)"
 
 run: $(BIN_SRC)
 	./bin/reti_emulator_main $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
 
 clean: clean-files clean-directories
+
 clean-directories:
 	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR)
 	find . -type d -wholename ".cache" -delete
@@ -97,6 +122,7 @@ clean-files:
 	find . -type f -name "test_results" -delete
 
 DEB_BIN := reti_emulator_main
+
 run_send_keypresses:
 	./send_keypresses.py --input ./opts/input.txt ./bin/$(DEB_BIN) $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
 

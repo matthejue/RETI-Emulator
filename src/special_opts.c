@@ -6,7 +6,7 @@
 #include "../include/reti.h"
 #include "../include/source_debug.h"
 #include "../include/utils.h"
-#include <ctype.h>
+#include "../include/uart.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@
 FILE *out_file = NULL;
 FILE *err_file = NULL;
 
-uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
+uint8_t *extract_input_from_comment(const char *line, uint16_t *len) {
   const char *prefix;
   if (!strncmp(line, "# input:", strlen("# input:"))) {
     prefix = "# input:";
@@ -27,73 +27,24 @@ uint32_t *extract_input_from_comment(const char *line, uint8_t *len) {
   }
 
   const char *ptr = line + strlen(prefix);
-  uint32_t *ar = NULL;
-  uint8_t count = 0;
+  /* keep the first whitespace. Commenting out the automatic
+     skip of a single space/tab after the prefix. */
+  /* if (*ptr == ' ' || *ptr == '\t') {
+    ptr++;
+  } */
 
-  while (*ptr) {
-    while (isspace((unsigned char)*ptr)) {
-      ptr++;
-    }
-
-    if (*ptr == '\0') {
-      break;
-    }
-
-    ar = realloc(ar, (count + 1) * sizeof(uint32_t));
-    if (*ptr == '\'') {
-      if (*(ptr + 1) == '\\' && *(ptr + 3) == '\'') {
-        switch (*(ptr + 2)) {
-        case 'n':
-          ar[count++] = '\n';
-          ptr += 4;
-          continue;
-        case 't':
-          ar[count++] = '\t';
-          ptr += 4;
-          continue;
-        case '\\':
-          ar[count++] = '\\';
-          ptr += 4;
-          continue;
-        case '\'':
-          ar[count++] = '\'';
-          ptr += 4;
-          continue;
-        default:
-          ar[count++] = (uint8_t)*ptr++;
-          continue;
-        }
-      } else if (*(ptr + 1) != '\0' && *(ptr + 2) == '\'') {
-        ar[count++] = (uint8_t)*(ptr + 1);
-        ptr += 3;
-        continue;
-      }
-    } else if (isdigit((unsigned char)*ptr) || *ptr == '-') {
-      uint8_t *original_ptr = (uint8_t *)ptr;
-      uint64_t num = strtol(ptr, (char **)&ptr, 10);
-      if ((int64_t)num < INT32_MIN || (int64_t)num > INT32_MAX) {
-        uint8_t idx_of_newline = strcspn((char *)original_ptr, "\n");
-        original_ptr[idx_of_newline] = '\0';
-        display_error_message(
-            "InputError",
-            "Number must be between -2147483648 and 2147483647, got \"%s\"",
-            (char *)original_ptr, Pntr);
-
-        exit(test_mode ? EXIT_SUCCESS : EXIT_FAILURE);
-      }
-      ar[count++] = (uint32_t)num;
-    } else {
-      ar[count++] = (uint8_t)*ptr++;
-    }
-  }
-
-  *len = count;
-  return ar;
+  *len = strcspn(ptr, "\n");
+  uint8_t *input = malloc(*len + 2);
+  memcpy(input, ptr, *len);
+  *len = decode_uart_input_escapes(input, *len);
+  input[(*len)++] = '\n';
+  input[*len] = '\0';
+  return input;
 }
 
 bool first_line_over = false;
 
-uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
+uint8_t *extract_comment_metadata(const char *prgrm_path, uint16_t *len) {
   error_context.filename = prgrm_path;
   FILE *file = fopen(prgrm_path, "r");
   if (file == NULL) {
@@ -102,7 +53,7 @@ uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
   }
 
   char line[256];
-  uint32_t *result = NULL;
+  uint8_t *result = NULL;
   *len = 0;
 
   while (fgets(line, sizeof(line), file)) {
@@ -118,7 +69,7 @@ uint32_t *extract_comment_metadata(const char *prgrm_path, uint8_t *len) {
     }
 
     if (line[0] == '#') {
-      uint32_t *extract_ar = extract_input_from_comment(line, len);
+      uint8_t *extract_ar = extract_input_from_comment(line, len);
       if (extract_ar) {
         result = extract_ar;
       }

@@ -1,4 +1,4 @@
-# output: -1 0
+# output:\d255\0
 MOVE CS IN1
 ADDI IN1 10
 LOADIN IN1 ACC 0

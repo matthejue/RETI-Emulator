@@ -1,4 +1,4 @@
-# output: 0 1 0
+# output:\0\d001\0
 LOADI IN2 0
 STOREIN DS IN2 0
 TSL DS ACC 0
