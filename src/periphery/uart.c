@@ -147,7 +147,25 @@ static void append_uart_input_bytes(const uint8_t *input, size_t len) {
   uart_input = new_input;
 }
 
+static void append_uart_input_word_count(size_t file_len) {
+  size_t num_words = file_len / sizeof(uint32_t);
+  uint32_t word_count = (uint32_t)num_words;
+  uint8_t word_count_bytes[sizeof(uint32_t)] = {
+      (uint8_t)(word_count >> 24),
+      (uint8_t)(word_count >> 16),
+      (uint8_t)(word_count >> 8),
+      (uint8_t)word_count,
+  };
+  append_uart_input_bytes(word_count_bytes, sizeof(word_count_bytes));
+}
+
 static void load_file_into_uart_input(const char *path, size_t len) {
+  if (len / sizeof(uint32_t) > UINT32_MAX) {
+    fprintf(stderr, "Warning: UART input file %s contains too many words\n",
+            path);
+    return;
+  }
+
   FILE *file = fopen(path, "rb");
   if (file == NULL) {
     fprintf(stderr, "Warning: Couldn't load UART input file %s: %s\n", path,
@@ -169,6 +187,7 @@ static void load_file_into_uart_input(const char *path, size_t len) {
   }
   fclose(file);
 
+  append_uart_input_word_count(bytes_read);
   append_uart_input_bytes(buffer, bytes_read);
   free(buffer);
 }

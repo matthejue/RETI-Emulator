@@ -71,7 +71,8 @@ void test_format_uart_byte() {
 
 void test_uart_load_command_appends_file_to_input() {
   const char *filename = "uart_load_test.bin";
-  const uint8_t file_content[] = {'A', '\0', 255};
+  const uint8_t file_content[] = {'A', '\0', 255, 'B', 'C', 'D', 'E', 'F'};
+  const uint8_t expected_word_count[] = {0, 0, 0, 2};
   FILE *file = fopen(filename, "wb");
   if (file == NULL) {
     fprintf(stderr, "Error: File could not be opened\n");
@@ -98,10 +99,14 @@ void test_uart_load_command_appends_file_to_input() {
     uart_handle_sent_byte_for_load_command(command[i]);
   }
 
-  assert(input_len == 2 + sizeof(file_content));
+  assert(input_len ==
+         2 + sizeof(expected_word_count) + sizeof(file_content));
   assert(input_idx == 1);
   assert(uart_input[1] == 'y');
-  assert(memcmp(uart_input + 2, file_content, sizeof(file_content)) == 0);
+  assert(memcmp(uart_input + 2, expected_word_count,
+                sizeof(expected_word_count)) == 0);
+  assert(memcmp(uart_input + 2 + sizeof(expected_word_count), file_content,
+                sizeof(file_content)) == 0);
 
   free(uart_input);
   uart_input = NULL;
