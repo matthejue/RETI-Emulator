@@ -2,6 +2,7 @@
 #include "../include/assemble.h"
 #include "../include/core_debug.h"
 #include "../include/parse/parse_args.h"
+#include "../include/parse/parse_sections.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <stdint.h>
@@ -46,9 +47,11 @@ void init_reti() {
   }
 }
 
-void load_adjusted_eprom_prgrm() {
+void load_adjusted_eprom_prgrm(uint32_t stack_start) {
   uint8_t i = 0;
-  uint32_t sram_size_num = 0b10 << 30 | (sram_size - 1);
+  uint32_t stack_addr =
+      stack_start == STACK_START_AUTO ? sram_size - 1 : stack_start;
+  uint32_t sram_size_num = SRAM_CONST << 30 | stack_addr;
   // or because of assumption that num_instrs_isrs is less than 2^30
   uint32_t num_upper = sign_extend_22_to_32(sram_size_num >> 10);
   uint32_t num_lower = sram_size_num & TEN_BIT_MASK;

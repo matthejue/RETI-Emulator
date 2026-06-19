@@ -24,7 +24,7 @@ extern FILE *sram;
 #define UART_CONST 0b01
 #define SRAM_CONST 0b10
 
-void load_adjusted_eprom_prgrm();
+void load_adjusted_eprom_prgrm(uint32_t stack_start);
 
 uint32_t read_file(FILE *dev, uint64_t address);
 void write_file(FILE *dev, uint64_t address, uint32_t buffer);

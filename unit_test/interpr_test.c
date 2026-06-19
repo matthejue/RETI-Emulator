@@ -3,6 +3,7 @@
 #include "../include/interpr.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_instrs.h"
+#include "../include/parse/parse_sections.h"
 #include "../include/reti.h"
 #include "../include/utils.h"
 #include <stdlib.h>
@@ -28,7 +29,7 @@ void test_interpr_prgrm() {
 
   parse_args(4, (char *[]){"", "-f", "/tmp", "-"});
   init_reti();
-  load_adjusted_eprom_prgrm();
+  load_adjusted_eprom_prgrm(42);
   parse_and_load_program(get_prgrm_content(sram_prgrm_path), SRAM_PRGRM);
   interpr_prgrm();
 
@@ -47,6 +48,7 @@ void test_interpr_prgrm() {
                 "JUMP 0") == 0);
   assert(strcmp(mem_value_to_str(read_file(sram, 5), false),
                 "1") == 0);
+  assert(read_array(regs, SP, false) == (SRAM_CONST << 30 | 42));
 }
 
 int main() {

@@ -23,18 +23,25 @@ static void load_interrupt_setup(void) {
   init_custom_interrupt_action_isr();
 }
 
-static void load_sram_program(Program_Sections *forced_sections) {
-  Program_Sections sections = {.exists = false,
-                               .codesegment_start = 0,
-                               .datasegment_start = 0,
-                               .stack_start = 0,
-                               .has_stack_start = false};
+static Program_Sections empty_program_sections(void) {
+  return (Program_Sections){.exists = false,
+                            .codesegment_start = 0,
+                            .datasegment_start = 0,
+                            .stack_start = STACK_START_AUTO,
+                            .has_stack_start = false};
+}
+
+static Program_Sections load_sram_program(Program_Sections *forced_sections) {
+  Program_Sections sections = empty_program_sections();
   bool has_explicit_isrs = strcmp(isrs_prgrm_path, "") != 0;
   char *sram_prgrm_content = NULL;
 
   if (has_sram_prgrm) {
-    sections = forced_sections == NULL ? parse_sections_for_reti_path(sram_prgrm_path)
-                                       : *forced_sections;
+    if (forced_sections != NULL) {
+      sections = *forced_sections;
+    } else {
+      sections = parse_sections_for_reti_path(sram_prgrm_path);
+    }
     sram_prgrm_content = get_prgrm_content(sram_prgrm_path);
   }
 
@@ -51,7 +58,7 @@ static void load_sram_program(Program_Sections *forced_sections) {
   load_interrupt_setup();
 
   if (!has_sram_prgrm) {
-    return;
+    return sections;
   }
 
   error_context.filename = sram_prgrm_path;
@@ -68,6 +75,7 @@ static void load_sram_program(Program_Sections *forced_sections) {
   } else {
     parse_and_load_program(sram_prgrm_content, SRAM_PRGRM);
   }
+  return sections;
 }
 
 static char *binary_output_path_for_reti_path(const char *reti_path) {
@@ -138,14 +146,14 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  load_sram_program(NULL);
+  Program_Sections sections = load_sram_program(NULL);
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     error_context.filename = eprom_prgrm_path;
     parse_and_load_program(get_prgrm_content(eprom_prgrm_path),
                            EPROM_START_PRGRM);
   } else {
-    load_adjusted_eprom_prgrm();
+    load_adjusted_eprom_prgrm(sections.stack_start);
   }
 
   interpr_prgrm();

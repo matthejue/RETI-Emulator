@@ -46,10 +46,6 @@ char *sections_path_for_reti_path(const char *reti_path) {
   return path_for_reti_path_with_extension(reti_path, ".sections");
 }
 
-char *section_path_for_reti_path(const char *reti_path) {
-  return path_for_reti_path_with_extension(reti_path, ".section");
-}
-
 static uint32_t read_uint32_section_value(cJSON *root, const char *key,
                                           const char *path, bool required,
                                           bool *exists) {
@@ -75,12 +71,37 @@ static uint32_t read_uint32_section_value(cJSON *root, const char *key,
   return (uint32_t)item->valuedouble;
 }
 
+static uint32_t read_stack_start_section_value(cJSON *root, const char *path,
+                                               bool required, bool *exists) {
+  cJSON *item = cJSON_GetObjectItemCaseSensitive(root, "stack_start");
+  if (item == NULL) {
+    if (required) {
+      fprintf(stderr, "Error: Missing \"stack_start\" in %s\n", path);
+      exit(EXIT_FAILURE);
+    }
+    *exists = false;
+    return STACK_START_AUTO;
+  }
+
+  if (!cJSON_IsNumber(item) || item->valuedouble < -1 ||
+      item->valuedouble > UINT32_MAX ||
+      item->valuedouble != (int64_t)item->valuedouble) {
+    fprintf(stderr,
+            "Error: \"stack_start\" in %s must be -1 or an unsigned 32-bit integer\n",
+            path);
+    exit(EXIT_FAILURE);
+  }
+
+  *exists = true;
+  return item->valuedouble == -1 ? STACK_START_AUTO : (uint32_t)item->valuedouble;
+}
+
 static Program_Sections parse_sections_file(const char *sections_path,
                                             bool require_stack_start) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
                                .datasegment_start = 0,
-                               .stack_start = 0,
+                               .stack_start = STACK_START_AUTO,
                                .has_stack_start = false};
   char *content = read_file_content(sections_path);
   cJSON *root = cJSON_Parse(content);
@@ -96,9 +117,8 @@ static Program_Sections parse_sections_file(const char *sections_path,
       root, "codesegment_start", sections_path, true, &exists);
   sections.datasegment_start = read_uint32_section_value(
       root, "datasegment_start", sections_path, true, &exists);
-  sections.stack_start = read_uint32_section_value(
-      root, "stack_start", sections_path, require_stack_start,
-      &sections.has_stack_start);
+  sections.stack_start = read_stack_start_section_value(
+      root, sections_path, require_stack_start, &sections.has_stack_start);
 
   cJSON_Delete(root);
   free(content);
@@ -109,7 +129,7 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
                                .datasegment_start = 0,
-                               .stack_start = 0,
+                               .stack_start = STACK_START_AUTO,
                                .has_stack_start = false};
   char *sections_path = sections_path_for_reti_path(reti_path);
   if (sections_path == NULL) {
@@ -126,15 +146,15 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
 }
 
 Program_Sections parse_required_section_for_reti_path(const char *reti_path) {
-  char *section_path = section_path_for_reti_path(reti_path);
-  if (section_path == NULL || !file_exists(section_path)) {
+  char *sections_path = sections_path_for_reti_path(reti_path);
+  if (sections_path == NULL || !file_exists(sections_path)) {
     fprintf(stderr, "Error: Assemble mode requires section file %s\n",
-            section_path == NULL ? "<stdin>.section" : section_path);
-    free(section_path);
+            sections_path == NULL ? "<stdin>.sections" : sections_path);
+    free(sections_path);
     exit(EXIT_FAILURE);
   }
 
-  Program_Sections sections = parse_sections_file(section_path, true);
-  free(section_path);
+  Program_Sections sections = parse_sections_file(sections_path, true);
+  free(sections_path);
   return sections;
 }
