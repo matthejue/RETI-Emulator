@@ -1551,7 +1551,7 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 }
 
 static void print_interrupt_controller_view(void) {
-  handle_heading(true, &uart_box, "Interrupt Controller View [a: UART]", "", 0);
+  handle_heading(true, &uart_box, "Interrupt Controller [a: UART]", "", 0);
   print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
                                 NUM_PERIPHERY_ADDRESSES - 1, false);
 }

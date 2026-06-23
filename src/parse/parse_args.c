@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+// Number of addressable 32-bit words in SRAM.
 uint32_t sram_size = 65536;
 uint16_t page_size = 4096;
 bool debug_mode = false;
@@ -31,13 +32,16 @@ char *eprom_prgrm_path = "";
 char *sram_prgrm_path = "";
 char *isrs_prgrm_path = "";
 char *interrupt_controller_config_path = "";
+char *sections_path = "";
+char *debuginfo_path = "";
 
 void print_help(char *bin_name) {
   fprintf(
       stderr,
-      "Usage: %s -r ram_size -p page_size -d (debug mode) "
+      "Usage: %s -r addressable_32_bit_sram_words -p page_size -d (debug mode) "
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-C interrupt_controller_config_path "
+      "-S sections_path -D debuginfo_path "
       "-w max_waiting_instrs -t (test mode) -m (read metadata comments) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a, --assemble (write encoded .bin and exit) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
@@ -53,7 +57,7 @@ void parse_args(int argc, char *argv[]) {
       {0, 0, 0, 0},
   };
 
-  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:w:hdvtmbEcauKI:",
+  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:w:hdvtmbEcauKI:",
                             long_options, NULL)) != -1) {
     char *endptr;
     int64_t tmp_val;
@@ -101,6 +105,12 @@ void parse_args(int argc, char *argv[]) {
       break;
     case 'C':
       interrupt_controller_config_path = optarg;
+      break;
+    case 'S':
+      sections_path = optarg;
+      break;
+    case 'D':
+      debuginfo_path = optarg;
       break;
     case 'w':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -207,5 +217,7 @@ void print_args() {
   printf("Interrupt service routines program path: %s\n", isrs_prgrm_path);
   printf("Interrupt controller config path: %s\n",
          interrupt_controller_config_path);
+  printf("Section file path: %s\n", sections_path);
+  printf("Debuginfo file path: %s\n", debuginfo_path);
   printf("SRAM program path: %s\n", sram_prgrm_path);
 }

@@ -1,4 +1,5 @@
 #include "../include/parse/parse_sections.h"
+#include "../include/parse/parse_args.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +38,22 @@ void test_parse_sections_for_reti_path(void) {
   assert(!sections.has_stack_start);
 
   remove(sections_path);
+}
+
+void test_parse_explicit_sections_path(void) {
+  const char *reti_path = "/tmp/reti_explicit_sections_test.reti";
+  const char *explicit_sections_path = "/tmp/reti_explicit_sections_file.data";
+  sections_path = (char *)explicit_sections_path;
+  write_test_file(explicit_sections_path,
+                  "{ \"codesegment_start\": 12, \"datasegment_start\": 34 }");
+
+  Program_Sections sections = parse_sections_for_reti_path(reti_path);
+  assert(sections.exists);
+  assert(sections.codesegment_start == 12);
+  assert(sections.datasegment_start == 34);
+
+  sections_path = "";
+  remove(explicit_sections_path);
 }
 
 void test_parse_required_section_for_reti_path(void) {
@@ -82,6 +99,7 @@ void test_missing_parse_sections_file(void) {
 int main(void) {
   test_sections_path_for_reti_path();
   test_parse_sections_for_reti_path();
+  test_parse_explicit_sections_path();
   test_parse_required_section_for_reti_path();
   test_parse_section_auto_stack_start();
   test_missing_parse_sections_file();

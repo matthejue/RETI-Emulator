@@ -20,12 +20,13 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 
 # Übersicht
 ## Kommandozeilenoptionen
-- `-r ram_size`: Setzt Größe des SRAM (Stadardwert: `2^16=65536`)
+- `-r ram_size`: Setzt die Anzahl adressierbarer 32-Bit-Wörter im SRAM (Stadardwert: `2^16=65536`)
 - `-d`: Zeigt das Ncurses Debug TUI an
-- `-D`: Verwendet DS-ADDRESS-Extension anstelle der Addition des DS-Registers
 - `-f file_dir`: Gibt an, wo die Datei `sram.bin` erzeugt werden soll
 - `-e eprom_prgrm_path`: Parst und lädt Eprom-Startprogramm aus Datei, die über Dateipfad gefunden werden kann
 - `-i isrs_prgrm_path`: Parst und lädt Interrupt-Service Routinen aus Datei, die über Dateipfad gefunden werden kann
+- `-S sections_path`: Verwendet die angegebene `.sections`-Datei anstelle von `<program>.sections`
+- `-D debuginfo_path`: Verwendet die angegebene `.debuginfo`-Datei anstelle von `<program>.debuginfo`
 - `-w max_waiting_instrs`: Setzt raximale Wartezeit der UART für das Senden und Empfangen von Daten (Anzahle Befehle)
 - `-t`: Aktiviert Testmode für Systemtests
 - `-m`: Liest Eingaben aus Kommentar `# input: ...` raus
@@ -145,7 +146,7 @@ JUMP 0
 In diesem Beispiel werden `42`, `-1`, der ASCII-Wert von `e` (`101`) und der ASCII-Wert von `!` (`33`) direkt in aufeinanderfolgende Speicherzellen geschrieben. Das ist besonders nützlich für Datensegmente, Strings oder vom Compiler erzeugte Speicherinhalte, die nicht als RETI-Instruktionen interpretiert werden sollen.
 
 ## Abschnittsdateien für Compiler-Ausgaben
-Wenn zu einer Datei `program.reti` eine Datei `program.sections` existiert, liest der Emulator diese JSON-Datei ein und verwendet sie, um die `.reti`-Datei in Interrupt-Service-Routinen, Codesegment und Datensegment aufzuteilen.
+Wenn zu einer Datei `program.reti` eine Datei `program.sections` existiert, liest der Emulator diese JSON-Datei ein und verwendet sie, um die `.reti`-Datei in Interrupt-Service-Routinen, Codesegment und Datensegment aufzuteilen. Mit `-S sections_path` kann stattdessen eine Abschnittsdatei mit anderem Pfad angegeben werden.
 
 Beispiel für `program.sections`:
 

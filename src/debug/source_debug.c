@@ -3,6 +3,7 @@
 #include "../../include/parse/parse_args.h"
 #include "../../include/reti.h"
 #include "../../include/statemachine.h"
+#include "../../include/utils.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -113,6 +114,10 @@ static void reap_source_debugger_if_exited(void) {
 }
 
 static char *build_debuginfo_path(void) {
+  if (strcmp(debuginfo_path, "") != 0) {
+    return allocate_and_copy_string(debuginfo_path);
+  }
+
   const char *last_slash = strrchr(sram_prgrm_path, '/');
   const char *filename = last_slash == NULL ? sram_prgrm_path : last_slash + 1;
   const char *last_dot = strrchr(filename, '.');

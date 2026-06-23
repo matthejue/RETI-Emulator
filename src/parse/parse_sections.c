@@ -1,4 +1,5 @@
 #include "../../include/parse/parse_sections.h"
+#include "../../include/parse/parse_args.h"
 #include "../../include/utils.h"
 #include "../../vendor/cJSON/cJSON.h"
 #include <stdint.h>
@@ -131,30 +132,40 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
                                .datasegment_start = 0,
                                .stack_start = STACK_START_AUTO,
                                .has_stack_start = false};
-  char *sections_path = sections_path_for_reti_path(reti_path);
-  if (sections_path == NULL) {
+  bool explicit_sections_path = strcmp(sections_path, "") != 0;
+  char *default_sections_path = NULL;
+  const char *path =
+      explicit_sections_path ? sections_path
+                             : (default_sections_path =
+                                    sections_path_for_reti_path(reti_path));
+  if (path == NULL) {
     return sections;
   }
-  if (!file_exists(sections_path)) {
-    free(sections_path);
+  if (!file_exists(path)) {
+    free(default_sections_path);
     return sections;
   }
 
-  sections = parse_sections_file(sections_path, false);
-  free(sections_path);
+  sections = parse_sections_file(path, false);
+  free(default_sections_path);
   return sections;
 }
 
 Program_Sections parse_required_section_for_reti_path(const char *reti_path) {
-  char *sections_path = sections_path_for_reti_path(reti_path);
-  if (sections_path == NULL || !file_exists(sections_path)) {
+  bool explicit_sections_path = strcmp(sections_path, "") != 0;
+  char *default_sections_path = NULL;
+  const char *path =
+      explicit_sections_path ? sections_path
+                             : (default_sections_path =
+                                    sections_path_for_reti_path(reti_path));
+  if (path == NULL || !file_exists(path)) {
     fprintf(stderr, "Error: Assemble mode requires section file %s\n",
-            sections_path == NULL ? "<stdin>.sections" : sections_path);
-    free(sections_path);
+            path == NULL ? "<stdin>.sections" : path);
+    free(default_sections_path);
     exit(EXIT_FAILURE);
   }
 
-  Program_Sections sections = parse_sections_file(sections_path, true);
-  free(sections_path);
+  Program_Sections sections = parse_sections_file(path, true);
+  free(default_sections_path);
   return sections;
 }

@@ -25,6 +25,8 @@ extern char *eprom_prgrm_path;
 extern char *sram_prgrm_path;
 extern char *isrs_prgrm_path;
 extern char *interrupt_controller_config_path;
+extern char *sections_path;
+extern char *debuginfo_path;
 
 void parse_args(int argc, char *argv[]);
 void print_args();
