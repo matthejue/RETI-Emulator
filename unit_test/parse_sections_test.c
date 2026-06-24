@@ -35,6 +35,7 @@ void test_parse_sections_for_reti_path(void) {
   assert(sections.exists);
   assert(sections.codesegment_start == 40);
   assert(sections.datasegment_start == 180);
+  assert(!sections.has_interrupt_service_routines_start);
   assert(!sections.has_stack_start);
 
   remove(sections_path);
@@ -51,6 +52,7 @@ void test_parse_explicit_sections_path(void) {
   assert(sections.exists);
   assert(sections.codesegment_start == 12);
   assert(sections.datasegment_start == 34);
+  assert(!sections.has_interrupt_service_routines_start);
 
   sections_path = "";
   remove(explicit_sections_path);
@@ -90,6 +92,23 @@ void test_parse_section_auto_stack_start(void) {
   remove(sections_path);
 }
 
+void test_parse_interrupt_service_routines_start(void) {
+  const char *reti_path = "/tmp/reti_section_isr_start_test.reti";
+  const char *sections_path = "/tmp/reti_section_isr_start_test.sections";
+  write_test_file(sections_path,
+                  "{ \"interrupt_service_routines_start\": 4, "
+                  "\"codesegment_start\": 20, \"datasegment_start\": 80 }");
+
+  Program_Sections sections = parse_sections_for_reti_path(reti_path);
+  assert(sections.exists);
+  assert(sections.has_interrupt_service_routines_start);
+  assert(sections.interrupt_service_routines_start == 4);
+  assert(sections.codesegment_start == 20);
+  assert(sections.datasegment_start == 80);
+
+  remove(sections_path);
+}
+
 void test_missing_parse_sections_file(void) {
   Program_Sections sections =
       parse_sections_for_reti_path("/tmp/reti_sections_missing.reti");
@@ -102,6 +121,7 @@ int main(void) {
   test_parse_explicit_sections_path();
   test_parse_required_section_for_reti_path();
   test_parse_section_auto_stack_start();
+  test_parse_interrupt_service_routines_start();
   test_missing_parse_sections_file();
   return 0;
 }

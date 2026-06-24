@@ -14,7 +14,6 @@
 #include "../../include/tui.h"
 #include "../../include/uart.h"
 #include "../../include/utils.h"
-#include <ctype.h>
 #include <ncurses.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -68,9 +67,10 @@ WatchBox sram_c_watchbox = {&sram_c_box, PC, NULL, 0};
 WatchBox sram_d_watchbox = {&sram_d_box, DS, NULL, 0};
 WatchBox sram_s_watchbox = {&sram_s_box, SP, NULL, 0};
 
-static bool eprom_only_sram_sections_exist = false;
-static uint32_t eprom_only_sram_datasegment_start = 0;
-static uint32_t eprom_only_sram_instruction_start = 0;
+static bool sram_sections_exist = false;
+static uint32_t sram_codesegment_start = 0;
+static uint32_t sram_interrupt_service_routines_start = 0;
+static bool sram_has_interrupt_service_routines_start = false;
 
 static BoxIdentifier active_box_identifier = EPROM_BOX;
 static bool uart_memory_view = false;
@@ -82,147 +82,13 @@ static const uint8_t NUM_FOCUS_BOXES =
 
 WatchBox *get_watchbox(BoxIdentifier box_identifier);
 
-static bool debug_file_exists(const char *path) {
-  FILE *file = fopen(path, "r");
-  if (file == NULL) {
-    return false;
-  }
-  fclose(file);
-  return true;
-}
-
-static char *path_with_reti_suffix(const char *path, const char *suffix) {
-  size_t path_len = strlen(path);
-  size_t suffix_len = strlen(suffix);
-  if (path_len >= suffix_len &&
-      strcmp(path + path_len - suffix_len, suffix) == 0) {
-    size_t basename_len = path_len - suffix_len;
-    char *reti_path = malloc(basename_len + strlen(".reti") + 1);
-    if (reti_path == NULL) {
-      fprintf(stderr, "Failed to allocate memory\n");
-      exit(EXIT_FAILURE);
-    }
-    strncpy(reti_path, path, basename_len);
-    reti_path[basename_len] = '\0';
-    strcat(reti_path, ".reti");
-    return reti_path;
-  }
-
-  return NULL;
-}
-
-static char *existing_eprom_only_sram_reti_path(void) {
-  char *reti_path = NULL;
-  bool has_explicit_sram_source_hint =
-      strcmp(sections_path, "") != 0 || strcmp(debuginfo_path, "") != 0;
-
-  if (strcmp(sections_path, "") != 0) {
-    reti_path = path_with_reti_suffix(sections_path, ".sections");
-    if (reti_path != NULL && debug_file_exists(reti_path)) {
-      return reti_path;
-    }
-    free(reti_path);
-  }
-
-  if (strcmp(debuginfo_path, "") != 0) {
-    reti_path = path_with_reti_suffix(debuginfo_path, ".debuginfo");
-    if (reti_path != NULL && debug_file_exists(reti_path)) {
-      return reti_path;
-    }
-    free(reti_path);
-  }
-
-  if (!has_explicit_sram_source_hint && strcmp(eprom_prgrm_path, "") != 0 &&
-      debug_file_exists(eprom_prgrm_path)) {
-    return allocate_and_copy_string(eprom_prgrm_path);
-  }
-
-  return NULL;
-}
-
-static bool debug_is_segment_end(char c) {
-  return c == '\0' || c == ';' || c == '\n' || c == '\r' || c == '#';
-}
-
-static const char *skip_segment(const char *cursor) {
-  while (!debug_is_segment_end(*cursor)) {
-    cursor++;
-  }
-  if (*cursor == '#') {
-    while (*cursor != '\0' && *cursor != '\n' && *cursor != '\r') {
-      cursor++;
-    }
-  }
-  if (*cursor == '\r' && *(cursor + 1) == '\n') {
-    return cursor + 2;
-  }
-  if (*cursor != '\0') {
-    return cursor + 1;
-  }
-  return cursor;
-}
-
-static bool is_numeric_source_word(const char *segment_start) {
-  const char *cursor = segment_start;
-  while (*cursor == ' ' || *cursor == '\t') {
-    cursor++;
-  }
-
-  if (!isdigit((unsigned char)*cursor)) {
-    return false;
-  }
-  while (isdigit((unsigned char)*cursor)) {
-    cursor++;
-  }
-
-  while (*cursor == ' ' || *cursor == '\t') {
-    cursor++;
-  }
-  return debug_is_segment_end(*cursor);
-}
-
-static bool is_ignored_source_segment(const char *segment_start) {
-  const char *cursor = segment_start;
-  while (*cursor == ' ' || *cursor == '\t') {
-    cursor++;
-  }
-  return debug_is_segment_end(*cursor) || *cursor == '.';
-}
-
-static uint32_t infer_ivt_end_from_source(uint32_t codesegment_start) {
-  char *reti_path = existing_eprom_only_sram_reti_path();
-  if (reti_path == NULL) {
-    return codesegment_start;
-  }
-
-  char *content = read_file_content(reti_path);
-  free(reti_path);
-
-  uint32_t ivt_entries = 0;
-  const char *cursor = content;
-  while (*cursor != '\0' && ivt_entries < codesegment_start) {
-    if (is_numeric_source_word(cursor)) {
-      ivt_entries++;
-      cursor = skip_segment(cursor);
-      continue;
-    }
-    if (!is_ignored_source_segment(cursor)) {
-      free(content);
-      return ivt_entries;
-    }
-    cursor = skip_segment(cursor);
-  }
-
-  free(content);
-  return ivt_entries;
-}
-
-void set_eprom_only_sram_debug_sections(bool exists, uint32_t codesegment_start,
-                                        uint32_t datasegment_start) {
-  eprom_only_sram_sections_exist = exists;
-  eprom_only_sram_datasegment_start = datasegment_start;
-  eprom_only_sram_instruction_start =
-      exists ? infer_ivt_end_from_source(codesegment_start) : 0;
+void set_sram_debug_sections(Program_Sections sections) {
+  sram_sections_exist = sections.exists;
+  sram_codesegment_start = sections.codesegment_start;
+  sram_interrupt_service_routines_start =
+      sections.interrupt_service_routines_start;
+  sram_has_interrupt_service_routines_start =
+      sections.has_interrupt_service_routines_start;
 }
 
 static bool highlighted_watchobject_idx_valid[] = {
@@ -341,6 +207,42 @@ char *assembly_to_str(Instruction *instr) {
     exit(EXIT_FAILURE);
   }
   return instr_str;
+}
+
+static bool is_exact_opcode(uint8_t op, const Unique_Opcode *opcodes,
+                            size_t num_opcodes) {
+  for (size_t i = 0; i < num_opcodes; i++) {
+    if (op == opcodes[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool machine_word_is_valid_instruction(uint32_t machine_instr) {
+  uint8_t mode = machine_instr >> 30;
+  if (mode == COMPUTE_M) {
+    uint8_t compute_mode = machine_instr >> 25;
+    return (ADDI <= compute_mode && compute_mode <= ANDI) ||
+           (ADDR <= compute_mode && compute_mode <= ANDR) ||
+           (ADDM <= compute_mode && compute_mode <= ANDM);
+  }
+
+  if (mode == LOAD_M || mode == STORE_M) {
+    static const Unique_Opcode load_store_opcodes[] = {
+        LOAD, LOADIN, LOADI, STORE, STOREIN, TSL, MOVE};
+    uint8_t load_store_mode = (machine_instr >> 28) << 3;
+    return is_exact_opcode(load_store_mode, load_store_opcodes,
+                           sizeof(load_store_opcodes) /
+                               sizeof(load_store_opcodes[0]));
+  }
+
+  static const Unique_Opcode jump_opcodes[] = {
+      NOP,    INT,    RTI,    JUMPGT, JUMPEQ, JUMPGE,
+      JUMPLT, JUMPNE, JUMPLE, JUMP};
+  uint8_t jump_mode = machine_instr >> 25;
+  return is_exact_opcode(jump_mode, jump_opcodes,
+                         sizeof(jump_opcodes) / sizeof(jump_opcodes[0]));
 }
 
 char *mem_value_to_str(int32_t mem_content, bool is_unsigned) {
@@ -1061,7 +963,7 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
     exit(EXIT_FAILURE);
   }
   const char *mem_content_str;
-  if (are_instrs) {
+  if (are_instrs && machine_word_is_valid_instruction(mem_content)) {
     mem_content_str = assembly_to_str(machine_to_assembly(mem_content));
   } else {
     if (binary_mode) {
@@ -1284,34 +1186,63 @@ void print_eprom_watchobject(uint64_t eprom_watchobject) {
   }
 }
 
-static void print_eprom_only_sram_watchobject(MemType mem_type, uint64_t start,
-                                              uint64_t end) {
-  if (!eprom_only_sram_sections_exist) {
-    print_file_with_idcs(mem_type, start, end, true, false);
-    return;
+static bool sram_relative_addr_from_register(Register reg, uint64_t *idx) {
+  uint32_t addr = read_array(regs, reg, false);
+  uint8_t addr_mem_type = addr >> 30;
+  if (addr_mem_type != SRAM_CONST && addr_mem_type != 0b11) {
+    return false;
   }
 
-  uint64_t instruction_start = eprom_only_sram_instruction_start;
-  bool has_instruction_range =
-      instruction_start < eprom_only_sram_datasegment_start;
-  uint64_t instruction_end = has_instruction_range
-                                 ? eprom_only_sram_datasegment_start - 1
-                                 : 0;
+  *idx = addr & 0x7FFFFFFF;
+  return true;
+}
 
-  if (start < instruction_start) {
-    print_file_with_idcs(mem_type, start, min(end, instruction_start - 1), true,
-                         false);
+static bool sram_idx_in_static_isr_range(uint64_t idx) {
+  return sram_sections_exist && sram_has_interrupt_service_routines_start &&
+         sram_interrupt_service_routines_start < sram_codesegment_start &&
+         idx >= sram_interrupt_service_routines_start &&
+         idx < sram_codesegment_start;
+}
+
+static bool sram_idx_in_dynamic_code_range(uint64_t idx) {
+  uint64_t code_start;
+  uint64_t data_start;
+  if (!sram_relative_addr_from_register(CS, &code_start) ||
+      !sram_relative_addr_from_register(DS, &data_start) ||
+      data_start <= code_start) {
+    return false;
   }
-  if (has_instruction_range && end >= instruction_start &&
-      start <= instruction_end) {
-    print_file_with_idcs(mem_type, max(instruction_start, start),
-                         min(end, instruction_end), false, true);
+
+  return idx >= code_start && idx < data_start;
+}
+
+static bool sram_idx_should_display_as_instruction(uint64_t idx,
+                                                   uint32_t mem_content) {
+  return (sram_idx_in_static_isr_range(idx) ||
+          sram_idx_in_dynamic_code_range(idx)) &&
+         machine_word_is_valid_instruction(mem_content);
+}
+
+static bool sram_idx_values_are_unsigned(uint64_t idx) {
+  uint64_t data_start;
+  if (sram_relative_addr_from_register(DS, &data_start) && idx >= data_start) {
+    return ds_vals_unsigned;
   }
-  if (end >= eprom_only_sram_datasegment_start) {
-    print_file_with_idcs(mem_type,
-                         max((uint64_t)eprom_only_sram_datasegment_start,
-                             start),
-                         end, true, false);
+  return true;
+}
+
+static void print_sram_range(MemType mem_type, uint64_t start, uint64_t end) {
+  for (uint64_t i = start; i <= end; i++) {
+    uint32_t mem_content = read_file(sram, i);
+    bool are_instrs = sram_idx_should_display_as_instruction(i, mem_content);
+    if (are_instrs) {
+      print_comments_for_instruction(mem_type, i, true);
+    }
+    print_mem_content_with_idx(i, mem_content, sram_idx_values_are_unsigned(i),
+                               are_instrs, mem_type);
+    if (are_instrs) {
+      print_comments_for_instruction(mem_type, i, false);
+    }
   }
 }
 
@@ -1338,28 +1269,7 @@ void print_sram_watchobject(uint64_t sram_watchobject_x, MemType mem_type) {
     return;
   }
 
-  if (!has_sram_prgrm) {
-    print_eprom_only_sram_watchobject(mem_type, start, end);
-    return;
-  }
-
-  uint64_t instruction_start = isr_num;
-  uint64_t instruction_end = num_instrs_isrs + num_instrs_prgrm - 1;
-
-  if (isr_num > 0 && start < isr_num) {
-    print_file_with_idcs(mem_type, start, min(end, (uint64_t)isr_num - 1), true,
-                         false);
-  }
-  if (end >= instruction_start && start <= instruction_end) {
-    print_file_with_idcs(mem_type, max(instruction_start, start),
-                         min(end, instruction_end), false, true);
-  }
-  if (end >= num_instrs_isrs + num_instrs_prgrm) {
-    print_file_with_idcs(mem_type,
-                         max((uint64_t)(num_instrs_isrs + num_instrs_prgrm),
-                             start),
-                         end, ds_vals_unsigned, false);
-  }
+  print_sram_range(mem_type, start, end);
 }
 
 void print_uart_meta_data() {

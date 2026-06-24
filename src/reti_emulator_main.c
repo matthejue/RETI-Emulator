@@ -27,8 +27,10 @@ static Program_Sections empty_program_sections(void) {
   return (Program_Sections){.exists = false,
                             .codesegment_start = 0,
                             .datasegment_start = 0,
+                            .interrupt_service_routines_start = 0,
                             .stack_start = STACK_START_AUTO,
-                            .has_stack_start = false};
+                            .has_stack_start = false,
+                            .has_interrupt_service_routines_start = false};
 }
 
 static Program_Sections load_sram_program(Program_Sections *forced_sections) {
@@ -147,14 +149,13 @@ int main(int argc, char *argv[]) {
   }
 
   Program_Sections sections = load_sram_program(NULL);
+  set_sram_debug_sections(sections);
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     if (!has_sram_prgrm) {
       Program_Sections eprom_sram_sections =
           parse_sections_for_reti_path(eprom_prgrm_path);
-      set_eprom_only_sram_debug_sections(eprom_sram_sections.exists,
-                                         eprom_sram_sections.codesegment_start,
-                                         eprom_sram_sections.datasegment_start);
+      set_sram_debug_sections(eprom_sram_sections);
     }
     error_context.filename = eprom_prgrm_path;
     parse_and_load_program(get_prgrm_content(eprom_prgrm_path),

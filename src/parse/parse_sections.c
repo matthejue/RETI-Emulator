@@ -102,8 +102,10 @@ static Program_Sections parse_sections_file(const char *sections_path,
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
                                .datasegment_start = 0,
+                               .interrupt_service_routines_start = 0,
                                .stack_start = STACK_START_AUTO,
-                               .has_stack_start = false};
+                               .has_stack_start = false,
+                               .has_interrupt_service_routines_start = false};
   char *content = read_file_content(sections_path);
   cJSON *root = cJSON_Parse(content);
   if (root == NULL) {
@@ -118,6 +120,9 @@ static Program_Sections parse_sections_file(const char *sections_path,
       root, "codesegment_start", sections_path, true, &exists);
   sections.datasegment_start = read_uint32_section_value(
       root, "datasegment_start", sections_path, true, &exists);
+  sections.interrupt_service_routines_start = read_uint32_section_value(
+      root, "interrupt_service_routines_start", sections_path, false,
+      &sections.has_interrupt_service_routines_start);
   sections.stack_start = read_stack_start_section_value(
       root, sections_path, require_stack_start, &sections.has_stack_start);
 
@@ -130,8 +135,10 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
   Program_Sections sections = {.exists = false,
                                .codesegment_start = 0,
                                .datasegment_start = 0,
+                               .interrupt_service_routines_start = 0,
                                .stack_start = STACK_START_AUTO,
-                               .has_stack_start = false};
+                               .has_stack_start = false,
+                               .has_interrupt_service_routines_start = false};
   bool explicit_sections_path = strcmp(sections_path, "") != 0;
   char *default_sections_path = NULL;
   const char *path =
