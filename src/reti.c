@@ -123,6 +123,9 @@ void load_adjusted_eprom_prgrm(uint32_t stack_start) {
 
 uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
   if (is_uart) {
+    if (addr == SYSTEM_INFO_SRAM_MAX_ADDRESS) {
+      return sram_size - 1;
+    }
     if (addr < 3 && !(uart[2] & 0b00000010) && addr == 1) {
       fprintf(stderr, "Warning: No new data in the receive register\n");
     } else if (addr < 3 && addr == 0) {
@@ -137,6 +140,10 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
 
 void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
   if (is_uart) {
+    if (addr == SYSTEM_INFO_SRAM_MAX_ADDRESS) {
+      fprintf(stderr, "Warning: Writing to read-only system info cell\n");
+      return;
+    }
     if (addr < 3 && !(uart[2] & 0b00000001) && addr == 0) {
       // TODO: Tobias fragen, ob er damit agreed
       fprintf(stderr, "Warning: UART does not accept any further data\n");
@@ -149,7 +156,7 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
     }
     ((uint8_t *)stor)[addr] = buffer & 0xFF;
     if (addr >= INTERRUPT_CONTROLLER_ISR_BASE &&
-        addr < NUM_PERIPHERY_ADDRESSES) {
+        addr < SYSTEM_INFO_BASE) {
       sync_interrupt_controller_from_memory();
     }
   } else {

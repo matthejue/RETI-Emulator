@@ -1,6 +1,7 @@
 #include "../include/assert.h"
 #include "../include/core_debug.h"
 #include "../include/interpr.h"
+#include "../include/interrupt_controller.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_instrs.h"
 #include "../include/parse/parse_sections.h"
@@ -8,6 +9,18 @@
 #include "../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
+
+void test_periphery_sram_max_address_cell() {
+  peripherals_dir = "/tmp";
+  sram_size = 1234;
+  init_reti();
+
+  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_SRAM_MAX_ADDRESS) ==
+         1233);
+
+  fin_reti();
+  sram_size = 65536;
+}
 
 void test_interpr_prgrm() {
   const char *test_input = "LOADI ACC 1;"
@@ -52,6 +65,7 @@ void test_interpr_prgrm() {
 }
 
 int main() {
+  test_periphery_sram_max_address_cell();
   test_interpr_prgrm();
 
   return 0;
