@@ -59,6 +59,7 @@ endif
 	debug \
 	run_send_keypresses \
 	debug_send_keypresses \
+	patch-pico-os-kernel-stack \
 	install-linux-local \
 	pull-latest-version \
 	update-linux-local \
@@ -104,6 +105,9 @@ sys-test: $(BIN_SRC)
 test_no_passed: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
 	./run_sys_tests.sh --not-passed "$${COLUMNS}" "" "$(EXTRA_ARGS)"
+
+patch-pico-os-kernel-stack:
+	sed -i -E 's/"stack_start": *-?[0-9]+/"stack_start": 5000/' /home/areo/Documents/Studium/Pico-OS/kernel.sections
 
 run: $(BIN_SRC)
 	./bin/reti_emulator_main $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)

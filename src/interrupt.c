@@ -6,11 +6,12 @@
 #include "../include/parse/parse_args.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
+#include "../include/uart.h"
 #include <stdio.h>
 #include <stdint.h>
 
 uint32_t timer_cnt = 0;
-uint32_t interrupt_timer_interval = 10;
+uint32_t interrupt_timer_interval = 0;
 
 bool interrupt_timer_active = false;
 
@@ -46,12 +47,14 @@ bool cycle_custom_interrupt_action_isr(void) {
 
 bool timer_interrupt_check() {
   sync_interrupt_controller_from_memory();
-  if (!interrupt_timer_active) {
+  uint32_t timer_interval =
+      read_array(uart, SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL, true);
+  if (!interrupt_timer_active || timer_interval == 0) {
     return false;
   }
   timer_cnt++;
   bool success = false;
-  if (timer_cnt == interrupt_timer_interval) {
+  if (timer_cnt >= timer_interval) {
     in.arg8 = device_to_isr[INTERRUPT_TIMER];
     update_state(HARDWARE_INTERRUPT);
     success = out.retbool1;

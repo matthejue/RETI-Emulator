@@ -775,9 +775,9 @@ static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
       draw_tui();
       return false;
     }
-    if (idx >= SYSTEM_INFO_BASE) {
+    if (idx == SYSTEM_INFO_SRAM_MAX_ADDRESS) {
       display_notification_box("Assign Value",
-                               "System info cells are read-only.");
+                               "SRAM max address is read-only.");
       draw_tui();
       return false;
     }
@@ -1084,6 +1084,12 @@ static const char *uart_cell_label(uint64_t idx) {
     return "custom priority";
   case SYSTEM_INFO_SRAM_MAX_ADDRESS:
     return "SRAM max address";
+  case SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL:
+    return "timer interrupt interval";
+  case SYSTEM_INFO_OS_CS:
+    return "Kernel CS";
+  case SYSTEM_INFO_OS_DS:
+    return "Kernel DS";
   default:
     return "peripheral reserved";
   }

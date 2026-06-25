@@ -36,7 +36,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
 - `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
-- `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts
+- `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
 - `-h`: Zeigt Verwendungshinweise an
 
 <!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
@@ -182,6 +182,8 @@ Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder m
 Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
 
 Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`CUSTOM`).
+
+Die Peripherie-Zelle `8` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern.
 
 Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 CUSTOM`; `-` bedeutet keine Zuordnung.
 

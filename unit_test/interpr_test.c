@@ -1,6 +1,7 @@
 #include "../include/assert.h"
 #include "../include/core_debug.h"
 #include "../include/interpr.h"
+#include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_instrs.h"
@@ -20,6 +21,45 @@ void test_periphery_sram_max_address_cell() {
 
   fin_reti();
   sram_size = 65536;
+}
+
+void test_periphery_timer_interrupt_interval_cell() {
+  peripherals_dir = "/tmp";
+  interrupt_timer_interval = 7;
+  init_reti();
+  timer_cnt = 0;
+
+  assert(read_storage((UART_CONST << 30) |
+                      SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) == 7);
+
+  write_storage((UART_CONST << 30) | INTERRUPT_CONTROLLER_ISR_BASE, 0);
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL, 0);
+  assert(!timer_interrupt_check());
+  assert(timer_cnt == 0);
+
+  timer_cnt = 99;
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL, 2);
+  assert(interrupt_timer_interval == 2);
+  assert(timer_cnt == 0);
+  assert(!timer_interrupt_check());
+  assert(timer_cnt == 1);
+
+  fin_reti();
+  timer_cnt = 0;
+  interrupt_timer_interval = 0;
+}
+
+void test_periphery_os_register_cells() {
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS, 0x8000002A);
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS, 0x80000064);
+
+  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS) == 0x8000002A);
+  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS) == 0x80000064);
+
+  fin_reti();
 }
 
 void test_interpr_prgrm() {
@@ -66,6 +106,8 @@ void test_interpr_prgrm() {
 
 int main() {
   test_periphery_sram_max_address_cell();
+  test_periphery_timer_interrupt_interval_cell();
+  test_periphery_os_register_cells();
   test_interpr_prgrm();
 
   return 0;

@@ -1,4 +1,5 @@
 #include "../../include/uart.h"
+#include "../../include/interrupt.h"
 #include "../../include/parse/parse_args.h"
 #include "../../include/reti.h"
 #include "../../include/interrupt_controller.h"
@@ -82,6 +83,8 @@ void init_uart() {
   uart = malloc(sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   memset(uart, 0, sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   uart[2] = UART_SEND_READY | UART_RECEIVE_READY;
+  write_array(uart, SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL,
+              interrupt_timer_interval, true);
   init_interrupt_controller();
 }
 

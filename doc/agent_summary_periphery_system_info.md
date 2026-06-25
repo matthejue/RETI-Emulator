@@ -1,1 +1,0 @@
-Added periphery address 7 as read-only `sram_max_address`, returning `sram_size - 1` via mapped reads. The periphery TUI now cycles with `a` through UART, Interrupt Controller, and System Info views; System Info shows the SRAM max address unsigned. Updated address-space docs and added an interpreter unit test for the new mapped cell.
