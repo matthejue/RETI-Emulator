@@ -59,7 +59,7 @@ char *mem_value_to_str(int32_t mem_content, bool is_unsigned);
 
 void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
                                 bool are_unsigned, bool are_instrs,
-                                MemType mem_type);
+                                bool is_ascii, MemType mem_type);
 void print_reg_content_with_reg(uint8_t idx, uint32_t mem_content);
 
 void print_array_with_idcs(MemType mem_type, uint8_t length, bool are_instrs);

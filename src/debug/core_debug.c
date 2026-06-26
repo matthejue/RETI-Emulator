@@ -71,7 +71,18 @@ static bool sram_sections_exist = false;
 static uint32_t sram_codesegment_start = 0;
 static uint32_t sram_interrupt_service_routines_start = 0;
 static bool sram_has_interrupt_service_routines_start = false;
-static bool sram_transcode_values = false;
+typedef enum {
+  SRAM_TRANSCODE_NUMERIC,
+  SRAM_TRANSCODE_INSTRUCTION,
+  SRAM_TRANSCODE_ASCII,
+  NUM_SRAM_TRANSCODE_MODES,
+} SramTranscodeMode;
+static SramTranscodeMode sram_transcode_mode = SRAM_TRANSCODE_NUMERIC;
+
+static void cycle_sram_transcode_mode(void) {
+  sram_transcode_mode =
+      (SramTranscodeMode)((sram_transcode_mode + 1) % NUM_SRAM_TRANSCODE_MODES);
+}
 
 typedef enum {
   PERIPHERY_UART_VIEW,
@@ -264,6 +275,28 @@ char *mem_value_to_str(int32_t mem_content, bool is_unsigned) {
 
 char *mem_value_to_bin_str(uint32_t mem_content) {
   return int_to_bin_str(mem_content, 32);
+}
+
+static char *ascii_value_to_str(uint32_t mem_content) {
+  static const char *control_names[] = {
+      "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL",
+      "BS",  "HT",  "LF",  "VT",  "FF",  "CR",  "SO",  "SI",
+      "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB",
+      "CAN", "EM",  "SUB", "ESC", "FS",  "GS",  "RS",  "US"};
+
+  char *ascii_str = malloc(6);
+  if (mem_content < 32) {
+    snprintf(ascii_str, 6, "%s", control_names[mem_content]);
+  } else if (mem_content == 127) {
+    snprintf(ascii_str, 6, "DEL");
+  } else if (mem_content == '\'') {
+    snprintf(ascii_str, 6, "'\\''");
+  } else if (mem_content == '\\') {
+    snprintf(ascii_str, 6, "'\\\\'");
+  } else {
+    snprintf(ascii_str, 6, "'%c'", (char)mem_content);
+  }
+  return ascii_str;
 }
 
 char *reg_to_mem_pntr(uint64_t idx, MemType mem_type) {
@@ -949,7 +982,7 @@ static const char *uart_cell_label(uint64_t idx);
 // TODO:: Unit test dafür und die ganzen idx Funktionen
 void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
                                 bool are_unsigned, bool are_instrs,
-                                MemType mem_type) {
+                                bool is_ascii, MemType mem_type) {
   char idx_str[20];
   switch (mem_type) {
   case SRAM_C:
@@ -982,6 +1015,8 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   const char *mem_content_str;
   if (are_instrs && machine_word_is_valid_instruction(mem_content)) {
     mem_content_str = assembly_to_str(machine_to_assembly(mem_content));
+  } else if (is_ascii && mem_content <= 127) {
+    mem_content_str = ascii_value_to_str(mem_content);
   } else {
     if (binary_mode) {
       mem_content_str = mem_value_to_bin_str(mem_content);
@@ -1115,9 +1150,9 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
       }
       if (i < num_instrs_start_prgrm) {
         print_mem_content_with_idx(i, ((uint32_t *)eprom)[i], false, are_instrs,
-                                   EPROM);
+                                   false, EPROM);
       } else {
-        print_mem_content_with_idx(i, 0, false, false, EPROM);
+        print_mem_content_with_idx(i, 0, false, false, false, EPROM);
       }
       if (are_instrs) {
         print_comments_for_instruction(EPROM, i, false);
@@ -1128,7 +1163,7 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
     for (uint8_t i = start; i <= end; i++) {
       bool is_system_info_cell = i >= SYSTEM_INFO_BASE;
       print_mem_content_with_idx(i, read_array(uart, i, true),
-                                 is_system_info_cell, are_instrs, UART);
+                                 is_system_info_cell, are_instrs, false, UART);
     }
     break;
   default:
@@ -1148,7 +1183,7 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
         print_comments_for_instruction(mem_type, i, true);
       }
       print_mem_content_with_idx(i, read_file(sram, i), are_unsigned,
-                                 are_instrs, mem_type);
+                                 are_instrs, false, mem_type);
       if (are_instrs) {
         print_comments_for_instruction(mem_type, i, false);
       }
@@ -1263,12 +1298,16 @@ static void print_sram_range(MemType mem_type, uint64_t start, uint64_t end) {
     bool is_code_instr = sram_idx_should_display_as_instruction(i, mem_content);
     bool are_instrs =
         is_code_instr ||
-        (sram_transcode_values && machine_word_is_valid_instruction(mem_content));
+        (sram_transcode_mode == SRAM_TRANSCODE_INSTRUCTION &&
+         machine_word_is_valid_instruction(mem_content));
+    bool is_ascii = !is_code_instr &&
+                    sram_transcode_mode == SRAM_TRANSCODE_ASCII &&
+                    mem_content <= 127;
     if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, true);
     }
     print_mem_content_with_idx(i, mem_content, sram_idx_values_are_unsigned(i),
-                               are_instrs, mem_type);
+                               are_instrs, is_ascii, mem_type);
     if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, false);
     }
@@ -1449,7 +1488,7 @@ void evaluate_keyboard_input(void) {
       draw_tui();
       continue;
     } else if (key == 't') {
-      sram_transcode_values = !sram_transcode_values;
+      cycle_sram_transcode_mode();
       draw_tui();
       continue;
     } else if (key == 'T') {
@@ -1578,7 +1617,7 @@ void wait_for_tui_quit(void) {
       draw_tui();
       continue;
     case 't':
-      sram_transcode_values = !sram_transcode_values;
+      cycle_sram_transcode_mode();
       draw_tui();
       continue;
     case 'd':
