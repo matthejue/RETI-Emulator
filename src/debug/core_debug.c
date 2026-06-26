@@ -71,6 +71,7 @@ static bool sram_sections_exist = false;
 static uint32_t sram_codesegment_start = 0;
 static uint32_t sram_interrupt_service_routines_start = 0;
 static bool sram_has_interrupt_service_routines_start = false;
+static bool sram_transcode_values = false;
 
 typedef enum {
   PERIPHERY_UART_VIEW,
@@ -1259,13 +1260,16 @@ static bool sram_idx_values_are_unsigned(uint64_t idx) {
 static void print_sram_range(MemType mem_type, uint64_t start, uint64_t end) {
   for (uint64_t i = start; i <= end; i++) {
     uint32_t mem_content = read_file(sram, i);
-    bool are_instrs = sram_idx_should_display_as_instruction(i, mem_content);
-    if (are_instrs) {
+    bool is_code_instr = sram_idx_should_display_as_instruction(i, mem_content);
+    bool are_instrs =
+        is_code_instr ||
+        (sram_transcode_values && machine_word_is_valid_instruction(mem_content));
+    if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, true);
     }
     print_mem_content_with_idx(i, mem_content, sram_idx_values_are_unsigned(i),
                                are_instrs, mem_type);
-    if (are_instrs) {
+    if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, false);
     }
   }
@@ -1445,6 +1449,10 @@ void evaluate_keyboard_input(void) {
       draw_tui();
       continue;
     } else if (key == 't') {
+      sram_transcode_values = !sram_transcode_values;
+      draw_tui();
+      continue;
+    } else if (key == 'T') {
       reset_all_scroll_offsets();
       bool success = custom_interrupt_trigger();
       if (success) {
@@ -1567,6 +1575,10 @@ void wait_for_tui_quit(void) {
       break;
     case 'o':
       cycle_info_box_page();
+      draw_tui();
+      continue;
+    case 't':
+      sram_transcode_values = !sram_transcode_values;
       draw_tui();
       continue;
     case 'd':

@@ -19,15 +19,16 @@ Box sram_s_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 static const char *info_box_pages[] = {
     "(n)ext instruction, (c)ontinue to breakpoint, (r)estart, "
     "(s)tep into isr, (f)inalize isr, "
-    "(tab/S-tab) to switch, (j/k) to scroll, (q)uit, (o)ther actions",
+    "(tab/S-tab) to switch, (q)uit, (o)ther actions",
 };
 static const char *halted_info_box_pages[] = {
     "Program halted, (r)estart, "
-    "(tab/S-tab) to switch, (j/k) to scroll, (q)uit, (o)ther actions"};
-static const uint8_t NUM_INFO_BOX_PAGES = 2;
-static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 2;
+    "(tab/S-tab) to switch, (q)uit, (o)ther actions"};
+static const uint8_t NUM_INFO_BOX_PAGES = 3;
+static const uint8_t NUM_HALTED_INFO_BOX_PAGES = 3;
 static uint8_t current_info_box_page = 0;
 static char info_box_second_page[256];
+static char info_box_third_page[256];
 static bool tui_halted_mode = false;
 static bool tui_snapshot_available = false;
 
@@ -45,55 +46,43 @@ static void update_info_box_text(void) {
   if (current_info_box_page == 1) {
     if (tui_halted_mode) {
       snprintf(info_box_second_page, sizeof(info_box_second_page),
-               tui_snapshot_available
-                   ? "(C)enter, (J/K) to in/decrease watchobject, "
-                     "(a)ssign watchobject, "
-                     "(A)ssign value, "
-                     "(d)ebug source, "
-                     "(S)napshot, (R)estore, (o)ther actions"
-                   : "(C)enter, (J/K) to in/decrease watchobject, "
-                     "(a)ssign watchobject, "
-                     "(A)ssign value, "
-                     "(d)ebug source, "
-                     "(S)napshot, (o)ther actions");
+               "(j/k) to scroll, "
+               "(J/K) to in/decrease watchobject, (C)enter, "
+               "(a)ssign watchobject, "
+               "(A)ssign value, (o)ther actions");
     } else {
       uint8_t custom_action_isr = get_custom_interrupt_action_isr();
       if (custom_action_isr == INVALID_ISR_NUM) {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
-            tui_snapshot_available
-                ? "(C)enter, (J/K) to in/decrease watchobject, "
-                  "(a)ssign watchobject, "
-                  "(A)ssign value, "
-                  "(t)rigger isr none, (e)xchange isr, "
-                  "(d)ebug source, "
-                  "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (J/K) to in/decrease watchobject, "
-                  "(a)ssign watchobject, "
-                  "(A)ssign value, "
-                  "(t)rigger isr none, (e)xchange isr, "
-                  "(d)ebug source, "
-                  "(S)napshot, (o)ther actions");
+            "(j/k) to scroll, "
+            "(J/K) to in/decrease watchobject, (C)enter, "
+            "(a)ssign watchobject, "
+            "(A)ssign value, "
+            "(T)rigger isr none, (e)xchange isr, (o)ther actions");
       } else {
         snprintf(
             info_box_second_page, sizeof(info_box_second_page),
-            tui_snapshot_available
-                ? "(C)enter, (J/K) to in/decrease watchobject, "
-                  "(a)ssign watchobject, "
-                  "(A)ssign value, "
-                  "(t)rigger isr %u, (e)xchange isr, "
-                  "(d)ebug source, "
-                  "(S)napshot, (R)estore, (o)ther actions"
-                : "(C)enter, (J/K) to in/decrease watchobject, "
-                  "(a)ssign watchobject, "
-                  "(A)ssign value, "
-                  "(t)rigger isr %u, (e)xchange isr, "
-                  "(d)ebug source, "
-                  "(S)napshot, (o)ther actions",
+            "(j/k) to scroll, "
+            "(J/K) to in/decrease watchobject, (C)enter, "
+            "(a)ssign watchobject, "
+            "(A)ssign value, "
+            "(T)rigger isr %u, (e)xchange isr, (o)ther actions",
             custom_action_isr);
       }
     }
     info_box.title = info_box_second_page;
+    return;
+  }
+
+  if (current_info_box_page == 2) {
+    snprintf(info_box_third_page, sizeof(info_box_third_page),
+             tui_snapshot_available
+                 ? "(S)napshot, (R)estore, (d)ebug source, "
+                   "(t)ranscode, (o)ther actions"
+                 : "(S)napshot, (d)ebug source, "
+                   "(t)ranscode, (o)ther actions");
+    info_box.title = info_box_third_page;
     return;
   }
 
