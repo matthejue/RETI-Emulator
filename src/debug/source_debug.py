@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import json
-import re
 import struct
 import sys
 import tkinter as tk
@@ -11,7 +10,6 @@ from tkinter import scrolledtext
 
 POLL_INTERVAL_MS = 1000
 STATE_STRUCT = struct.Struct("<II")
-INCLUDE_RE = re.compile(r'^\s*#\s*include\s+[<"]([^>"]+)[>"]')
 MEM_TYPE_SHIFT = 30
 EPROM_MEM_TYPE = 0b00
 
@@ -24,7 +22,6 @@ class SourceDebugApp:
         self.current_state = None
         self.current_file = None
         self.files = []
-        self.file_cache = {}
         self.file_path_cache = {}
         self.status_var = tk.StringVar(
             value=f"debuginfo: {self.debuginfo_path}"
@@ -71,7 +68,10 @@ class SourceDebugApp:
     def resolve_file_path(self, file_id):
         if file_id not in self.file_path_cache:
             file_path = Path(self.files[file_id])
-            self.file_path_cache[file_id] = self.resolve_relative_file_path(file_path)
+            resolved_path = self.resolve_relative_file_path(file_path)
+            self.file_path_cache[file_id] = self.resolve_preprocessed_file_path(
+                resolved_path
+            )
         return self.file_path_cache[file_id]
 
     def resolve_relative_file_path(self, file_path):
@@ -89,6 +89,15 @@ class SourceDebugApp:
                 return candidate.resolve()
 
         return candidates[0].resolve()
+
+    def resolve_preprocessed_file_path(self, file_path):
+        if file_path.suffix != ".picoc":
+            return file_path
+
+        preprocessed_path = file_path.with_suffix(".pre")
+        if preprocessed_path.exists():
+            return preprocessed_path
+        return file_path
 
     def poll_state(self):
         try:
@@ -156,7 +165,12 @@ class SourceDebugApp:
         return None
 
     def load_source_file(self, file_path):
-        lines = self.load_expanded_source_lines(file_path, set())
+        try:
+            with file_path.open("r", encoding="utf-8") as handle:
+                lines = handle.readlines()
+        except OSError as exc:
+            lines = [f"Failed to read {file_path}: {exc}\n"]
+
         self.text.configure(state="normal")
         self.text.delete("1.0", tk.END)
         for idx, line in enumerate(lines, start=1):
@@ -164,57 +178,6 @@ class SourceDebugApp:
             if not line.endswith("\n"):
                 self.text.insert(tk.END, "\n")
         self.text.configure(state="disabled")
-
-    def load_expanded_source_lines(self, file_path, include_stack):
-        if file_path in self.file_cache:
-            return self.file_cache[file_path]
-
-        try:
-            with file_path.open("r", encoding="utf-8") as handle:
-                raw_lines = handle.readlines()
-        except OSError as exc:
-            self.file_cache[file_path] = [f"Failed to read {file_path}: {exc}\n"]
-            return self.file_cache[file_path]
-
-        expanded_lines = []
-        next_include_stack = include_stack | {file_path}
-        for line in raw_lines:
-            include_match = INCLUDE_RE.match(line)
-            if include_match is None:
-                expanded_lines.append(line)
-                continue
-
-            include_path = self.resolve_include_path(
-                include_match.group(1), file_path
-            )
-            if include_path is None or include_path in include_stack:
-                expanded_lines.append(line)
-                continue
-
-            expanded_lines.extend(
-                self.load_expanded_source_lines(include_path, next_include_stack)
-            )
-
-        self.file_cache[file_path] = expanded_lines
-        return expanded_lines
-
-    def resolve_include_path(self, include_name, including_file):
-        include_path = Path(include_name)
-        if include_path.is_absolute():
-            return include_path.resolve() if include_path.exists() else None
-
-        debuginfo_dir = self.debuginfo_path.parent
-        candidates = [
-            including_file.parent / include_path,
-            debuginfo_dir / include_path,
-            debuginfo_dir.parent / "lib" / include_path.stem / include_path.name,
-        ]
-
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate.resolve()
-
-        return None
 
     def highlight_line(self, line_number):
         self.text.configure(state="normal")
