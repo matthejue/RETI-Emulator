@@ -4,6 +4,7 @@
 #include "../../include/reti.h"
 #include "../../include/statemachine.h"
 #include "../../include/utils.h"
+#include "../../vendor/cJSON/cJSON.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -172,127 +173,6 @@ static char *read_text_file_or_null(const char *path) {
   return content;
 }
 
-static char *skip_json_ws(char *cursor) {
-  while (*cursor == ' ' || *cursor == '\n' || *cursor == '\r' ||
-         *cursor == '\t') {
-    cursor++;
-  }
-  return cursor;
-}
-
-static char *find_json_array(char *json, const char *key) {
-  char search_key[64];
-  snprintf(search_key, sizeof(search_key), "\"%s\"", key);
-
-  char *cursor = strstr(json, search_key);
-  if (cursor == NULL) {
-    return NULL;
-  }
-
-  cursor = strchr(cursor, '[');
-  return cursor == NULL ? NULL : cursor + 1;
-}
-
-static char *find_json_object_end(char *object_start) {
-  bool in_string = false;
-  bool escaped = false;
-  int depth = 0;
-
-  for (char *cursor = object_start; *cursor != '\0'; cursor++) {
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (*cursor == '\\' && in_string) {
-      escaped = true;
-      continue;
-    }
-    if (*cursor == '"') {
-      in_string = !in_string;
-      continue;
-    }
-    if (in_string) {
-      continue;
-    }
-    if (*cursor == '{') {
-      depth++;
-    } else if (*cursor == '}') {
-      depth--;
-      if (depth == 0) {
-        return cursor;
-      }
-    }
-  }
-
-  return NULL;
-}
-
-static char *json_string_field(char *object_start, char *object_end,
-                               const char *key) {
-  char search_key[64];
-  snprintf(search_key, sizeof(search_key), "\"%s\"", key);
-
-  char *cursor = object_start;
-  while ((cursor = strstr(cursor, search_key)) != NULL && cursor < object_end) {
-    cursor += strlen(search_key);
-    cursor = skip_json_ws(cursor);
-    if (*cursor != ':') {
-      continue;
-    }
-    cursor = skip_json_ws(cursor + 1);
-    if (*cursor != '"') {
-      continue;
-    }
-    cursor++;
-    char *value_start = cursor;
-    while (cursor < object_end && *cursor != '\0' && *cursor != '"') {
-      if (*cursor == '\\' && cursor[1] != '\0') {
-        cursor += 2;
-      } else {
-        cursor++;
-      }
-    }
-    if (cursor >= object_end || *cursor != '"') {
-      return NULL;
-    }
-    size_t value_len = (size_t)(cursor - value_start);
-    char *value = malloc(value_len + 1);
-    if (value == NULL) {
-      return NULL;
-    }
-    memcpy(value, value_start, value_len);
-    value[value_len] = '\0';
-    return value;
-  }
-
-  return NULL;
-}
-
-static bool json_u32_field(char *object_start, char *object_end,
-                           const char *key, uint32_t *value) {
-  char search_key[64];
-  snprintf(search_key, sizeof(search_key), "\"%s\"", key);
-
-  char *cursor = object_start;
-  while ((cursor = strstr(cursor, search_key)) != NULL && cursor < object_end) {
-    cursor += strlen(search_key);
-    cursor = skip_json_ws(cursor);
-    if (*cursor != ':') {
-      continue;
-    }
-    cursor = skip_json_ws(cursor + 1);
-    char *endptr = NULL;
-    unsigned long parsed = strtoul(cursor, &endptr, 10);
-    if (endptr == cursor || endptr > object_end || parsed > UINT32_MAX) {
-      return false;
-    }
-    *value = (uint32_t)parsed;
-    return true;
-  }
-
-  return false;
-}
-
 static bool append_source_debug_symbol(SourceDebugSymbol symbol) {
   if (num_source_debug_symbols == source_debug_symbols_capacity) {
     size_t next_capacity =
@@ -392,33 +272,52 @@ static SourceDebugStackFrame *current_source_debug_stack_frame(void) {
   return &source_debug_call_stack[source_debug_call_stack_size - 1];
 }
 
-static void load_source_debug_symbol_array(char *json, const char *array_key,
+static char *cjson_string_field(cJSON *object, const char *key) {
+  cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+  if (!cJSON_IsString(item) || item->valuestring == NULL) {
+    return NULL;
+  }
+
+  return allocate_and_copy_string(item->valuestring);
+}
+
+static bool cjson_u32_value(cJSON *item, uint32_t *value) {
+  if (!cJSON_IsNumber(item) || item->valuedouble < 0 ||
+      item->valuedouble > UINT32_MAX ||
+      item->valuedouble != (uint32_t)item->valuedouble) {
+    return false;
+  }
+
+  *value = (uint32_t)item->valuedouble;
+  return true;
+}
+
+static bool cjson_u32_field(cJSON *object, const char *key, uint32_t *value) {
+  return cjson_u32_value(cJSON_GetObjectItemCaseSensitive(object, key), value);
+}
+
+static void load_source_debug_symbol_array(cJSON *root, const char *array_key,
                                            bool is_argument) {
-  char *array = find_json_array(json, array_key);
-  for (char *cursor = array; cursor != NULL && *cursor != '\0'; cursor++) {
-    cursor = skip_json_ws(cursor);
-    if (*cursor == ']') {
-      break;
-    }
-    if (*cursor != '{') {
+  cJSON *array = cJSON_GetObjectItemCaseSensitive(root, array_key);
+  if (!cJSON_IsArray(array)) {
+    return;
+  }
+
+  cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, array) {
+    if (!cJSON_IsObject(entry)) {
       continue;
     }
 
-    char *object_end = find_json_object_end(cursor);
-    if (object_end == NULL) {
-      break;
-    }
-
     SourceDebugSymbol symbol = {
-        .name = json_string_field(cursor, object_end, "name"),
-        .scope = json_string_field(cursor, object_end, "scope"),
+        .name = cjson_string_field(entry, "name"),
+        .scope = cjson_string_field(entry, "scope"),
         .address = 0,
         .size = 1,
         .is_argument = is_argument,
     };
-    bool has_address =
-        json_u32_field(cursor, object_end, "address", &symbol.address);
-    json_u32_field(cursor, object_end, "size", &symbol.size);
+    bool has_address = cjson_u32_field(entry, "address", &symbol.address);
+    cjson_u32_field(entry, "size", &symbol.size);
 
     if (symbol.name != NULL && symbol.scope != NULL && has_address &&
         symbol.size > 0) {
@@ -431,37 +330,28 @@ static void load_source_debug_symbol_array(char *json, const char *array_key,
       free(symbol.name);
       free(symbol.scope);
     }
-
-    cursor = object_end;
   }
 }
 
-static void load_source_debug_symbols_from_json(char *json) {
-  load_source_debug_symbol_array(json, "variables", false);
-  load_source_debug_symbol_array(json, "arguments", true);
+static void load_source_debug_symbols_from_json(cJSON *root) {
+  load_source_debug_symbol_array(root, "variables", false);
+  load_source_debug_symbol_array(root, "arguments", true);
 
-  char *call_jumps = find_json_array(json, "call_jumps");
-  for (char *cursor = call_jumps; cursor != NULL && *cursor != '\0'; cursor++) {
-    cursor = skip_json_ws(cursor);
-    if (*cursor == ']') {
-      break;
-    }
-    if (*cursor != '{') {
+  cJSON *call_jumps = cJSON_GetObjectItemCaseSensitive(root, "call_jumps");
+  if (!cJSON_IsArray(call_jumps)) {
+    call_jumps = NULL;
+  }
+  cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, call_jumps) {
+    if (!cJSON_IsObject(entry)) {
       continue;
-    }
-
-    char *object_end = find_json_object_end(cursor);
-    if (object_end == NULL) {
-      break;
     }
 
     SourceDebugCallJump call_jump = {
         .address = 0,
-        .target_function =
-            json_string_field(cursor, object_end, "target_function"),
+        .target_function = cjson_string_field(entry, "target_function"),
     };
-    bool has_address =
-        json_u32_field(cursor, object_end, "address", &call_jump.address);
+    bool has_address = cjson_u32_field(entry, "address", &call_jump.address);
 
     if (call_jump.target_function != NULL && has_address) {
       if (!append_source_debug_call_jump(call_jump)) {
@@ -471,27 +361,21 @@ static void load_source_debug_symbols_from_json(char *json) {
     } else {
       free(call_jump.target_function);
     }
-
-    cursor = object_end;
   }
 
-  char *return_addresses = find_json_array(json, "return_addresses");
-  for (char *cursor = return_addresses;
-       cursor != NULL && *cursor != '\0'; cursor++) {
-    cursor = skip_json_ws(cursor);
-    if (*cursor == ']') {
+  cJSON *return_addresses =
+      cJSON_GetObjectItemCaseSensitive(root, "return_addresses");
+  if (!cJSON_IsArray(return_addresses)) {
+    return_addresses = NULL;
+  }
+  cJSON_ArrayForEach(entry, return_addresses) {
+    uint32_t return_address;
+    if (!cjson_u32_value(entry, &return_address)) {
+      continue;
+    }
+    if (!append_source_debug_return_address(return_address)) {
       break;
     }
-
-    char *endptr = NULL;
-    unsigned long parsed = strtoul(cursor, &endptr, 10);
-    if (endptr == cursor || parsed > UINT32_MAX) {
-      break;
-    }
-    if (!append_source_debug_return_address((uint32_t)parsed)) {
-      break;
-    }
-    cursor = endptr;
   }
 }
 
@@ -512,7 +396,11 @@ static void ensure_source_debug_symbols_loaded(void) {
     return;
   }
 
-  load_source_debug_symbols_from_json(json);
+  cJSON *root = cJSON_Parse(json);
+  if (root != NULL) {
+    load_source_debug_symbols_from_json(root);
+    cJSON_Delete(root);
+  }
   free(json);
 }
 

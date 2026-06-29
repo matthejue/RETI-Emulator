@@ -1123,9 +1123,9 @@ static const char *uart_cell_label(uint64_t idx) {
   case SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL:
     return "timer interrupt interval";
   case SYSTEM_INFO_OS_CS:
-    return "Kernel CS";
+    return "kernel CS";
   case SYSTEM_INFO_OS_DS:
-    return "Kernel DS";
+    return "kernel DS";
   default:
     return "peripheral reserved";
   }
