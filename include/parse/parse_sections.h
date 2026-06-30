@@ -10,8 +10,10 @@ typedef struct {
   bool exists;
   uint32_t codesegment_start;
   uint32_t datasegment_start;
+  uint32_t heap_start;
   uint32_t interrupt_service_routines_start;
   uint32_t stack_start;
+  bool has_heap_start;
   bool has_stack_start;
   bool has_interrupt_service_routines_start;
 } Program_Sections;

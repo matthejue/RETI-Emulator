@@ -34,7 +34,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
 - `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
-- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
+- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start`, `heap_start` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
 - `-h`: Zeigt Verwendungshinweise an

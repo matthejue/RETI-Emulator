@@ -35,6 +35,7 @@ void test_parse_sections_for_reti_path(void) {
   assert(sections.exists);
   assert(sections.codesegment_start == 40);
   assert(sections.datasegment_start == 180);
+  assert(!sections.has_heap_start);
   assert(!sections.has_interrupt_service_routines_start);
   assert(!sections.has_stack_start);
 
@@ -52,6 +53,7 @@ void test_parse_explicit_sections_path(void) {
   assert(sections.exists);
   assert(sections.codesegment_start == 12);
   assert(sections.datasegment_start == 34);
+  assert(!sections.has_heap_start);
   assert(!sections.has_interrupt_service_routines_start);
 
   sections_path = "";
@@ -63,12 +65,14 @@ void test_parse_required_section_for_reti_path(void) {
   const char *sections_path = "/tmp/reti_required_section_test.sections";
   write_test_file(sections_path,
                   "{ \"codesegment_start\": 0, \"datasegment_start\": 4572, "
-                  "\"stack_start\": 8000 }");
+                  "\"heap_start\": 4600, \"stack_start\": 8000 }");
 
   Program_Sections sections = parse_required_section_for_reti_path(reti_path);
   assert(sections.exists);
   assert(sections.codesegment_start == 0);
   assert(sections.datasegment_start == 4572);
+  assert(sections.heap_start == 4600);
+  assert(sections.has_heap_start);
   assert(sections.stack_start == 8000);
   assert(sections.has_stack_start);
 
@@ -80,12 +84,14 @@ void test_parse_section_auto_stack_start(void) {
   const char *sections_path = "/tmp/reti_section_auto_stack_test.sections";
   write_test_file(sections_path,
                   "{ \"codesegment_start\": 0, \"datasegment_start\": 20, "
-                  "\"stack_start\": -1 }");
+                  "\"heap_start\": 24, \"stack_start\": -1 }");
 
   Program_Sections sections = parse_sections_for_reti_path(reti_path);
   assert(sections.exists);
   assert(sections.codesegment_start == 0);
   assert(sections.datasegment_start == 20);
+  assert(sections.heap_start == 24);
+  assert(sections.has_heap_start);
   assert(sections.stack_start == STACK_START_AUTO);
   assert(sections.has_stack_start);
 
