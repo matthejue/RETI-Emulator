@@ -55,9 +55,17 @@ void test_periphery_os_register_cells() {
 
   write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS, 0x8000002A);
   write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS, 0x80000064);
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_HEAP_START,
+                0x80001000);
+  write_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_STACK_START,
+                0x80002000);
 
   assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS) == 0x8000002A);
   assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS) == 0x80000064);
+  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_HEAP_START) ==
+         0x80001000);
+  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_STACK_START) ==
+         0x80002000);
 
   fin_reti();
 }

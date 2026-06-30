@@ -23,6 +23,8 @@ uint32_t num_instrs_data = 0;
 
 static uint32_t system_info_os_cs = 0;
 static uint32_t system_info_os_ds = 0;
+static uint32_t system_info_kernel_heap_start = 0;
+static uint32_t system_info_kernel_stack_start = 0;
 
 void init_reti() {
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);
@@ -139,6 +141,12 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
     if (addr == SYSTEM_INFO_OS_DS) {
       return system_info_os_ds;
     }
+    if (addr == SYSTEM_INFO_KERNEL_HEAP_START) {
+      return system_info_kernel_heap_start;
+    }
+    if (addr == SYSTEM_INFO_KERNEL_STACK_START) {
+      return system_info_kernel_stack_start;
+    }
     if (addr < 3 && !(uart[2] & 0b00000010) && addr == 1) {
       fprintf(stderr, "Warning: No new data in the receive register\n");
     } else if (addr < 3 && addr == 0) {
@@ -168,6 +176,14 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
     }
     if (addr == SYSTEM_INFO_OS_DS) {
       system_info_os_ds = buffer;
+      return;
+    }
+    if (addr == SYSTEM_INFO_KERNEL_HEAP_START) {
+      system_info_kernel_heap_start = buffer;
+      return;
+    }
+    if (addr == SYSTEM_INFO_KERNEL_STACK_START) {
+      system_info_kernel_stack_start = buffer;
       return;
     }
     if (addr < 3 && !(uart[2] & 0b00000001) && addr == 0) {

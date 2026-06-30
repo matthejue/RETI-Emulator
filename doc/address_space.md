@@ -11,6 +11,7 @@ section.
   `5 timer_device_to_prio`, `6 custom_device_to_prio`,
   `7 sram_max_address`,
   `8 timer_interrupt_interval` (`0 = timer interrupt disabled`),
-  `9 kernel_cs`, `10 kernel_ds`
+  `9 kernel_cs`, `10 kernel_ds`,
+  `11 kernel_heap_start`, `12 kernel_stack_start`
   Interrupt-controller meaning: `doc/interrupt_controller_control.md`.
 - `10` + `11`: SRAM

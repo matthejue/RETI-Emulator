@@ -1126,6 +1126,10 @@ static const char *uart_cell_label(uint64_t idx) {
     return "kernel CS";
   case SYSTEM_INFO_OS_DS:
     return "kernel DS";
+  case SYSTEM_INFO_KERNEL_HEAP_START:
+    return "kernel heap start";
+  case SYSTEM_INFO_KERNEL_STACK_START:
+    return "kernel stack start";
   default:
     return "peripheral reserved";
   }
