@@ -9,9 +9,6 @@ section.
   `0 uart_send`, `1 uart_receive`, `2 uart_status`,
   `3 timer_device_to_isr`, `4 custom_device_to_isr`,
   `5 timer_device_to_prio`, `6 custom_device_to_prio`,
-  `7 sram_max_address`,
-  `8 timer_interrupt_interval` (`0 = timer interrupt disabled`),
-  `9 kernel_cs`, `10 kernel_ds`,
-  `11 kernel_heap_start`, `12 kernel_stack_start`
+  `7 timer_interrupt_interval` (`0 = timer interrupt disabled`)
   Interrupt-controller meaning: `doc/interrupt_controller_control.md`.
 - `10` + `11`: SRAM

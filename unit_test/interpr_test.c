@@ -11,18 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void test_periphery_sram_max_address_cell() {
-  peripherals_dir = "/tmp";
-  sram_size = 1234;
-  init_reti();
-
-  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_SRAM_MAX_ADDRESS) ==
-         1233);
-
-  fin_reti();
-  sram_size = 65536;
-}
-
 void test_periphery_timer_interrupt_interval_cell() {
   peripherals_dir = "/tmp";
   interrupt_timer_interval = 7;
@@ -47,27 +35,6 @@ void test_periphery_timer_interrupt_interval_cell() {
   fin_reti();
   timer_cnt = 0;
   interrupt_timer_interval = 0;
-}
-
-void test_periphery_os_register_cells() {
-  peripherals_dir = "/tmp";
-  init_reti();
-
-  write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS, 0x8000002A);
-  write_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS, 0x80000064);
-  write_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_HEAP_START,
-                0x80001000);
-  write_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_STACK_START,
-                0x80002000);
-
-  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_CS) == 0x8000002A);
-  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_OS_DS) == 0x80000064);
-  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_HEAP_START) ==
-         0x80001000);
-  assert(read_storage((UART_CONST << 30) | SYSTEM_INFO_KERNEL_STACK_START) ==
-         0x80002000);
-
-  fin_reti();
 }
 
 void test_interpr_prgrm() {
@@ -113,9 +80,7 @@ void test_interpr_prgrm() {
 }
 
 int main() {
-  test_periphery_sram_max_address_cell();
   test_periphery_timer_interrupt_interval_cell();
-  test_periphery_os_register_cells();
   test_interpr_prgrm();
 
   return 0;

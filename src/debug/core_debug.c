@@ -86,8 +86,7 @@ static void cycle_sram_transcode_mode(void) {
 
 typedef enum {
   PERIPHERY_UART_VIEW,
-  PERIPHERY_INTERRUPT_CONTROLLER_VIEW,
-  PERIPHERY_SYSTEM_INFO_VIEW,
+  PERIPHERY_INTERRUPTS_VIEW,
 } Periphery_View;
 
 static BoxIdentifier active_box_identifier = EPROM_BOX;
@@ -335,7 +334,7 @@ uint64_t determine_watchobject_value(WatchBox *watchbox);
 static Box *get_box_for_box_identifier(BoxIdentifier box_identifier);
 
 static void cycle_periphery_view(void) {
-  periphery_view = (periphery_view + 1) % 3;
+  periphery_view = (periphery_view + 1) % 2;
 }
 
 static void handle_watchobject_assignment(void) {
@@ -809,12 +808,6 @@ static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
       draw_tui();
       return false;
     }
-    if (idx == SYSTEM_INFO_SRAM_MAX_ADDRESS) {
-      display_notification_box("Assign Value",
-                               "SRAM max address is read-only.");
-      draw_tui();
-      return false;
-    }
     write_array(uart, idx, value, true);
     return true;
   case SRAM_C:
@@ -1004,7 +997,8 @@ void print_mem_content_with_idx(uint64_t idx, uint32_t mem_content,
   case UART:
     snprintf(idx_str, sizeof(idx_str),
              proper_str_cat(proper_str_cat("%0", num_digits_for_idx_str(
-                                                     NUM_PERIPHERY_ADDRESSES)),
+                                                     max(NUM_PERIPHERY_ADDRESSES,
+                                                         11))),
                             "zu"),
              idx);
     break;
@@ -1118,18 +1112,8 @@ static const char *uart_cell_label(uint64_t idx) {
     return "timer priority";
   case INTERRUPT_CONTROLLER_PRIO_BASE + CUSTOM:
     return "custom priority";
-  case SYSTEM_INFO_SRAM_MAX_ADDRESS:
-    return "SRAM max address";
   case SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL:
     return "timer interrupt interval";
-  case SYSTEM_INFO_OS_CS:
-    return "kernel CS";
-  case SYSTEM_INFO_OS_DS:
-    return "kernel DS";
-  case SYSTEM_INFO_KERNEL_HEAP_START:
-    return "kernel heap start";
-  case SYSTEM_INFO_KERNEL_STACK_START:
-    return "kernel stack start";
   default:
     return "peripheral reserved";
   }
@@ -1663,16 +1647,9 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
   }
 }
 
-static void print_interrupt_controller_view(void) {
-  handle_heading(true, &uart_box, "Interrupt Controller [a: System Info]", "",
-                 0);
+static void print_interrupts_view(void) {
+  handle_heading(true, &uart_box, "Interrupts [a: UART]", "", 0);
   print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
-                                SYSTEM_INFO_BASE - 1, false);
-}
-
-static void print_system_info_view(void) {
-  handle_heading(true, &uart_box, "System Info [a: UART]", "", 0);
-  print_array_with_idcs_from_to(UART, SYSTEM_INFO_BASE,
                                 NUM_PERIPHERY_ADDRESSES - 1, false);
 }
 
@@ -1738,12 +1715,10 @@ bool draw_tui(void) {
                  eprom_watchobject_int);
   print_eprom_watchobject(eprom_watchobject_int);
 
-  if (periphery_view == PERIPHERY_INTERRUPT_CONTROLLER_VIEW) {
-    print_interrupt_controller_view();
-  } else if (periphery_view == PERIPHERY_SYSTEM_INFO_VIEW) {
-    print_system_info_view();
+  if (periphery_view == PERIPHERY_INTERRUPTS_VIEW) {
+    print_interrupts_view();
   } else {
-    handle_heading(true, &uart_box, "UART [a: Interrupt Controller]", "", 0);
+    handle_heading(true, &uart_box, "UART [a: Interrupts]", "", 0);
     print_array_with_idcs_from_to(UART, 0, 2, false);
     print_uart_meta_data();
   }

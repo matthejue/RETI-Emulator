@@ -183,7 +183,7 @@ Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Be
 
 Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`CUSTOM`).
 
-Die Peripherie-Zelle `8` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern.
+Die Peripherie-Zelle `7` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern.
 
 Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 CUSTOM`; `-` bedeutet keine Zuordnung.
 
