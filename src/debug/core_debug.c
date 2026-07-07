@@ -1364,6 +1364,11 @@ void print_uart_meta_data() {
   print_formatted_to_box("\n", &uart_box);
 }
 
+static void print_interrupt_timer_meta_data(void) {
+  print_formatted_to_box("Current interrupt timer: %u\n", &uart_box,
+                         timer_cnt);
+}
+
 WatchBox *get_watchbox(BoxIdentifier box_identifier) {
   switch (box_identifier) {
   case EPROM_BOX:
@@ -1651,6 +1656,7 @@ static void print_interrupts_view(void) {
   handle_heading(true, &uart_box, "Interrupts [a: UART]", "", 0);
   print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
                                 NUM_PERIPHERY_ADDRESSES - 1, false);
+  print_interrupt_timer_meta_data();
 }
 
 bool draw_tui(void) {
