@@ -97,14 +97,15 @@ void do_step_into_isr() {
 }
 
 void check_deactivation_custom_interrupt() {
-  if (latest_isr == isr_of_timer_interrupt) {
+  if (latest_isr == isr_of_custom_interrupt) {
     deactivated_custom_interrupt_here = stacked_isrs_cnt;
     custom_interrupt_active = true;
   }
 }
 
-void check_reactivation_custom_interrupt() {
-  if (deactivated_custom_interrupt_here == stacked_isrs_cnt) {
+void check_reactivation_custom_interrupt(uint8_t completed_isr) {
+  if (completed_isr == isr_of_custom_interrupt &&
+      deactivated_custom_interrupt_here == stacked_isrs_cnt) {
     custom_interrupt_active = false;
   }
 }
@@ -116,8 +117,9 @@ void check_deactivation_interrupt_timer() {
   }
 }
 
-void check_reactivation_interrupt_timer() {
-  if (latest_isr == isr_of_timer_interrupt && deactivated_timer_interrupt_here == stacked_isrs_cnt) {
+void check_reactivation_interrupt_timer(uint8_t completed_isr) {
+  if (completed_isr == isr_of_timer_interrupt &&
+      deactivated_timer_interrupt_here == stacked_isrs_cnt) {
     interrupt_timer_active = true;
   }
 }
@@ -155,6 +157,14 @@ void check_hardware_int_completed() {
     hardware_isr_stack_top--;
   }
   is_hardware_int_stack_top--;
+}
+
+uint8_t completed_hardware_isr(void) {
+  if (is_hardware_int_stack_top >= 0 &&
+      is_hardware_int_stack[is_hardware_int_stack_top]) {
+    return hardware_isr_stack[hardware_isr_stack_top];
+  }
+  return INVALID_ISR_NUM;
 }
 
 bool decide_prio_higher_stack(uint8_t isr) {
@@ -212,7 +222,7 @@ void error_too_many_hardware_interrupts(void) {
 }
 
 void check_heap_size_before_insert_into_heap(uint8_t isr) {
-  if (heap_size <= HEAP_SIZE) {
+  if (heap_size < HEAP_SIZE) {
     insert_into_heap(isr);
   } else {
     error_too_many_hardware_interrupts();
@@ -271,14 +281,14 @@ void update_state(Event event) {
     break;
   case RETURN_FROM_INTERRUPT:
     stacked_isrs_cnt--;
+    uint8_t completed_isr = completed_hardware_isr();
     return_from_interrupt();
-    check_reactivation_custom_interrupt();
-    check_reactivation_interrupt_timer();
+    check_reactivation_custom_interrupt(completed_isr);
+    check_reactivation_interrupt_timer(completed_isr);
     check_finished_isr_completed();
     check_not_stepped_into_isr_completed();
     check_hardware_int_completed();
     if (decide_prio_higher_heap()) {
-      heap_size--;
       handle_next_hi();
     }
     break;

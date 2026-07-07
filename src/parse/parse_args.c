@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 // Number of addressable 32-bit words in SRAM.
+// Default: 2^16 = 65536 words.
 uint32_t sram_size = 65536;
 uint16_t page_size = 4096;
 bool debug_mode = false;

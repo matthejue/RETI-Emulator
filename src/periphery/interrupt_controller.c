@@ -29,6 +29,8 @@ static int parse_device_slot(const char *str) {
 }
 
 void sync_interrupt_controller_from_memory(void) {
+  uint8_t previous_timer_isr = isr_of_timer_interrupt;
+
   memset(isr_to_prio, 0, sizeof(isr_to_prio));
   for (uint8_t device = 0; device < NUM_HARDWARE_INTERRUPT_SIGNAL_LINES;
        device++) {
@@ -44,7 +46,11 @@ void sync_interrupt_controller_from_memory(void) {
 
   isr_of_timer_interrupt = device_to_isr[INTERRUPT_TIMER];
   isr_of_custom_interrupt = device_to_isr[CUSTOM];
-  interrupt_timer_active = isr_of_timer_interrupt != INVALID_ISR_NUM;
+  if (isr_of_timer_interrupt == INVALID_ISR_NUM) {
+    interrupt_timer_active = false;
+  } else if (previous_timer_isr != isr_of_timer_interrupt) {
+    interrupt_timer_active = true;
+  }
   custom_interrupt_activatable = isr_of_custom_interrupt != INVALID_ISR_NUM;
 }
 
