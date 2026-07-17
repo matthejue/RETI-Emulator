@@ -214,6 +214,9 @@ static void process_uart_load_command(void) {
     return;
   }
 
+  fprintf(stderr, "DIAG load command path=%s input=%zu/%zu\n", path,
+          input_idx, input_len);
+
   struct stat st;
   if (stat(path, &st) != 0) {
     return;
@@ -233,6 +236,8 @@ static void process_uart_load_command(void) {
   }
 
   load_file_into_uart_input(path, (size_t)(uintmax_t)st.st_size);
+  fprintf(stderr, "DIAG queued path=%s input=%zu/%zu\n", path, input_idx,
+          input_len);
 }
 
 void uart_handle_sent_byte_for_load_command(uint8_t byte) {
@@ -450,7 +455,6 @@ static void update_uart_receive(void) {
     if (!uart_receive_requested()) {
       return;
     }
-
     receive_current_byte = next_receive_byte();
     if (start_waiting(&receiving_waiting_time)) {
       receive_state = UART_WAITING;

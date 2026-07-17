@@ -1,5 +1,6 @@
 #include "../include/special_opts.h"
 #include "../include/uart.h"
+#include "../include/parse/parse_args.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,6 +116,48 @@ void test_uart_load_command_appends_file_to_input() {
   remove(filename);
 }
 
+void test_uart_completes_load_command_before_receive() {
+  const char *filename = "uart_load_order_test.bin";
+  const uint8_t file_content[] = {'A', 'B', 'C', 'D'};
+  FILE *file = fopen(filename, "wb");
+  if (file == NULL) {
+    fprintf(stderr, "Error: File could not be opened\n");
+    exit(EXIT_FAILURE);
+  }
+  fwrite(file_content, 1, sizeof(file_content), file);
+  fclose(file);
+
+  init_uart();
+  max_waiting_instrs = 0;
+  free(uart_input);
+  uart_input = malloc(1);
+  uart_input[0] = '\0';
+  input_len = 0;
+  input_idx = 0;
+
+  const char *command = "load uart_load_order_test.bin";
+  for (size_t i = 0; i < strlen(command); i++) {
+    uart_handle_sent_byte_for_load_command(command[i]);
+  }
+
+  uart[0] = '\n';
+  uart[2] = 0;
+  update_uart();
+  update_uart();
+
+  assert(input_len == sizeof(uint32_t) + sizeof(file_content));
+  assert(input_idx == 1);
+  assert(receive_current_byte == 0);
+
+  free(uart_input);
+  uart_input = NULL;
+  input_len = 0;
+  input_idx = 0;
+  free(uart);
+  uart = NULL;
+  remove(filename);
+}
+
 int main() {
   test_extract_comment_metadata();
   test_extract_comment_metadata_decimal_escapes();
@@ -122,5 +165,6 @@ int main() {
   test_decimal_escape_above_byte_range_stays_literal();
   test_format_uart_byte();
   test_uart_load_command_appends_file_to_input();
+  test_uart_completes_load_command_before_receive();
   return 0;
 }
