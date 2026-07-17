@@ -4,6 +4,7 @@
 #include "../include/interrupt.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_sections.h"
+#include "../include/statemachine.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
 #include <stdint.h>
@@ -22,6 +23,7 @@ uint32_t num_instrs_isrs = 0;
 uint32_t num_instrs_data = 0;
 
 void init_reti() {
+  stacked_isrs_cnt = os_mode ? 1 : 0;
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);
   // TODO: herausfinden, wie man num_instrs_start_prgrm vorher bestimmt
   if (strcmp(eprom_prgrm_path, "") == 0) {
