@@ -1,10 +1,12 @@
 #include "../include/utils.h"
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 // r = a % m <-> r + m * q = a + m * p <-> r = a - m * q (q is biggest q such
 // that q*m <= a) = a − m * (a / m) 0 <= r < m, a,q € Z, m € N/0 (normal C /
@@ -60,6 +62,35 @@ char *proper_str_cat(const char *prefix, const char *suffix) {
   char *new_file_dir = malloc(strlen(prefix) + strlen(suffix) + 1);
   strcpy(new_file_dir, prefix);
   return strcat(new_file_dir, suffix);
+}
+
+char *build_debug_script_path(const char *script_name) {
+  char exe_path[PATH_MAX];
+  ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+  if (len < 0) {
+    return NULL;
+  }
+  exe_path[len] = '\0';
+
+  char *last_slash = strrchr(exe_path, '/');
+  if (last_slash == NULL) {
+    return NULL;
+  }
+  *last_slash = '\0';
+
+  char *bin_slash = strrchr(exe_path, '/');
+  if (bin_slash != NULL && strcmp(bin_slash + 1, "bin") == 0) {
+    *bin_slash = '\0';
+  }
+
+  const char *debug_dir = "/src/debug/";
+  size_t path_len =
+      strlen(exe_path) + strlen(debug_dir) + strlen(script_name) + 1;
+  char *script_path = malloc(path_len);
+  if (script_path != NULL) {
+    snprintf(script_path, path_len, "%s%s%s", exe_path, debug_dir, script_name);
+  }
+  return script_path;
 }
 
 char *read_stdin_content() {

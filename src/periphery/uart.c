@@ -5,6 +5,7 @@
 #include "../../include/interrupt_controller.h"
 #include "../../include/input_output.h"
 #include "../../include/special_opts.h"
+#include "../../include/terminal_view.h"
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -214,9 +215,6 @@ static void process_uart_load_command(void) {
     return;
   }
 
-  fprintf(stderr, "DIAG load command path=%s input=%zu/%zu\n", path,
-          input_idx, input_len);
-
   struct stat st;
   if (stat(path, &st) != 0) {
     return;
@@ -236,8 +234,6 @@ static void process_uart_load_command(void) {
   }
 
   load_file_into_uart_input(path, (size_t)(uintmax_t)st.st_size);
-  fprintf(stderr, "DIAG queued path=%s input=%zu/%zu\n", path, input_idx,
-          input_len);
 }
 
 void uart_handle_sent_byte_for_load_command(uint8_t byte) {
@@ -283,7 +279,9 @@ static bool uart_receive_requested(void) {
 
 static void complete_send(void) {
   uint8_t sent_byte = uart[0];
-  if (test_mode) {
+  if (debug_mode) {
+    append_terminal_output(sent_byte);
+  } else if (test_mode) {
     char buffer[6];
     adjust_print(true, "%s", "%s", format_uart_byte(sent_byte, buffer));
   } else {

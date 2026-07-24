@@ -5,6 +5,7 @@
 #include "../include/parse/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/source_debug.h"
+#include "../include/terminal_view.h"
 #include "../include/utils.h"
 #include "../include/uart.h"
 #include <stdarg.h>
@@ -136,6 +137,8 @@ void close_out_and_err_file() {
 
 void finalize() {
   stop_source_debugger();
+  stop_terminal_viewer();
+  close_terminal_output();
   fin_reti();
   free_program_comments();
   if (test_mode) {

@@ -11,6 +11,7 @@
 #include "../../include/source_debug.h"
 #include "../../include/special_opts.h"
 #include "../../include/statemachine.h"
+#include "../../include/terminal_view.h"
 #include "../../include/tui.h"
 #include "../../include/uart.h"
 #include "../../include/utils.h"
@@ -1532,6 +1533,13 @@ void evaluate_keyboard_input(void) {
       }
       draw_tui();
       continue;
+    } else if (key == 'V') {
+      if (!start_terminal_viewer()) {
+        display_notification_box("Terminal Error",
+                                 "Failed to start terminal viewer");
+      }
+      draw_tui();
+      continue;
     } else if (key == 'S' || key == 'R') {
       reset_all_scroll_offsets();
       if (handle_snapshot_debug_key(key)) {
@@ -1618,6 +1626,13 @@ void wait_for_tui_quit(void) {
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
+      }
+      draw_tui();
+      continue;
+    case 'V':
+      if (!start_terminal_viewer()) {
+        display_notification_box("Terminal Error",
+                                 "Failed to start terminal viewer");
       }
       draw_tui();
       continue;

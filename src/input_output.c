@@ -87,6 +87,8 @@ void display_input_box(char *input, const char *message,
   mvwgetnstr(input_box, 1, 1, input, max_num_digits);
   noecho();
 
+  werase(input_box);
+  wrefresh(input_box);
   delwin(input_box);
 }
 

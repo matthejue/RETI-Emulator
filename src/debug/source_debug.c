@@ -7,7 +7,6 @@
 #include "../../vendor/cJSON/cJSON.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -409,31 +408,6 @@ static bool is_global_scope(const char *scope) {
          strcmp(scope, "") == 0;
 }
 
-static char *build_source_debug_script_path(void) {
-  char exe_path[PATH_MAX];
-  ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-  if (len < 0) {
-    return NULL;
-  }
-  exe_path[len] = '\0';
-
-  char *last_slash = strrchr(exe_path, '/');
-  if (last_slash == NULL) {
-    return NULL;
-  }
-  *last_slash = '\0';
-
-  char *bin_slash = strrchr(exe_path, '/');
-  if (bin_slash != NULL && strcmp(bin_slash + 1, "bin") == 0) {
-    *bin_slash = '\0';
-  }
-
-  size_t total_len = strlen(exe_path) + strlen("/src/debug/source_debug.py") + 1;
-  char *script_path = malloc(total_len);
-  snprintf(script_path, total_len, "%s/src/debug/source_debug.py", exe_path);
-  return script_path;
-}
-
 bool start_source_debugger(void) {
   reap_source_debugger_if_exited();
   if (source_debugger_pid > 0) {
@@ -446,7 +420,7 @@ bool start_source_debugger(void) {
   activate_source_debug();
   write_source_debug_state();
 
-  char *script_path = build_source_debug_script_path();
+  char *script_path = build_debug_script_path("source_debug.py");
   char *debuginfo_path = build_debuginfo_path();
   if (script_path == NULL || debuginfo_path == NULL) {
     free(script_path);

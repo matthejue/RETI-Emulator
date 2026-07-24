@@ -7,6 +7,7 @@
 #include "../include/parse/parse_sections.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
+#include "../include/terminal_view.h"
 #include "../include/tui.h"
 #include "../include/uart.h"
 #include "../include/utils.h"
@@ -142,6 +143,9 @@ int main(int argc, char *argv[]) {
 
   init_reti();
   if (debug_mode && !assemble_mode) {
+    if (!init_terminal_output()) {
+      fprintf(stderr, "Warning: Couldn't create debug terminal output\n");
+    }
     init_tui();
   }
 
