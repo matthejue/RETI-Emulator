@@ -11,6 +11,28 @@ Receive one byte: clear `b1`; emulator later writes the next buffered ASCII byte
 
 Input is buffered. Interactive input can contain multiple characters; they are consumed one byte at a time. With `-m`, one separator space/tab after `# input:` is skipped and the rest of the line is used as the initial byte buffer, including further spaces.
 
+## Output control frames
+
+`ESC` below is the ASCII escape byte `27`. A control frame has the byte form
+`ESC command ESC /`. Every byte in the frame, including both escape bytes and
+the final slash, is consumed by the emulator and is not written to the terminal
+or the currently selected output file.
+
+- `ESC load <path> ESC /` appends a file to the UART input buffer. The emulator
+  first appends the file's 32-bit big-endian word count and then the file bytes.
+  Plain, unframed `load <path>` text has no special meaning and is printed
+  normally.
+- `ESC !<terminal_command> ESC /` runs the command through the shell in the
+  emulator process's current working directory.
+- `ESC <path> ESC /` creates or truncates `<path>` and routes subsequent UART
+  output bytes to it.
+- `ESC stdout ESC /` routes subsequent output back to standard output and thus
+  to the debug terminal viewer when debug mode is active.
+- `ESC stderr ESC /` routes subsequent output to standard error.
+
+Paths in these frames are relative to the directory in which the emulator is
+running unless they are absolute.
+
 ## Debug terminal output
 
 Without `-d`, completed UART sends are written directly to standard output. With

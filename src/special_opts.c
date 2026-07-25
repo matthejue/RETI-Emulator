@@ -139,6 +139,7 @@ void finalize() {
   stop_source_debugger();
   stop_terminal_viewer();
   close_terminal_output();
+  close_uart_output();
   fin_reti();
   free_program_comments();
   if (test_mode) {

@@ -5,6 +5,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+static void send_uart_byte(uint8_t byte) {
+  uart[0] = byte;
+  uart[2] &= 0b11111110;
+  update_uart();
+}
+
+static void send_uart_bytes(const uint8_t *bytes, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    send_uart_byte(bytes[i]);
+  }
+}
 
 void test_extract_comment_metadata() {
   char *filename = "/tmp/extract_comment_metadata.reti";
@@ -70,7 +83,7 @@ void test_format_uart_byte() {
   assert(strcmp(format_uart_byte(255, buffer), "\\d255") == 0);
 }
 
-void test_uart_load_command_appends_file_to_input() {
+void test_escaped_uart_load_command_appends_file_to_input() {
   const char *filename = "uart_load_test.bin";
   const uint8_t file_content[] = {'A', '\0', 255, 'B', 'C', 'D', 'E', 'F'};
   const uint8_t expected_word_count[] = {0, 0, 0, 2};
@@ -82,6 +95,8 @@ void test_uart_load_command_appends_file_to_input() {
   fwrite(file_content, 1, sizeof(file_content), file);
   fclose(file);
 
+  init_uart();
+  max_waiting_instrs = 0;
   free(uart_input);
   uart_input = malloc(3);
   memcpy(uart_input, "xy", 2);
@@ -89,16 +104,29 @@ void test_uart_load_command_appends_file_to_input() {
   input_len = 2;
   input_idx = 1;
 
-  const char *ignored_output = "hello\n";
-  for (size_t i = 0; i < strlen(ignored_output); i++) {
-    uart_handle_sent_byte_for_load_command(ignored_output[i]);
-  }
+  FILE *stdout_capture = tmpfile();
+  assert(stdout_capture != NULL);
+  int saved_stdout = dup(STDOUT_FILENO);
+  assert(saved_stdout >= 0);
+  assert(dup2(fileno(stdout_capture), STDOUT_FILENO) >= 0);
+
+  const char *ordinary_load = "load uart_load_test.bin\n";
+  send_uart_bytes((const uint8_t *)ordinary_load, strlen(ordinary_load));
+  fflush(stdout);
+  rewind(stdout_capture);
+  char ordinary_output[26] = {0};
+  assert(fread(ordinary_output, 1, strlen(ordinary_load), stdout_capture) ==
+         strlen(ordinary_load));
+  assert(memcmp(ordinary_output, ordinary_load, strlen(ordinary_load)) == 0);
+  assert(fgetc(stdout_capture) == EOF);
+
+  assert(dup2(saved_stdout, STDOUT_FILENO) >= 0);
+  close(saved_stdout);
+  fclose(stdout_capture);
   assert(input_len == 2);
 
-  const char *command = "load uart_load_test.bin\n";
-  for (size_t i = 0; i < strlen(command); i++) {
-    uart_handle_sent_byte_for_load_command(command[i]);
-  }
+  const uint8_t command[] = "\x1bload uart_load_test.bin\x1b/";
+  send_uart_bytes(command, sizeof(command) - 1);
 
   assert(input_len ==
          2 + sizeof(expected_word_count) + sizeof(file_content));
@@ -113,6 +141,9 @@ void test_uart_load_command_appends_file_to_input() {
   uart_input = NULL;
   input_len = 0;
   input_idx = 0;
+  close_uart_output();
+  free(uart);
+  uart = NULL;
   remove(filename);
 }
 
@@ -135,14 +166,15 @@ void test_uart_completes_load_command_before_receive() {
   input_len = 0;
   input_idx = 0;
 
-  const char *command = "load uart_load_order_test.bin";
-  for (size_t i = 0; i < strlen(command); i++) {
-    uart_handle_sent_byte_for_load_command(command[i]);
-  }
+  const uint8_t command[] = "\x1bload uart_load_order_test.bin\x1b";
+  send_uart_bytes(command, sizeof(command) - 1);
 
-  uart[0] = '\n';
+  max_waiting_instrs = 1;
+  uart[0] = '/';
   uart[2] = 0;
   update_uart();
+  assert(input_len == 0);
+  assert(input_idx == 0);
   update_uart();
 
   assert(input_len == sizeof(uint32_t) + sizeof(file_content));
@@ -153,6 +185,7 @@ void test_uart_completes_load_command_before_receive() {
   uart_input = NULL;
   input_len = 0;
   input_idx = 0;
+  close_uart_output();
   free(uart);
   uart = NULL;
   remove(filename);
@@ -164,7 +197,7 @@ int main() {
   test_common_escapes();
   test_decimal_escape_above_byte_range_stays_literal();
   test_format_uart_byte();
-  test_uart_load_command_appends_file_to_input();
+  test_escaped_uart_load_command_appends_file_to_input();
   test_uart_completes_load_command_before_receive();
   return 0;
 }

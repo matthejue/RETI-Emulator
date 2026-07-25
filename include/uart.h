@@ -23,8 +23,8 @@ extern uint8_t *uart;
 
 void update_uart(void);
 void init_uart() ;
+void close_uart_output(void);
 uint16_t decode_uart_input_escapes(uint8_t *input, uint16_t len);
 const char *format_uart_byte(uint8_t byte, char *buffer);
-void uart_handle_sent_byte_for_load_command(uint8_t byte);
 
 #endif // UART_H

@@ -38,11 +38,22 @@ uint8_t *uart;
 #define UART_RECEIVE_READY 0b00000010
 #define UART_INPUT_BOX_LEN 80
 #define UART_LOAD_COMMAND_PREFIX "load "
-#define UART_LOAD_COMMAND_MAX 4096
+#define UART_CONTROL_ESCAPE 27
+#define UART_CONTROL_MAX 4096
 
-static char uart_load_command[UART_LOAD_COMMAND_MAX + 1];
-static size_t uart_load_command_len = 0;
-static bool uart_load_command_candidate = true;
+typedef enum {
+  UART_OUTPUT_STDOUT,
+  UART_OUTPUT_STDERR,
+  UART_OUTPUT_FILE
+} Uart_Output;
+
+static char uart_control[UART_CONTROL_MAX + 1];
+static size_t uart_control_len = 0;
+static bool uart_control_active = false;
+static bool uart_control_end_candidate = false;
+static bool uart_control_overflow = false;
+static Uart_Output uart_output = UART_OUTPUT_STDOUT;
+static FILE *uart_output_file = NULL;
 
 static bool is_visible_terminal_ascii(uint8_t byte) {
   return byte >= 32 && byte <= 126;
@@ -81,6 +92,7 @@ const char *format_uart_byte(uint8_t byte, char *buffer) {
 }
 
 void init_uart() {
+  close_uart_output();
   uart = malloc(sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   memset(uart, 0, sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   uart[2] = UART_SEND_READY | UART_RECEIVE_READY;
@@ -196,13 +208,13 @@ static void load_file_into_uart_input(const char *path, size_t len) {
   free(buffer);
 }
 
-static void process_uart_load_command(void) {
+static void process_uart_load_command(char *command) {
   const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
-  if (strncmp(uart_load_command, UART_LOAD_COMMAND_PREFIX, prefix_len) != 0) {
+  if (strncmp(command, UART_LOAD_COMMAND_PREFIX, prefix_len) != 0) {
     return;
   }
 
-  char *path = uart_load_command + prefix_len;
+  char *path = command + prefix_len;
   while (*path == ' ' || *path == '\t') {
     path++;
   }
@@ -222,7 +234,7 @@ static void process_uart_load_command(void) {
   if (S_ISDIR(st.st_mode)) {
     fprintf(stderr,
             "Warning: UART load directory chooser is not implemented; send "
-            "load <file> instead\n");
+            "<esc>load <file><esc>/ instead\n");
     return;
   }
   if (!S_ISREG(st.st_mode)) {
@@ -236,37 +248,136 @@ static void process_uart_load_command(void) {
   load_file_into_uart_input(path, (size_t)(uintmax_t)st.st_size);
 }
 
-void uart_handle_sent_byte_for_load_command(uint8_t byte) {
-  if (byte == '\n' || byte == '\r') {
-    if (uart_load_command_candidate) {
-      uart_load_command[uart_load_command_len] = '\0';
-      process_uart_load_command();
+static void select_uart_output_file(const char *path) {
+  FILE *file = fopen(path, "wb");
+  if (file == NULL) {
+    fprintf(stderr, "Warning: Couldn't open UART output file %s: %s\n", path,
+            strerror(errno));
+    return;
+  }
+
+  if (uart_output_file != NULL) {
+    fclose(uart_output_file);
+  }
+  uart_output_file = file;
+  uart_output = UART_OUTPUT_FILE;
+}
+
+static void select_uart_standard_output(Uart_Output output) {
+  if (uart_output_file != NULL) {
+    fclose(uart_output_file);
+    uart_output_file = NULL;
+  }
+  uart_output = output;
+}
+
+static void process_uart_control(void) {
+  uart_control[uart_control_len] = '\0';
+  if (strncmp(uart_control, UART_LOAD_COMMAND_PREFIX,
+              strlen(UART_LOAD_COMMAND_PREFIX)) == 0) {
+    process_uart_load_command(uart_control);
+  } else if (uart_control[0] == '!') {
+    if (uart_control[1] != '\0' && system(uart_control + 1) == -1) {
+      fprintf(stderr, "Warning: Couldn't execute UART terminal command: %s\n",
+              strerror(errno));
     }
-    uart_load_command_len = 0;
-    uart_load_command[0] = '\0';
-    uart_load_command_candidate = true;
+  } else if (strcmp(uart_control, "stdout") == 0) {
+    select_uart_standard_output(UART_OUTPUT_STDOUT);
+  } else if (strcmp(uart_control, "stderr") == 0) {
+    select_uart_standard_output(UART_OUTPUT_STDERR);
+  } else if (uart_control[0] != '\0') {
+    select_uart_output_file(uart_control);
+  }
+}
+
+static void append_uart_control_byte(uint8_t byte) {
+  if (uart_control_overflow) {
     return;
   }
 
-  if (!uart_load_command_candidate) {
+  if (uart_control_len >= UART_CONTROL_MAX) {
+    uart_control_overflow = true;
     return;
   }
-  if (uart_load_command_len >= UART_LOAD_COMMAND_MAX) {
-    uart_load_command_len = 0;
-    uart_load_command[0] = '\0';
-    uart_load_command_candidate = false;
-    return;
+  uart_control[uart_control_len++] = byte;
+}
+
+static bool handle_uart_control_byte(uint8_t byte) {
+  if (!uart_control_active) {
+    if (byte != UART_CONTROL_ESCAPE) {
+      return false;
+    }
+    uart_control_active = true;
+    uart_control_len = 0;
+    uart_control_end_candidate = false;
+    uart_control_overflow = false;
+    return true;
   }
 
-  uart_load_command[uart_load_command_len++] = byte;
-  size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
-  if (uart_load_command_len <= prefix_len &&
-      strncmp(uart_load_command, UART_LOAD_COMMAND_PREFIX,
-              uart_load_command_len) != 0) {
-    uart_load_command_len = 0;
-    uart_load_command[0] = '\0';
-    uart_load_command_candidate = false;
+  if (uart_control_end_candidate) {
+    if (byte == '/') {
+      if (!uart_control_overflow) {
+        process_uart_control();
+      }
+      uart_control_active = false;
+      uart_control_end_candidate = false;
+      return true;
+    }
+
+    append_uart_control_byte(UART_CONTROL_ESCAPE);
+    uart_control_end_candidate = false;
   }
+
+  if (byte == UART_CONTROL_ESCAPE) {
+    uart_control_end_candidate = true;
+  } else {
+    append_uart_control_byte(byte);
+  }
+  return true;
+}
+
+static void write_uart_stdout(uint8_t byte) {
+  if (debug_mode) {
+    append_terminal_output(byte);
+  } else if (test_mode) {
+    char buffer[6];
+    adjust_print(true, "%s", "%s", format_uart_byte(byte, buffer));
+  } else {
+    adjust_print(true, "%c", "%c", byte);
+  }
+}
+
+static void write_uart_output(uint8_t byte) {
+  switch (uart_output) {
+  case UART_OUTPUT_STDOUT:
+    write_uart_stdout(byte);
+    break;
+  case UART_OUTPUT_STDERR:
+    if (test_mode) {
+      char buffer[6];
+      adjust_print(false, "%s", "%s", format_uart_byte(byte, buffer));
+    } else {
+      fputc(byte, stderr);
+      fflush(stderr);
+    }
+    break;
+  case UART_OUTPUT_FILE:
+    fputc(byte, uart_output_file);
+    fflush(uart_output_file);
+    break;
+  }
+}
+
+void close_uart_output(void) {
+  if (uart_output_file != NULL) {
+    fclose(uart_output_file);
+    uart_output_file = NULL;
+  }
+  uart_output = UART_OUTPUT_STDOUT;
+  uart_control_active = false;
+  uart_control_end_candidate = false;
+  uart_control_overflow = false;
+  uart_control_len = 0;
 }
 
 static bool uart_send_requested(void) {
@@ -277,18 +388,20 @@ static bool uart_receive_requested(void) {
   return !(read_array(uart, 2, true) & UART_RECEIVE_READY);
 }
 
+static bool uart_send_completes_load_control(void) {
+  size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
+  return uart_send_requested() && uart_control_active &&
+         uart_control_end_candidate && uart[0] == '/' &&
+         !uart_control_overflow && uart_control_len >= prefix_len &&
+         memcmp(uart_control, UART_LOAD_COMMAND_PREFIX, prefix_len) == 0;
+}
+
 static void complete_send(void) {
   uint8_t sent_byte = uart[0];
-  if (debug_mode) {
-    append_terminal_output(sent_byte);
-  } else if (test_mode) {
-    char buffer[6];
-    adjust_print(true, "%s", "%s", format_uart_byte(sent_byte, buffer));
-  } else {
-    adjust_print(true, "%c", "%c", sent_byte);
+  if (!handle_uart_control_byte(sent_byte)) {
+    write_uart_output(sent_byte);
   }
   remember_sent_byte(sent_byte);
-  uart_handle_sent_byte_for_load_command(sent_byte);
   uart[2] = uart[2] | UART_SEND_READY;
   send_state = UART_IDLE;
 }
@@ -469,6 +582,15 @@ static void update_uart_receive(void) {
 }
 
 void update_uart(void) {
+  if (uart_send_completes_load_control()) {
+    update_uart_send();
+    if (uart_send_requested()) {
+      return;
+    }
+    update_uart_receive();
+    return;
+  }
+
   update_uart_receive();
   update_uart_send();
 }
