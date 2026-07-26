@@ -94,7 +94,7 @@ static void test_uart_controls_are_hidden_from_debug_terminal(void) {
   assert(init_terminal_output());
   start_uart();
 
-  const uint8_t output[] = "A\x1bstdout\x1b/B";
+  const uint8_t output[] = "A\x1bwrite stdout\x1b/B";
   send_uart_bytes(output, sizeof(output) - 1);
 
   stop_uart();
@@ -115,7 +115,8 @@ static void test_uart_output_can_be_redirected_to_a_file(void) {
   debug_mode = false;
   start_uart();
   const uint8_t output[] =
-      "\x1b/tmp/reti_uart_output_test.bin\x1b/file\x1bstdout\x1b/terminal";
+      "\x1bwrite /tmp/reti_uart_output_test.bin\x1b/"
+      "file\x1bstdout\x1b/still\x1bwrite stdout\x1b/terminal";
   send_uart_bytes(output, sizeof(output) - 1);
   stop_uart();
 
@@ -129,9 +130,9 @@ static void test_uart_output_can_be_redirected_to_a_file(void) {
   close(saved_stdout);
   fclose(stdout_capture);
 
-  uint8_t file_output[4];
-  assert(read_file(path, file_output, sizeof(file_output)) == 4);
-  assert(memcmp(file_output, "file", sizeof(file_output)) == 0);
+  uint8_t file_output[9];
+  assert(read_file(path, file_output, sizeof(file_output)) == 9);
+  assert(memcmp(file_output, "filestill", sizeof(file_output)) == 0);
   remove(path);
 }
 
@@ -149,7 +150,8 @@ static void test_uart_output_can_be_redirected_to_stderr(void) {
 
   debug_mode = false;
   start_uart();
-  const uint8_t output[] = "\x1bstderr\x1b/E\x1bstdout\x1b/O";
+  const uint8_t output[] =
+      "\x1bwrite stderr\x1b/E\x1bwrite stdout\x1b/O";
   send_uart_bytes(output, sizeof(output) - 1);
   stop_uart();
 

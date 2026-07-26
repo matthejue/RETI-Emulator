@@ -13,22 +13,37 @@ Input is buffered. Interactive input can contain multiple characters; they are c
 
 ## Output control frames
 
-`ESC` below is the ASCII escape byte `27`. A control frame has the byte form
-`ESC command ESC /`. Every byte in the frame, including both escape bytes and
+`<esc>` below is the ASCII escape byte `27`. A control command has the byte form
+`<esc>command<esc>/`. Every byte in the command, including both escape bytes and
 the final slash, is consumed by the emulator and is not written to the terminal
 or the currently selected output file.
 
-- `ESC load <path> ESC /` appends a file to the UART input buffer. The emulator
+- `<esc>load <path><esc>/` appends a file to the UART input buffer. The emulator
   first appends the file's 32-bit big-endian word count and then the file bytes.
-  Plain, unframed `load <path>` text has no special meaning and is printed
-  normally.
-- `ESC !<terminal_command> ESC /` runs the command through the shell in the
+  A missing or unreadable file returns a zero word count.
+- `<esc>read <path><esc>/` appends a regular file's 32-bit big-endian byte count
+  and then its exact bytes. A missing or unreadable file returns `UINT32_MAX`
+  instead of file data.
+  Plain, unframed `load <path>` and `read <path>` text has no special meaning
+  and is printed normally.
+
+The `read` command is intended for OS-side text configuration files. For
+example, Pico-OS init reads `./opts/environment.txt`, splits its newline-
+separated `NAME=value` entries, and passes the resulting environment to the
+shell. The shell obtains `PATH` with `getenv("PATH")` and searches its
+colon-separated directories in order. A read failure is returned as an empty
+configuration by Pico-OS.
+
+The exact byte count is required because configuration files are text and may
+not have a size divisible by four. The explicit failure value is required
+because a missing file must not leave the OS waiting indefinitely for a length.
+- `<esc>!<terminal_command><esc>/` runs the command through the shell in the
   emulator process's current working directory.
-- `ESC <path> ESC /` creates or truncates `<path>` and routes subsequent UART
-  output bytes to it.
-- `ESC stdout ESC /` routes subsequent output back to standard output and thus
-  to the debug terminal viewer when debug mode is active.
-- `ESC stderr ESC /` routes subsequent output to standard error.
+- `<esc>write <path><esc>/` creates or truncates `<path>` and routes subsequent
+  UART output bytes to it.
+- `<esc>write stdout<esc>/` routes subsequent output back to standard output and
+  thus to the debug terminal viewer when debug mode is active.
+- `<esc>write stderr<esc>/` routes subsequent output to standard error.
 
 Paths in these frames are relative to the directory in which the emulator is
 running unless they are absolute.
