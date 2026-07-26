@@ -17,6 +17,8 @@ void do_step_into_isr();
 
 bool timer_interrupt_check();
 bool custom_interrupt_trigger();
+bool uart_interrupt_trigger(uint8_t byte);
+void uart_interrupt_completed(uint8_t isr);
 void init_custom_interrupt_action_isr(void);
 bool cycle_custom_interrupt_action_isr(void);
 uint8_t get_custom_interrupt_action_isr(void);

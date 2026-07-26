@@ -18,6 +18,9 @@ static int parse_device_slot(const char *str) {
   if (strcmp(str, "CUSTOM") == 0) {
     return CUSTOM;
   }
+  if (strcmp(str, "UART") == 0) {
+    return UART_DEVICE;
+  }
 
   char *endptr;
   long value = strtol(str, &endptr, 10);
@@ -46,6 +49,7 @@ void sync_interrupt_controller_from_memory(void) {
 
   isr_of_timer_interrupt = device_to_isr[INTERRUPT_TIMER];
   isr_of_custom_interrupt = device_to_isr[CUSTOM];
+  isr_of_uart_interrupt = device_to_isr[UART_DEVICE];
   if (isr_of_timer_interrupt == INVALID_ISR_NUM) {
     interrupt_timer_active = false;
   } else if (previous_timer_isr != isr_of_timer_interrupt) {

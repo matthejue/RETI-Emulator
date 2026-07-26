@@ -12,6 +12,7 @@
 
 extern uint8_t isr_of_timer_interrupt;
 extern uint8_t isr_of_custom_interrupt;
+extern uint8_t isr_of_uart_interrupt;
 extern uint16_t isr_num;
 
 typedef enum {

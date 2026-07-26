@@ -11,8 +11,11 @@
 static const char *TERMINAL_ROOT_DIR = "/tmp/reti_emulator";
 static const char *TERMINAL_OUTPUT_PATH =
     "/tmp/reti_emulator/terminal_output.bin";
+static const char *TERMINAL_INPUT_PATH =
+    "/tmp/reti_emulator/terminal_input.bin";
 
 static int terminal_output_fd = -1;
+static int terminal_input_fd = -1;
 static pid_t terminal_viewer_pid = -1;
 
 static bool ensure_terminal_dir(void) {
@@ -26,7 +29,13 @@ bool init_terminal_output(void) {
 
   terminal_output_fd =
       open(TERMINAL_OUTPUT_PATH, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600);
-  return terminal_output_fd >= 0;
+  terminal_input_fd =
+      open(TERMINAL_INPUT_PATH, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0600);
+  if (terminal_output_fd < 0 || terminal_input_fd < 0) {
+    close_terminal_output();
+    return false;
+  }
+  return true;
 }
 
 void append_terminal_output(uint8_t byte) {
@@ -35,6 +44,16 @@ void append_terminal_output(uint8_t byte) {
   }
 
   (void)write(terminal_output_fd, &byte, 1);
+}
+
+bool read_terminal_input(uint8_t *byte) {
+  return terminal_input_fd >= 0 && read(terminal_input_fd, byte, 1) == 1;
+}
+
+void discard_terminal_input(void) {
+  uint8_t byte;
+  while (read_terminal_input(&byte)) {
+  }
 }
 
 static void reap_terminal_viewer(void) {
@@ -85,7 +104,8 @@ bool start_terminal_viewer(void) {
 
   if (child_pid == 0) {
     detach_terminal_viewer_from_tui();
-    execlp("python3", "python3", script_path, TERMINAL_OUTPUT_PATH, NULL);
+    execlp("python3", "python3", script_path, TERMINAL_OUTPUT_PATH,
+           TERMINAL_INPUT_PATH, NULL);
     _exit(EXIT_FAILURE);
   }
 
@@ -106,10 +126,13 @@ void stop_terminal_viewer(void) {
 }
 
 void close_terminal_output(void) {
-  if (terminal_output_fd < 0) {
-    return;
+  if (terminal_output_fd >= 0) {
+    close(terminal_output_fd);
+    terminal_output_fd = -1;
   }
 
-  close(terminal_output_fd);
-  terminal_output_fd = -1;
+  if (terminal_input_fd >= 0) {
+    close(terminal_input_fd);
+    terminal_input_fd = -1;
+  }
 }

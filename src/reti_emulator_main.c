@@ -10,6 +10,7 @@
 #include "../include/terminal_view.h"
 #include "../include/tui.h"
 #include "../include/uart.h"
+#include "../include/uart_mode.h"
 #include "../include/utils.h"
 #include "../include/core_debug.h"
 #include <stdint.h>
@@ -169,6 +170,15 @@ int main(int argc, char *argv[]) {
                            EPROM_START_PRGRM);
   } else {
     load_adjusted_eprom_prgrm(sections.stack_start);
+  }
+
+  if (uart_mode) {
+    if (!activate_uart_mode()) {
+      fprintf(stderr, "Warning: Couldn't activate (U)ART mode\n");
+    } else if (debug_mode) {
+      update_term_and_box_sizes();
+      draw_tui();
+    }
   }
 
   interpr_prgrm();

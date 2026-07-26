@@ -138,6 +138,8 @@ bool setup_hardware_interrupt(uint8_t isr) {
     title = "Custom Interrupt";
   } else if (isr == isr_of_timer_interrupt) {
     title = "Timer Interrupt";
+  } else if (isr == isr_of_uart_interrupt) {
+    title = "UART Interrupt";
   } else {
     title = "Hardware Interrupt";
   }
@@ -287,6 +289,7 @@ void update_state(Event event) {
     check_reactivation_interrupt_timer(completed_isr);
     check_finished_isr_completed();
     check_not_stepped_into_isr_completed();
+    uart_interrupt_completed(completed_isr);
     check_hardware_int_completed();
     if (decide_prio_higher_heap()) {
       handle_next_hi();

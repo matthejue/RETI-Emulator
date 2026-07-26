@@ -13,6 +13,7 @@
 
 uint8_t isr_of_timer_interrupt = INVALID_ISR_NUM; // unreachable value
 uint8_t isr_of_custom_interrupt = INVALID_ISR_NUM;
+uint8_t isr_of_uart_interrupt = INVALID_ISR_NUM;
 
 // TODO: wrong name
 const char *register_code_to_name[] = {

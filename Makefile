@@ -160,4 +160,6 @@ update-linux-global: pull-latest-version install-linux-global
 uninstall-linux-global:
 	@sudo rm -f /usr/local/bin/reti_emulator
 
--include $(OBJ:.o=.d)
+-include $(OBJ_SRC:.o=.d)
+-include $(patsubst $(BIN_DIR)/%,$(OBJ_DIR)/%.d,$(BIN_SRC))
+-include $(patsubst $(BIN_DIR)/%,$(OBJ_TEST_DIR)/%.d,$(BIN_TEST))

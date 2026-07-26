@@ -12,6 +12,11 @@
 #include <string.h>
 
 void test_periphery_timer_interrupt_interval_cell() {
+  assert(INTERRUPT_CONTROLLER_ISR_BASE == 3);
+  assert(INTERRUPT_CONTROLLER_PRIO_BASE == 6);
+  assert(SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL == 9);
+  assert(NUM_PERIPHERY_ADDRESSES == 10);
+
   peripherals_dir = "/tmp";
   interrupt_timer_interval = 7;
   init_reti();
@@ -21,6 +26,14 @@ void test_periphery_timer_interrupt_interval_cell() {
                       SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) == 7);
 
   write_storage((UART_CONST << 30) | INTERRUPT_CONTROLLER_ISR_BASE, 0);
+  write_storage((UART_CONST << 30) |
+                    (INTERRUPT_CONTROLLER_ISR_BASE + UART_DEVICE),
+                2);
+  write_storage((UART_CONST << 30) |
+                    (INTERRUPT_CONTROLLER_PRIO_BASE + UART_DEVICE),
+                4);
+  assert(device_to_isr[UART_DEVICE] == 2);
+  assert(device_to_prio[UART_DEVICE] == 4);
   write_storage((UART_CONST << 30) | SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL, 0);
   assert(!timer_interrupt_check());
   assert(timer_cnt == 0);

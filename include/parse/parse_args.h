@@ -19,6 +19,7 @@ extern bool verbose;
 extern bool ds_vals_unsigned;
 extern bool keep_tui_alive_after_halt;
 extern bool os_mode;
+extern bool uart_mode;
 extern bool has_sram_prgrm;
 
 extern char *peripherals_dir;

@@ -39,6 +39,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
 - `-O`: Startet mit einer synthetischen aktiven ISR für Betriebssysteme, deren erster Prozess per `RTI` gestartet wird
+- `-U`: Startet direkt im interaktiven `(U)ART mode`; ohne `-d` dient das aufrufende Terminal gleichzeitig als Ein- und Ausgabegerät
 - `-h`: Zeigt Verwendungshinweise an
 
 <!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
@@ -60,6 +61,8 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
   - Löst die aktuell für die Custom-Aktion ausgewählte ISR aus
 - `e` xchange isr
   - Wechselt zyklisch zwischen allen per `-i` geladenen ISR-Nummern, die durch `t` ausgelöst werden können
+- `U` ART mode
+  - Führt das Programm kontinuierlich aus und öffnet das GUI-Terminal als UART-Ein- und -Ausgabegerät; nur `Escape` beendet diesen Modus
 
 # Installation und Updates
 ## Installation auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
@@ -183,11 +186,11 @@ Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder m
 
 Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
 
-Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 2 Zellen für `signal line -> isr` und danach 2 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Aktuell gibt es Signal-Line `0` (`INTTIMER`) und Signal-Line `1` (`CUSTOM`).
+Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 3 Zellen für `signal line -> isr` und danach 3 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Es gibt Signal-Line `0` (`INTTIMER`), Signal-Line `1` (`CUSTOM`) und Signal-Line `2` (`UART`).
 
-Die Peripherie-Zelle `7` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern.
+Die Peripherie-Zelle `9` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern.
 
-Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER` oder `1 CUSTOM`; `-` bedeutet keine Zuordnung.
+Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER`, `1 CUSTOM` oder `3 UART`; `-` bedeutet keine Zuordnung.
 
 Eine Datei mit Interrupt Service Routinen, zum Beispiel `isrs.reti`, kann so aufgebaut sein:
 
@@ -232,6 +235,8 @@ Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der 
 
 Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(T)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `T` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden. Mit `t` (`t`ranscode) wechselt die Anzeige sichtbarer SRAM-Werte zwischen Zahl, RETI-Instruktion und ASCII-Zeichen, sofern der jeweilige Wert so dekodiert werden kann.
 
+Auf der dritten Hilfeseite aktiviert `U` den `(U)ART mode`. Das Programm läuft darin kontinuierlich weiter, das GUI-Terminal wird automatisch geöffnet und alle anderen TUI-Aktionen sind gesperrt. Die Infobox zeigt währenddessen den aktiven Modus an. `Escape` im GUI-Terminal oder im Debug-TUI beendet den Modus und hält die Ausführung wieder im Debugger an.
+
 Mit `-c` werden zusätzlich Quellkommentare im Debugmode angezeigt. Dazu werden Kommentare beim Parsen in einer internen Struktur mit Ziel-Speicherbereich, referenziertem Instruktionsindex und Anzeigeposition gespeichert. Beim Anzeigen einer Instruktion wird geprüft, welche gespeicherten Kommentare diesem Instruktionsindex im aktuellen Speicherbereich zugeordnet sind, und diese werden dann vor oder nach der Instruktion ausgegeben.
 
 Mithilfe sogenannter **Watchbojects** wird ein mittels `-r i` (radius) bestimmter Radius von `i` (default ist 2) sichtbaren Instructions bzw. Speicherinhalten über und unter einer von diesem Watchobject betrachteten Speicheradresse angezeigt. Die Speicheradresse ist hierbei entweder über den Inhalt eines vorher dem Watchobject zugewiesenen Registers bestimmt oder einfach direkt durch eine vorher an das Watchobject zugewiesene Speicheradresse. Die verschiedenen verfügbaren Wachpointer in dem TUI für das Debuggen sind `ew` (EPROM Watchobject), `swc` (SRAM Watchobject für das Codesegment), `swd` (SRAM Watchobject für das Datensegment) und `sws` (SRAM Watchobject für den Stack). Die Zuweisung einer Speicheradresse oder eines Registers erfolgt dabei über das Kommando `a` (`a`ssign), z.B. in Form von `a<enter>ew<enter>10`, `a<enter>sws<enter>BAF` usw.
@@ -250,12 +255,15 @@ Mithilfe sogenannter **Watchbojects** wird ein mittels `-r i` (radius) bestimmte
 - Die UART überträgt nur einzelne 8-Bit-Bytes. Es gibt kein Datentyp-Byte und keine Sonderbehandlung für Zahlen oder Strings. ASCII-Zeichen werden als ihr 8-Bit-ASCII-Code übertragen.
 - Zum Senden schreibt das RETI-Programm ein Byte nach R0 und setzt danach `b0` in R2 auf `0`. Nach der simulierten UART-Wartezeit setzt der Emulator `b0` wieder auf `1`; dann wurde dieses Byte vom simulierten Ausgabegerät übernommen und als ASCII-Zeichen ausgegeben.
 - Zum Empfangen setzt das RETI-Programm `b1` in R2 auf `0`, sobald es bereit für das nächste Byte ist. Nach der simulierten UART-Wartezeit schreibt der Emulator das nächste ASCII-Byte nach R1 und setzt `b1` wieder auf `1`; das Programm sollte R1 lesen, bevor es das nächste Byte anfordert.
+- Im `(U)ART mode` wird jeder Tastendruck direkt als einzelnes 8-Bit-Byte nach R1 geschrieben, setzt `b1` und löst die Hardware-Signalleitung `UART` aus. Solange der vorherige UART-Interrupt noch aussteht, werden weitere Tasten gepuffert. `Escape` beendet den Modus und wird nicht an R1 übertragen.
+- Mit `-U` wird der `(U)ART mode` ohne Debug-TUI direkt beim Start aktiviert. Eingaben kommen dann zeichenweise aus dem aufrufenden Terminal und normale UART-Ausgaben erscheinen dort auf `stdout`.
 - Wenn kein gepufferter Input mehr vorhanden ist, fragt der Emulator in einer Input-Box nach UART-Eingabe. Mehrere eingegebene Zeichen werden als Buffer gespeichert und danach byteweise verbraucht. Eine leere Eingabe entspricht `\n`; alternativ können `\n` und `\t` als Escape-Sequenzen eingegeben werden.
 - Mit `-m` können Eingaben aus dem Kommentar `# input: ...` gelesen werden. Ein einzelnes Trennleerzeichen oder Tab nach `input:` wird übersprungen; der restliche Text wird als Zeichenbuffer übernommen, inklusive weiterer Leerzeichen, und danach Zeichen für Zeichen über die UART ausgeliefert.
 - Spezielle UART-Ausgabeaktionen werden mit dem ASCII-Escape-Byte `27` eingerahmt: `<esc>Aktion<esc>/`. Die gesamte Einrahmung einschließlich der Aktion wird nicht ins Terminal geschrieben. Ein nicht eingerahmtes `load <path>` ist normale Ausgabe; nur `<esc>load <path><esc>/` lädt die Datei und hängt zuerst ihre 32-Bit-Wortanzahl (Big Endian), danach ihren Inhalt an den UART-Eingabepuffer an.
 - `<esc>read <path><esc>/` hängt zuerst die 32-Bit-Byteanzahl (Big Endian), danach die unveränderten Bytes einer regulären Datei an den UART-Eingabepuffer an. Bei einer fehlenden oder nicht lesbaren Datei wird stattdessen `UINT32_MAX` zurückgegeben.
 - `<esc>!<terminal_command><esc>/` führt den Befehl in dem Arbeitsverzeichnis aus, in dem der Emulator gestartet wurde.
 - `<esc>write <path><esc>/` leitet alle folgenden UART-Ausgabebytes in die neu angelegte beziehungsweise geleerte Datei um. `<esc>write stdout<esc>/` schaltet zurück zur Terminalausgabe, `<esc>write stderr<esc>/` leitet auf die Standardfehlerausgabe um.
+- `<esc>append <path><esc>/` leitet die folgenden UART-Ausgabebytes an das Ende der Datei um und legt sie bei Bedarf an, ohne vorhandene Daten zu löschen.
 
 Für die UART zeigt das TUI fürs Debuggen neben offensichtlich den Registern R0, R1 und R2 (Senderegister, Empfangsregister und Statusregister) in Form der ersten 3 Adressen noch Informationen an, wie 
 - `Waiting time sending: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART an das vom RETI-Emulator simulierte Anzeigegerät zu versenden. Die Wartezeit wird zufällig generiert und ihr Maximalwert wird über `-w i` festgelegt (default für `i` ist 10). Die Wartezeit fängt an sobald durch setzen des Bit b0 im Statusregister auf 0 signalisiert wurde, dass das Byte im Senderegister R0 final feststeht und versandt werden kann. Sobald die Wartezeit abgelaufen ist, wird b0 wieder auf 1 gesetzt. Ohne `-d` wird das Byte über `stdout` ausgegeben. Mit `-d` wird es stattdessen unabhängig von einem geöffneten Viewer in `/tmp/reti_emulator/terminal_output.bin` aufgezeichnet; mit der auf Seite 3 der Infobox dokumentierten Aktion `(V)iew terminal` kann die bisherige und neue Ausgabe in einem Python-GUI-Terminal betrachtet werden. Das Byte wird außerdem unter `Current send data: ...` sowie `All send data: ...` angezeigt.

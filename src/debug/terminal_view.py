@@ -50,8 +50,9 @@ class TerminalBuffer:
 class TerminalView:
     POLL_INTERVAL_MS = 50
 
-    def __init__(self, output_path):
+    def __init__(self, output_path, input_path):
         self.output_path = output_path
+        self.input_file = open(input_path, "ab", buffering=0)
         self.offset = 0
         self.buffer = TerminalBuffer()
 
@@ -88,6 +89,25 @@ class TerminalView:
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
         self.text.configure(state="disabled")
+        self.root.bind("<KeyPress>", self._send_key)
+        self.text.focus_set()
+
+    def _send_key(self, event):
+        special_keys = {
+            "Return": b"\r",
+            "BackSpace": b"\x7f",
+            "Tab": b"\t",
+            "Escape": b"\x1b",
+        }
+        data = special_keys.get(event.keysym)
+        if data is None and event.char:
+            try:
+                data = event.char.encode("latin-1")
+            except UnicodeEncodeError:
+                data = None
+        if data:
+            self.input_file.write(data)
+        return "break"
 
     def _read_new_output(self):
         try:
@@ -116,9 +136,9 @@ class TerminalView:
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit(f"Usage: {sys.argv[0]} OUTPUT_FILE")
-    TerminalView(sys.argv[1]).run()
+    if len(sys.argv) != 3:
+        raise SystemExit(f"Usage: {sys.argv[0]} OUTPUT_FILE INPUT_FILE")
+    TerminalView(sys.argv[1], sys.argv[2]).run()
 
 
 if __name__ == "__main__":

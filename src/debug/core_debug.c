@@ -14,6 +14,7 @@
 #include "../../include/terminal_view.h"
 #include "../../include/tui.h"
 #include "../../include/uart.h"
+#include "../../include/uart_mode.h"
 #include "../../include/utils.h"
 #include <ncurses.h>
 #include <stdbool.h>
@@ -1109,10 +1110,14 @@ static const char *uart_cell_label(uint64_t idx) {
     return "timer isr";
   case INTERRUPT_CONTROLLER_ISR_BASE + CUSTOM:
     return "custom isr";
+  case INTERRUPT_CONTROLLER_ISR_BASE + UART_DEVICE:
+    return "uart isr";
   case INTERRUPT_CONTROLLER_PRIO_BASE + INTERRUPT_TIMER:
     return "timer priority";
   case INTERRUPT_CONTROLLER_PRIO_BASE + CUSTOM:
     return "custom priority";
+  case INTERRUPT_CONTROLLER_PRIO_BASE + UART_DEVICE:
+    return "uart priority";
   case SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL:
     return "timer interrupt interval";
   default:
@@ -1540,6 +1545,16 @@ void evaluate_keyboard_input(void) {
       }
       draw_tui();
       continue;
+    } else if (key == 'U') {
+      reset_all_scroll_offsets();
+      if (!activate_uart_mode()) {
+        display_notification_box("UART Mode Error",
+                                 "Failed to activate (U)ART mode");
+        draw_tui();
+        continue;
+      }
+      draw_tui();
+      return;
     } else if (key == 'S' || key == 'R') {
       reset_all_scroll_offsets();
       if (handle_snapshot_debug_key(key)) {
@@ -1634,6 +1649,11 @@ void wait_for_tui_quit(void) {
         display_notification_box("Terminal Error",
                                  "Failed to start terminal viewer");
       }
+      draw_tui();
+      continue;
+    case 'U':
+      display_notification_box("UART Mode",
+                               "(U)ART mode is unavailable after program halt");
       draw_tui();
       continue;
     case 'S':

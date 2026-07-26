@@ -47,5 +47,6 @@ void update_term_and_box_sizes();
 void cycle_info_box_page(void);
 void set_tui_halted_mode(bool halted);
 void set_tui_snapshot_available(bool available);
+void set_tui_uart_mode(bool active);
 
 #endif // TUI_H

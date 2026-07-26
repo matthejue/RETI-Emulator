@@ -1,15 +1,33 @@
 # UART Protocol Cheat Sheet
 
-UART memory cells: `R0` send, `R1` receive, `R2` status. In `R2`, `b0 = send ready` and `b1 = receive ready`.
+UART memory cells: `R0` send, `R1` receive, `R2` status. In `R2`,
+`b0 = send ready` and `b1 = receive ready`.
 
-UART transfers are raw 8-bit bytes only. There is no datatype byte and no integer/string framing. ASCII characters are transferred as their byte values.
+UART transfers are raw 8-bit bytes only. There is no datatype byte and no
+integer/string framing. ASCII characters are transferred as their byte values.
 
 Send one byte: write byte to `R0`, clear `b0`; emulator later sets `b0` and
 emits that byte to standard output or the debug terminal capture.
 
-Receive one byte: clear `b1`; emulator later writes the next buffered ASCII byte to `R1` and sets `b1`.
+Receive one byte: clear `b1`; emulator later writes the next buffered ASCII byte
+to `R1` and sets `b1`.
 
-Input is buffered. Interactive input can contain multiple characters; they are consumed one byte at a time. With `-m`, one separator space/tab after `# input:` is skipped and the rest of the line is used as the initial byte buffer, including further spaces.
+Input is buffered. Interactive input can contain multiple characters; they are
+consumed one byte at a time. With `-m`, one separator space/tab after `# input:`
+is skipped and the rest of the line is used as the initial byte buffer,
+including further spaces.
+
+## Interactive (U)ART mode
+
+`-U` enters `(U)ART mode` when the emulator starts. Without `-d`, the invoking
+terminal supplies character input and receives UART output. In the debug TUI,
+`U` enters the mode and opens the GUI terminal automatically. Other debug
+actions are unavailable until `Escape` exits the mode.
+
+Each input byte is written to `R1`, sets the receive-ready bit in `R2`, and
+triggers the `UART` hardware interrupt. Further input is buffered while an
+earlier UART interrupt is pending. `Escape` exits `(U)ART mode` and is not
+delivered as UART input.
 
 ## Output control frames
 
@@ -37,10 +55,13 @@ configuration by Pico-OS.
 The exact byte count is required because configuration files are text and may
 not have a size divisible by four. The explicit failure value is required
 because a missing file must not leave the OS waiting indefinitely for a length.
+
 - `<esc>!<terminal_command><esc>/` runs the command through the shell in the
   emulator process's current working directory.
 - `<esc>write <path><esc>/` creates or truncates `<path>` and routes subsequent
   UART output bytes to it.
+- `<esc>append <path><esc>/` creates `<path>` if needed and routes subsequent
+  UART output bytes to its end without truncating existing data.
 - `<esc>write stdout<esc>/` routes subsequent output back to standard output and
   thus to the debug terminal viewer when debug mode is active.
 - `<esc>write stderr<esc>/` routes subsequent output to standard error.
@@ -58,6 +79,6 @@ viewer being open.
 
 The third infobox page provides `(V)iew terminal`. Capital `V` opens the Python
 GUI terminal with all output captured so far and follows new output while the
-emulator runs. The viewer handles carriage return, newline, backspace, tab,
-and printable ASCII output. Backspace removes the preceding displayed character.
+emulator runs. The viewer handles carriage return, newline, backspace, tab, and
+printable ASCII output. Backspace removes the preceding displayed character.
 It is available while stepping and after halt when `-K` keeps the TUI open.

@@ -40,6 +40,7 @@ uint8_t *uart;
 #define UART_LOAD_COMMAND_PREFIX "load "
 #define UART_READ_COMMAND_PREFIX "read "
 #define UART_WRITE_COMMAND_PREFIX "write "
+#define UART_APPEND_COMMAND_PREFIX "append "
 #define UART_CONTROL_ESCAPE 27
 #define UART_CONTROL_MAX 4096
 
@@ -282,8 +283,8 @@ static void process_uart_read_command(char *command) {
   }
 }
 
-static void select_uart_output_file(const char *path) {
-  FILE *file = fopen(path, "wb");
+static void select_uart_output_file(const char *path, const char *mode) {
+  FILE *file = fopen(path, mode);
   if (file == NULL) {
     fprintf(stderr, "Warning: Couldn't open UART output file %s: %s\n", path,
             strerror(errno));
@@ -313,7 +314,15 @@ static void process_uart_write_command(char *command) {
   } else if (strcmp(destination, "stderr") == 0) {
     select_uart_standard_output(UART_OUTPUT_STDERR);
   } else if (*destination != '\0') {
-    select_uart_output_file(destination);
+    select_uart_output_file(destination, "wb");
+  }
+}
+
+static void process_uart_append_command(char *command) {
+  char *destination = command + strlen(UART_APPEND_COMMAND_PREFIX);
+
+  if (*destination != '\0') {
+    select_uart_output_file(destination, "ab");
   }
 }
 
@@ -333,6 +342,9 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_WRITE_COMMAND_PREFIX,
                      strlen(UART_WRITE_COMMAND_PREFIX)) == 0) {
     process_uart_write_command(uart_control);
+  } else if (strncmp(uart_control, UART_APPEND_COMMAND_PREFIX,
+                     strlen(UART_APPEND_COMMAND_PREFIX)) == 0) {
+    process_uart_append_command(uart_control);
   }
 }
 
@@ -390,6 +402,7 @@ static void write_uart_stdout(uint8_t byte) {
     adjust_print(true, "%s", "%s", format_uart_byte(byte, buffer));
   } else {
     adjust_print(true, "%c", "%c", byte);
+    fflush(stdout);
   }
 }
 
@@ -606,6 +619,8 @@ static uint8_t next_receive_byte(void) {
   return uart_input[input_idx++];
 }
 
+static bool uart_receive_buffer_has_data(void) { return input_idx < input_len; }
+
 static void complete_receive(void) {
   uart[1] = receive_current_byte;
   uart[2] = uart[2] | UART_RECEIVE_READY;
@@ -616,6 +631,9 @@ static void update_uart_receive(void) {
   switch (receive_state) {
   case UART_IDLE:
     if (!uart_receive_requested()) {
+      return;
+    }
+    if (uart_mode && !uart_receive_buffer_has_data()) {
       return;
     }
     receive_current_byte = next_receive_byte();

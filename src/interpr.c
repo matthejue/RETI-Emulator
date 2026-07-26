@@ -11,6 +11,7 @@
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
+#include "../include/uart_mode.h"
 #include "../include/utils.h"
 #include <ncurses.h>
 #include <stdbool.h>
@@ -400,6 +401,7 @@ void interpr_prgrm() {
   sync_source_debug_state();
   while (true) {
     sync_source_debug_state();
+    update_uart_mode();
     if (visibility_condition) {
       update_term_and_box_sizes();
       draw_tui();

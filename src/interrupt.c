@@ -17,6 +17,8 @@ bool interrupt_timer_active = false;
 
 bool custom_interrupt_active = false;
 bool custom_interrupt_activatable = false;
+static bool uart_interrupt_pending = false;
+static uint8_t pending_uart_isr = INVALID_ISR_NUM;
 
 void init_custom_interrupt_action_isr(void) {
   sync_interrupt_controller_from_memory();
@@ -83,4 +85,27 @@ bool custom_interrupt_trigger() {
   update_state(HARDWARE_INTERRUPT);
   bool should_cont = out.retbool2;
   return should_cont;
+}
+
+bool uart_interrupt_trigger(uint8_t byte) {
+  sync_interrupt_controller_from_memory();
+  uint8_t uart_isr = device_to_isr[UART_DEVICE];
+  if (uart_interrupt_pending || uart_isr == INVALID_ISR_NUM) {
+    return false;
+  }
+
+  uart[1] = byte;
+  uart[2] |= 0b00000010;
+  uart_interrupt_pending = true;
+  pending_uart_isr = uart_isr;
+  in.arg8 = uart_isr;
+  update_state(HARDWARE_INTERRUPT);
+  return true;
+}
+
+void uart_interrupt_completed(uint8_t isr) {
+  if (uart_interrupt_pending && isr == pending_uart_isr) {
+    uart_interrupt_pending = false;
+    pending_uart_isr = INVALID_ISR_NUM;
+  }
 }

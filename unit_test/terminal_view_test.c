@@ -10,6 +10,8 @@
 
 static const char *TERMINAL_OUTPUT_PATH =
     "/tmp/reti_emulator/terminal_output.bin";
+static const char *TERMINAL_INPUT_PATH =
+    "/tmp/reti_emulator/terminal_input.bin";
 
 static void start_uart(void) {
   init_uart();
@@ -87,6 +89,27 @@ static void test_non_debug_uart_output_uses_stdout(void) {
   assert(dup2(saved_stdout, STDOUT_FILENO) >= 0);
   close(saved_stdout);
   fclose(stdout_capture);
+}
+
+static void test_debug_terminal_input_is_read(void) {
+  assert(init_terminal_output());
+  FILE *input = fopen(TERMINAL_INPUT_PATH, "ab");
+  assert(input != NULL);
+  assert(fputc('x', input) == 'x');
+  fclose(input);
+
+  uint8_t byte = 0;
+  assert(read_terminal_input(&byte));
+  assert(byte == 'x');
+  assert(!read_terminal_input(&byte));
+
+  input = fopen(TERMINAL_INPUT_PATH, "ab");
+  assert(input != NULL);
+  assert(fputs("yz", input) >= 0);
+  fclose(input);
+  discard_terminal_input();
+  assert(!read_terminal_input(&byte));
+  close_terminal_output();
 }
 
 static void test_uart_controls_are_hidden_from_debug_terminal(void) {
@@ -194,6 +217,7 @@ static void test_uart_terminal_command_runs_in_emulator_directory(void) {
 int main(void) {
   test_debug_uart_output_is_captured();
   test_non_debug_uart_output_uses_stdout();
+  test_debug_terminal_input_is_read();
   test_uart_controls_are_hidden_from_debug_terminal();
   test_uart_output_can_be_redirected_to_a_file();
   test_uart_output_can_be_redirected_to_stderr();
