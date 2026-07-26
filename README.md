@@ -22,6 +22,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 ## Kommandozeilenoptionen
 - `-r ram_size`: Setzt die Anzahl adressierbarer 32-Bit-Wörter im SRAM (Stadardwert: `2^16=65536`)
 - `-d`: Zeigt das Ncurses Debug TUI an
+- `-K`: Hält die Debug-TUI nach dem abschließenden `JUMP 0` geöffnet, bis sie mit `q` beendet wird
 - `-f file_dir`: Gibt an, wo die Datei `sram.bin` erzeugt werden soll
 - `-e eprom_prgrm_path`: Parst und lädt Eprom-Startprogramm aus Datei, die über Dateipfad gefunden werden kann
 - `-i isrs_prgrm_path`: Parst und lädt Interrupt-Service Routinen aus Datei, die über Dateipfad gefunden werden kann
