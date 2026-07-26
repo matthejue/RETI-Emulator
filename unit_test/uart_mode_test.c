@@ -7,6 +7,7 @@
 #include "../include/uart.h"
 #include "../include/uart_mode.h"
 #include <assert.h>
+#include <ncurses.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -74,8 +75,26 @@ static void test_non_debug_uart_mode_reads_keys_until_escape(void) {
   close(input_pipe[1]);
 }
 
+static void test_debug_keys_are_converted_to_uart_bytes(void) {
+  uint8_t byte = 0;
+
+  assert(debug_key_to_uart_byte('x', &byte));
+  assert(byte == 'x');
+  assert(debug_key_to_uart_byte('\n', &byte));
+  assert(byte == '\n');
+  assert(debug_key_to_uart_byte(KEY_ENTER, &byte));
+  assert(byte == '\r');
+  assert(debug_key_to_uart_byte(KEY_BACKSPACE, &byte));
+  assert(byte == 127);
+  assert(debug_key_to_uart_byte(KEY_DC, &byte));
+  assert(byte == 127);
+  assert(!debug_key_to_uart_byte(KEY_UP, &byte));
+  assert(!debug_key_to_uart_byte('x', NULL));
+}
+
 int main(void) {
   test_uart_key_triggers_configured_interrupt();
   test_non_debug_uart_mode_reads_keys_until_escape();
+  test_debug_keys_are_converted_to_uart_bytes();
   return 0;
 }

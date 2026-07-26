@@ -151,6 +151,26 @@ static bool handle_input_byte(uint8_t byte) {
   return true;
 }
 
+bool debug_key_to_uart_byte(int key, uint8_t *byte) {
+  if (byte == NULL) {
+    return false;
+  }
+  if (key == KEY_BACKSPACE || key == KEY_DC) {
+    *byte = 127;
+    return true;
+  }
+  if (key == KEY_ENTER) {
+    *byte = '\r';
+    return true;
+  }
+  if (key < 0 || key > UINT8_MAX) {
+    return false;
+  }
+
+  *byte = (uint8_t)key;
+  return true;
+}
+
 static void read_debug_input(void) {
   uint8_t byte;
   if (read_terminal_input(&byte) && !handle_input_byte(byte)) {
@@ -159,8 +179,7 @@ static void read_debug_input(void) {
 
   int key;
   while ((key = getch()) != ERR) {
-    if (key == UART_MODE_ESCAPE) {
-      close_uart_mode();
+    if (debug_key_to_uart_byte(key, &byte) && !handle_input_byte(byte)) {
       return;
     }
   }
