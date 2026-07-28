@@ -42,6 +42,25 @@ static void test_uart_key_triggers_configured_interrupt(void) {
   fin_reti();
 }
 
+static void test_uart_interrupt_completes_in_untracked_os_context(void) {
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  set_interrupt_device_isr(UART_DEVICE, 2);
+  write_file(sram, 2, 20);
+  write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
+  write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
+  is_hardware_int_stack_top = -2;
+
+  assert(uart_interrupt_trigger('x'));
+  finish_uart_interrupt();
+  assert(hardware_isr_stack_top == -1);
+  assert(uart_interrupt_trigger('y'));
+  finish_uart_interrupt();
+
+  fin_reti();
+}
+
 static void test_non_debug_uart_terminal_reads_every_byte(void) {
   int input_pipe[2];
   assert(pipe(input_pipe) == 0);
@@ -80,6 +99,7 @@ static void test_non_debug_uart_terminal_reads_every_byte(void) {
 
 int main(void) {
   test_uart_key_triggers_configured_interrupt();
+  test_uart_interrupt_completes_in_untracked_os_context();
   test_non_debug_uart_terminal_reads_every_byte();
   return 0;
 }

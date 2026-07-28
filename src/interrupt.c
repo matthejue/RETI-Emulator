@@ -104,6 +104,10 @@ bool uart_interrupt_trigger(uint8_t byte) {
 }
 
 void uart_interrupt_completed(uint8_t isr) {
+  if (isr == INVALID_ISR_NUM && is_hardware_int_stack_top < 0 &&
+      hardware_isr_stack_top >= 0) {
+    isr = hardware_isr_stack[hardware_isr_stack_top];
+  }
   if (uart_interrupt_pending && isr == pending_uart_isr) {
     uart_interrupt_pending = false;
     pending_uart_isr = INVALID_ISR_NUM;

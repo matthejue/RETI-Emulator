@@ -41,12 +41,16 @@ struct StateOutput out = {.retbool1 = false, .retbool2 = false};
 
 void remember_was_hardware_int() {
   is_hardware_int_stack_top++;
-  is_hardware_int_stack[is_hardware_int_stack_top] = true;
+  if (is_hardware_int_stack_top >= 0) {
+    is_hardware_int_stack[is_hardware_int_stack_top] = true;
+  }
 }
 
 void remember_was_software_int() {
   is_hardware_int_stack_top++;
-  is_hardware_int_stack[is_hardware_int_stack_top] = false;
+  if (is_hardware_int_stack_top >= 0) {
+    is_hardware_int_stack[is_hardware_int_stack_top] = false;
+  }
 }
 
 void decide_if_software_int_skipped() {
@@ -155,7 +159,11 @@ bool setup_hardware_interrupt(uint8_t isr) {
 }
 
 void check_hardware_int_completed() {
-  if (is_hardware_int_stack[is_hardware_int_stack_top]) {
+  if (is_hardware_int_stack_top >= 0 &&
+      is_hardware_int_stack[is_hardware_int_stack_top]) {
+    hardware_isr_stack_top--;
+  } else if (is_hardware_int_stack_top < 0 &&
+             hardware_isr_stack_top >= 0) {
     hardware_isr_stack_top--;
   }
   is_hardware_int_stack_top--;

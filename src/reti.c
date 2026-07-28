@@ -24,6 +24,9 @@ uint32_t num_instrs_data = 0;
 
 void init_reti() {
   stacked_isrs_cnt = os_mode ? 1 : 0;
+  hardware_isr_stack_top = -1;
+  is_hardware_int_stack_top = -1;
+  heap_size = 0;
   regs = malloc(sizeof(uint32_t) * NUM_REGISTERS);
   // TODO: herausfinden, wie man num_instrs_start_prgrm vorher bestimmt
   if (strcmp(eprom_prgrm_path, "") == 0) {
