@@ -401,12 +401,20 @@ void interpr_prgrm() {
   sync_source_debug_state();
   while (true) {
     sync_source_debug_state();
+    bool terminal_was_active = uart_terminal_is_active();
     update_uart_terminal();
-    poll_running_debug_action();
+    bool terminal_closed =
+        debug_mode && terminal_was_active && !uart_terminal_is_active();
+    if (!terminal_closed) {
+      poll_running_debug_action();
+    }
     if (visibility_condition) {
       update_term_and_box_sizes();
       draw_tui();
       evaluate_keyboard_input();
+    } else if (terminal_closed) {
+      update_term_and_box_sizes();
+      draw_tui();
     }
     if (timer_interrupt_check()) {
       continue;

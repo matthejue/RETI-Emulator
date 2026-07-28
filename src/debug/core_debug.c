@@ -1484,7 +1484,10 @@ void poll_running_debug_action(void) {
     return;
   }
   if (key == 'V') {
-    activate_uart_terminal();
+    if (!activate_uart_terminal()) {
+      update_term_and_box_sizes();
+      draw_tui();
+    }
   }
 }
 
@@ -1582,7 +1585,10 @@ void evaluate_keyboard_input(void) {
         draw_tui();
         continue;
       }
-      return;
+      wait_for_uart_terminal_exit();
+      update_term_and_box_sizes();
+      draw_tui();
+      continue;
     } else if (key == 'S' || key == 'R') {
       reset_all_scroll_offsets();
       if (handle_snapshot_debug_key(key)) {
@@ -1679,7 +1685,6 @@ void wait_for_tui_quit(void) {
       } else {
         wait_for_uart_terminal_exit();
       }
-      draw_tui();
       continue;
     case 'S':
     case 'R':

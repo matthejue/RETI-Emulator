@@ -113,7 +113,6 @@ static bool prepare_stdin(void) {
 static void restore_debug_tui(void) {
   reset_prog_mode();
   clearok(stdscr, true);
-  refresh();
 }
 
 static void show_debug_terminal(void) {
@@ -212,24 +211,29 @@ void wait_for_uart_terminal_exit(void) {
   struct pollfd input = {.fd = STDIN_FILENO, .events = POLLIN};
 
   while (terminal_active) {
+    if (termination_signal != 0) {
+      update_uart_terminal();
+      return;
+    }
+    input.revents = 0;
+    if (poll(&input, 1, -1) < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      close_uart_terminal();
+      return;
+    }
+
     ssize_t result = read_terminal_input();
     if (result == 1) {
       clear_queued_input();
       continue;
     }
-    if (result == 0) {
+    if (result == 0 && (input.revents & POLLHUP) != 0) {
       close_uart_terminal();
-      return;
-    }
-    if (termination_signal != 0) {
-      update_uart_terminal();
       return;
     }
     if (result < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-      close_uart_terminal();
-      return;
-    }
-    if (poll(&input, 1, -1) < 0 && errno != EINTR) {
       close_uart_terminal();
       return;
     }

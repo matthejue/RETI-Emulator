@@ -28,11 +28,12 @@ earlier UART interrupt is pending. Without `-d`, `Escape` is delivered as an
 ordinary UART input byte.
 
 With `-d`, capital `V` suspends ncurses and switches the invoking terminal to
-the same live UART view. `Escape` restores the debug TUI and is not delivered
-as UART input. Opening the view from a paused debugger lets the program run
-until the view is closed. `V` is also polled while a `c` continue run is active;
-closing the view then returns to the still-running debugger. Capital `E` stops
-that run at its current program address.
+the UART terminal view. `Escape` restores the debug TUI and is not delivered
+as UART input. Opening the view from a paused debugger keeps execution paused
+and only displays output captured so far. `V` is also polled while a `c`
+continue run is active; execution and live UART input continue in the terminal
+view. Closing that view redraws the debug TUI and returns to the still-running
+debugger. Capital `E` stops that run at its current program address.
 
 ## Output control frames
 
@@ -88,5 +89,5 @@ then displays new output directly. Capturing continues while the debug TUI is
 visible, so entering the view never starts in the middle of an otherwise
 missing message. Terminal handling of carriage return, newline, backspace, tab,
 and printable output is the same as during a non-debug run. The view is
-available while stepping, during a `c` continue run, and after halt when `-K`
-keeps the TUI open.
+available without advancing the program while stepping, during a `c` continue
+run, and after halt when `-K` keeps the TUI open.
