@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
     load_adjusted_eprom_prgrm(sections.stack_start);
   }
 
-  if (!debug_mode && !activate_uart_terminal()) {
+  if (!debug_mode && !test_mode && !activate_uart_terminal()) {
     fprintf(stderr, "Warning: Couldn't activate UART terminal input\n");
   }
 
