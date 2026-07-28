@@ -5,9 +5,8 @@
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
-#include "../include/uart_mode.h"
+#include "../include/uart_terminal.h"
 #include <assert.h>
-#include <ncurses.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -43,7 +42,7 @@ static void test_uart_key_triggers_configured_interrupt(void) {
   fin_reti();
 }
 
-static void test_non_debug_uart_mode_reads_keys_until_escape(void) {
+static void test_non_debug_uart_terminal_reads_every_byte(void) {
   int input_pipe[2];
   assert(pipe(input_pipe) == 0);
   int saved_stdin = dup(STDIN_FILENO);
@@ -57,16 +56,20 @@ static void test_non_debug_uart_mode_reads_keys_until_escape(void) {
   write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
   write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
 
-  assert(activate_uart_mode());
-  assert(uart_mode);
+  assert(activate_uart_terminal());
+  assert(uart_terminal_is_active());
   assert(write(input_pipe[1], "x", 1) == 1);
-  update_uart_mode();
+  update_uart_terminal();
   assert(uart[1] == 'x');
+  finish_uart_interrupt();
 
   assert(write(input_pipe[1], "\x1b", 1) == 1);
-  update_uart_mode();
-  assert(!uart_mode);
+  update_uart_terminal();
+  assert(uart[1] == '\x1b');
+  assert(uart_terminal_is_active());
   finish_uart_interrupt();
+  close_uart_terminal();
+  assert(!uart_terminal_is_active());
 
   fin_reti();
   assert(dup2(saved_stdin, STDIN_FILENO) >= 0);
@@ -75,26 +78,8 @@ static void test_non_debug_uart_mode_reads_keys_until_escape(void) {
   close(input_pipe[1]);
 }
 
-static void test_debug_keys_are_converted_to_uart_bytes(void) {
-  uint8_t byte = 0;
-
-  assert(debug_key_to_uart_byte('x', &byte));
-  assert(byte == 'x');
-  assert(debug_key_to_uart_byte('\n', &byte));
-  assert(byte == '\n');
-  assert(debug_key_to_uart_byte(KEY_ENTER, &byte));
-  assert(byte == '\r');
-  assert(debug_key_to_uart_byte(KEY_BACKSPACE, &byte));
-  assert(byte == 127);
-  assert(debug_key_to_uart_byte(KEY_DC, &byte));
-  assert(byte == 127);
-  assert(!debug_key_to_uart_byte(KEY_UP, &byte));
-  assert(!debug_key_to_uart_byte('x', NULL));
-}
-
 int main(void) {
   test_uart_key_triggers_configured_interrupt();
-  test_non_debug_uart_mode_reads_keys_until_escape();
-  test_debug_keys_are_converted_to_uart_bytes();
+  test_non_debug_uart_terminal_reads_every_byte();
   return 0;
 }

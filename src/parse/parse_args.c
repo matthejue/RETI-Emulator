@@ -27,7 +27,6 @@ bool verbose = false;
 bool ds_vals_unsigned = false;
 bool keep_tui_alive_after_halt = false;
 bool os_mode = false;
-bool uart_mode = false;
 bool has_sram_prgrm = false;
 
 char *peripherals_dir = ".";
@@ -49,7 +48,6 @@ void print_help(char *bin_name) {
       "-b (binary mode) -E (extended features) -a, --assemble (write encoded .bin and exit) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
       "-O (start with a synthetic interrupt for OS execution) "
-      "-U ((U)ART mode) "
       "-I timer_interrupt_interval -h (help page) "
       "[prgrm_path]\n",
       bin_name);
@@ -62,7 +60,7 @@ void parse_args(int argc, char *argv[]) {
       {0, 0, 0, 0},
   };
 
-  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:w:hdvtmbEcauKOUI:",
+  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:w:hdvtmbEcauKOI:",
                             long_options, NULL)) != -1) {
     char *endptr;
     int64_t tmp_val;
@@ -157,9 +155,6 @@ void parse_args(int argc, char *argv[]) {
     case 'O':
       os_mode = true;
       break;
-    case 'U':
-      uart_mode = true;
-      break;
     case 'h':
       print_help(argv[0]);
       exit(EXIT_SUCCESS);
@@ -223,7 +218,6 @@ void print_args() {
   printf("Keep TUI alive after halt: %s\n",
          keep_tui_alive_after_halt ? "true" : "false");
   printf("OS mode: %s\n", os_mode ? "true" : "false");
-  printf("(U)ART mode: %s\n", uart_mode ? "true" : "false");
   printf("Has SRAM program: %s\n", has_sram_prgrm ? "true" : "false");
   printf("Peripheral file directory: %s\n", peripherals_dir);
   printf("Eprom program path: %s\n", eprom_prgrm_path);

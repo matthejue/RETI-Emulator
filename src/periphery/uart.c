@@ -6,6 +6,7 @@
 #include "../../include/input_output.h"
 #include "../../include/special_opts.h"
 #include "../../include/terminal_view.h"
+#include "../../include/uart_terminal.h"
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -397,7 +398,12 @@ static bool handle_uart_control_byte(uint8_t byte) {
 static void write_uart_stdout(uint8_t byte) {
   if (debug_mode) {
     append_terminal_output(byte);
-  } else if (test_mode) {
+    if (!uart_terminal_is_active()) {
+      return;
+    }
+  }
+
+  if (test_mode) {
     char buffer[6];
     adjust_print(true, "%s", "%s", format_uart_byte(byte, buffer));
   } else {
@@ -633,7 +639,7 @@ static void update_uart_receive(void) {
     if (!uart_receive_requested()) {
       return;
     }
-    if (uart_mode && !uart_receive_buffer_has_data()) {
+    if (uart_terminal_is_active() && !uart_receive_buffer_has_data()) {
       return;
     }
     receive_current_byte = next_receive_byte();

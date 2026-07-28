@@ -6,10 +6,7 @@
 
 bool init_terminal_output(void);
 void append_terminal_output(uint8_t byte);
-bool read_terminal_input(uint8_t *byte);
-void discard_terminal_input(void);
-bool start_terminal_viewer(void);
-void stop_terminal_viewer(void);
+bool replay_terminal_output(void);
 void close_terminal_output(void);
 
 #endif // TERMINAL_VIEW_H

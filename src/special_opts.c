@@ -8,7 +8,7 @@
 #include "../include/terminal_view.h"
 #include "../include/utils.h"
 #include "../include/uart.h"
-#include "../include/uart_mode.h"
+#include "../include/uart_terminal.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -137,9 +137,8 @@ void close_out_and_err_file() {
 }
 
 void finalize() {
-  close_uart_mode();
+  close_uart_terminal();
   stop_source_debugger();
-  stop_terminal_viewer();
   close_terminal_output();
   close_uart_output();
   fin_reti();

@@ -11,7 +11,7 @@
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
-#include "../include/uart_mode.h"
+#include "../include/uart_terminal.h"
 #include "../include/utils.h"
 #include <ncurses.h>
 #include <stdbool.h>
@@ -401,7 +401,8 @@ void interpr_prgrm() {
   sync_source_debug_state();
   while (true) {
     sync_source_debug_state();
-    update_uart_mode();
+    update_uart_terminal();
+    poll_running_debug_action();
     if (visibility_condition) {
       update_term_and_box_sizes();
       draw_tui();
@@ -419,6 +420,7 @@ void interpr_prgrm() {
       break;
     } else if (assembly_instr->op == INT && assembly_instr->opd1 == 3) {
       update_state(BREAKPOINT_ENCOUNTERED);
+      stop_continuous_execution();
       write_array(regs, PC, read_array(regs, PC, false) + 1, false);
     } else {
       interpr_instr(assembly_instr);
@@ -427,4 +429,6 @@ void interpr_prgrm() {
 
     update_uart();
   }
+
+  stop_continuous_execution();
 }

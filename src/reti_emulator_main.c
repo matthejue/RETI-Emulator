@@ -10,7 +10,7 @@
 #include "../include/terminal_view.h"
 #include "../include/tui.h"
 #include "../include/uart.h"
-#include "../include/uart_mode.h"
+#include "../include/uart_terminal.h"
 #include "../include/utils.h"
 #include "../include/core_debug.h"
 #include <stdint.h>
@@ -172,17 +172,15 @@ int main(int argc, char *argv[]) {
     load_adjusted_eprom_prgrm(sections.stack_start);
   }
 
-  if (uart_mode) {
-    if (!activate_uart_mode()) {
-      fprintf(stderr, "Warning: Couldn't activate (U)ART mode\n");
-    } else if (debug_mode) {
-      update_term_and_box_sizes();
-      draw_tui();
-    }
+  if (!debug_mode && !activate_uart_terminal()) {
+    fprintf(stderr, "Warning: Couldn't activate UART terminal input\n");
   }
 
   interpr_prgrm();
 
+  if (debug_mode && uart_terminal_is_active()) {
+    close_uart_terminal();
+  }
   if (debug_mode && keep_tui_alive_after_halt) {
     wait_for_tui_quit();
   }

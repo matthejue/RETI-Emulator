@@ -17,17 +17,22 @@ consumed one byte at a time. With `-m`, one separator space/tab after `# input:`
 is skipped and the rest of the line is used as the initial byte buffer,
 including further spaces.
 
-## Interactive (U)ART mode
+## Interactive UART terminal
 
-`-U` enters `(U)ART mode` when the emulator starts. Without `-d`, the invoking
-terminal supplies character input and receives UART output. In the debug TUI,
-`U` enters the mode and opens the GUI terminal automatically. Other debug
-actions are unavailable until `Escape` exits the mode.
+Without `-d`, the invoking terminal always supplies UART character input and
+receives UART output. No additional command-line option is required.
 
 Each input byte is written to `R1`, sets the receive-ready bit in `R2`, and
 triggers the `UART` hardware interrupt. Further input is buffered while an
-earlier UART interrupt is pending. `Escape` exits `(U)ART mode` and is not
-delivered as UART input.
+earlier UART interrupt is pending. Without `-d`, `Escape` is delivered as an
+ordinary UART input byte.
+
+With `-d`, capital `V` suspends ncurses and switches the invoking terminal to
+the same live UART view. `Escape` restores the debug TUI and is not delivered
+as UART input. Opening the view from a paused debugger lets the program run
+until the view is closed. `V` is also polled while a `c` continue run is active;
+closing the view then returns to the still-running debugger. Capital `E` stops
+that run at its current program address.
 
 ## Output control frames
 
@@ -63,7 +68,7 @@ because a missing file must not leave the OS waiting indefinitely for a length.
 - `<esc>append <path><esc>/` creates `<path>` if needed and routes subsequent
   UART output bytes to its end without truncating existing data.
 - `<esc>write stdout<esc>/` routes subsequent output back to standard output and
-  thus to the debug terminal viewer when debug mode is active.
+  thus to the terminal view when debug mode is active.
 - `<esc>write stderr<esc>/` routes subsequent output to standard error.
 
 Paths in these frames are relative to the directory in which the emulator is
@@ -77,8 +82,11 @@ Without `-d`, completed UART sends are written directly to standard output. With
 ncurses TUI. Capturing starts with the emulator and does not depend on the
 viewer being open.
 
-The third infobox page provides `(V)iew terminal`. Capital `V` opens the Python
-GUI terminal with all output captured so far and follows new output while the
-emulator runs. The viewer handles carriage return, newline, backspace, tab, and
-printable ASCII output. Backspace removes the preceding displayed character.
-It is available while stepping and after halt when `-K` keeps the TUI open.
+The third infobox page provides `(V)iew terminal`. Capital `V` clears the
+invoking terminal, replays all raw output captured since emulator startup, and
+then displays new output directly. Capturing continues while the debug TUI is
+visible, so entering the view never starts in the middle of an otherwise
+missing message. Terminal handling of carriage return, newline, backspace, tab,
+and printable output is the same as during a non-debug run. The view is
+available while stepping, during a `c` continue run, and after halt when `-K`
+keeps the TUI open.

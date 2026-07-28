@@ -30,8 +30,8 @@ static uint8_t current_info_box_page = 0;
 static char info_box_second_page[256];
 static char info_box_third_page[256];
 static bool tui_halted_mode = false;
+static bool tui_program_running = false;
 static bool tui_snapshot_available = false;
-static bool tui_uart_mode = false;
 
 Box info_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 // Box paging_box = {"", 0, 0, 0, 0, 1, 1, NULL};
@@ -44,9 +44,8 @@ const uint8_t NUM_BOXES = sizeof(boxes) / sizeof(boxes[0]);
 static Box *active_box = &eprom_box;
 
 static void update_info_box_text(void) {
-  if (tui_uart_mode) {
-    info_box.title =
-        "Currently in (U)ART mode; press Escape to exit (U)ART mode";
+  if (tui_program_running) {
+    info_box.title = "Program running, (E)nter again, (V)iew terminal";
     return;
   }
 
@@ -86,10 +85,10 @@ static void update_info_box_text(void) {
     snprintf(info_box_third_page, sizeof(info_box_third_page),
              tui_snapshot_available
                  ? "(S)napshot, (R)estore, (d)ebug source, "
-                   "(V)iew terminal, (U)ART mode, "
+                   "(V)iew terminal, "
                    "(t)ranscode, (o)ther actions"
                  : "(S)napshot, (d)ebug source, "
-                   "(V)iew terminal, (U)ART mode, "
+                   "(V)iew terminal, "
                    "(t)ranscode, (o)ther actions");
     info_box.title = info_box_third_page;
     return;
@@ -105,11 +104,6 @@ static void update_info_box_text(void) {
 
 void set_tui_snapshot_available(bool available) {
   tui_snapshot_available = available;
-  update_info_box_text();
-}
-
-void set_tui_uart_mode(bool active) {
-  tui_uart_mode = active;
   update_info_box_text();
 }
 
@@ -203,6 +197,12 @@ void cycle_info_box_page(void) {
 
 void set_tui_halted_mode(bool halted) {
   tui_halted_mode = halted;
+  current_info_box_page = 0;
+  update_info_box_text();
+}
+
+void set_tui_program_running(bool running) {
+  tui_program_running = running;
   current_info_box_page = 0;
   update_info_box_text();
 }

@@ -1,11 +1,11 @@
-#include "../../include/uart_mode.h"
+#include "../../include/uart_terminal.h"
 #include "../../include/interrupt.h"
 #include "../../include/parse/parse_args.h"
 #include "../../include/terminal_view.h"
-#include "../../include/tui.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <ncurses.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#define UART_MODE_ESCAPE 27
+#define UART_TERMINAL_ESCAPE 27
 
 static struct termios saved_stdin_termios;
 static int saved_stdin_flags = 0;
@@ -27,6 +27,7 @@ static volatile sig_atomic_t termination_signal = 0;
 static uint8_t *queued_input = NULL;
 static size_t queued_input_len = 0;
 static size_t queued_input_idx = 0;
+static bool terminal_active = false;
 
 static void clear_queued_input(void) {
   free(queued_input);
@@ -38,7 +39,7 @@ static void clear_queued_input(void) {
 static void append_queued_input(uint8_t byte) {
   uint8_t *new_input = realloc(queued_input, queued_input_len + 1);
   if (new_input == NULL) {
-    fprintf(stderr, "Error: Couldn't allocate (U)ART mode input buffer\n");
+    fprintf(stderr, "Error: Couldn't allocate UART terminal input buffer\n");
     exit(EXIT_FAILURE);
   }
   queued_input = new_input;
@@ -109,108 +110,93 @@ static bool prepare_stdin(void) {
   return true;
 }
 
-bool activate_uart_mode(void) {
-  clear_queued_input();
+static void restore_debug_tui(void) {
+  reset_prog_mode();
+  clearok(stdscr, true);
+  refresh();
+}
 
-  if (debug_mode) {
-    discard_terminal_input();
-    if (!start_terminal_viewer()) {
-      uart_mode = false;
-      return false;
-    }
-    uart_mode = true;
-    set_tui_uart_mode(true);
-    nodelay(stdscr, TRUE);
+static void show_debug_terminal(void) {
+  fputs("\x1b[2J\x1b[H", stdout);
+  replay_terminal_output();
+}
+
+bool activate_uart_terminal(void) {
+  if (terminal_active) {
     return true;
   }
 
+  clear_queued_input();
+
+  if (debug_mode) {
+    def_prog_mode();
+    endwin();
+  }
+
   if (!prepare_stdin()) {
-    uart_mode = false;
+    if (debug_mode) {
+      restore_debug_tui();
+    }
     return false;
   }
-  uart_mode = true;
+
+  terminal_active = true;
+  if (debug_mode) {
+    show_debug_terminal();
+  }
   return true;
 }
 
-void close_uart_mode(void) {
-  if (debug_mode && uart_mode) {
-    nodelay(stdscr, FALSE);
-    set_tui_uart_mode(false);
+bool uart_terminal_is_active(void) { return terminal_active; }
+
+void close_uart_terminal(void) {
+  if (!terminal_active) {
+    restore_stdin();
+    clear_queued_input();
+    return;
   }
+
   restore_stdin();
   clear_queued_input();
-  uart_mode = false;
+  terminal_active = false;
+
+  if (debug_mode) {
+    restore_debug_tui();
+  }
 }
 
 static bool handle_input_byte(uint8_t byte) {
-  if (byte == UART_MODE_ESCAPE) {
-    close_uart_mode();
+  if (debug_mode && byte == UART_TERMINAL_ESCAPE) {
+    close_uart_terminal();
     return false;
   }
   append_queued_input(byte);
   return true;
 }
 
-bool debug_key_to_uart_byte(int key, uint8_t *byte) {
-  if (byte == NULL) {
-    return false;
-  }
-  if (key == KEY_BACKSPACE || key == KEY_DC) {
-    *byte = 127;
-    return true;
-  }
-  if (key == KEY_ENTER) {
-    *byte = '\r';
-    return true;
-  }
-  if (key < 0 || key > UINT8_MAX) {
-    return false;
-  }
-
-  *byte = (uint8_t)key;
-  return true;
-}
-
-static void read_debug_input(void) {
+static ssize_t read_terminal_input(void) {
   uint8_t byte;
-  if (read_terminal_input(&byte) && !handle_input_byte(byte)) {
-    return;
+  ssize_t result = read(STDIN_FILENO, &byte, 1);
+  if (result == 1) {
+    handle_input_byte(byte);
   }
-
-  int key;
-  while ((key = getch()) != ERR) {
-    if (debug_key_to_uart_byte(key, &byte) && !handle_input_byte(byte)) {
-      return;
-    }
-  }
+  return result;
 }
 
-static void read_stdin_input(void) {
-  uint8_t byte;
-  if (read(STDIN_FILENO, &byte, 1) != 1) {
-    return;
-  }
-  handle_input_byte(byte);
-}
-
-void update_uart_mode(void) {
-  if (!uart_mode) {
+void update_uart_terminal(void) {
+  if (!terminal_active) {
     return;
   }
   if (termination_signal != 0) {
     int signal_number = termination_signal;
     termination_signal = 0;
-    close_uart_mode();
+    close_uart_terminal();
     raise(signal_number);
     return;
   }
 
-  if (debug_mode) {
-    read_debug_input();
-  } else {
-    read_stdin_input();
-  }
-  if (!uart_mode || queued_input_idx >= queued_input_len) {
+  (void)read_terminal_input();
+  if (!terminal_active || queued_input_idx >= queued_input_len) {
     return;
   }
 
@@ -218,6 +204,34 @@ void update_uart_mode(void) {
     queued_input_idx++;
     if (queued_input_idx == queued_input_len) {
       clear_queued_input();
+    }
+  }
+}
+
+void wait_for_uart_terminal_exit(void) {
+  struct pollfd input = {.fd = STDIN_FILENO, .events = POLLIN};
+
+  while (terminal_active) {
+    ssize_t result = read_terminal_input();
+    if (result == 1) {
+      clear_queued_input();
+      continue;
+    }
+    if (result == 0) {
+      close_uart_terminal();
+      return;
+    }
+    if (termination_signal != 0) {
+      update_uart_terminal();
+      return;
+    }
+    if (result < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+      close_uart_terminal();
+      return;
+    }
+    if (poll(&input, 1, -1) < 0 && errno != EINTR) {
+      close_uart_terminal();
+      return;
     }
   }
 }

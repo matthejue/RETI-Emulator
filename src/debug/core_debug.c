@@ -11,10 +11,9 @@
 #include "../../include/source_debug.h"
 #include "../../include/special_opts.h"
 #include "../../include/statemachine.h"
-#include "../../include/terminal_view.h"
 #include "../../include/tui.h"
 #include "../../include/uart.h"
-#include "../../include/uart_mode.h"
+#include "../../include/uart_terminal.h"
 #include "../../include/utils.h"
 #include <ncurses.h>
 #include <stdbool.h>
@@ -1429,6 +1428,8 @@ static void restart_emulator(void) {
   execvp(gargv[0], gargv);
 }
 
+static bool continuous_execution_active = false;
+
 static int read_tui_key(void) {
   int key = getch();
   if (key != 27) {
@@ -1452,6 +1453,41 @@ static int read_tui_key(void) {
   return key;
 }
 
+static void start_continuous_execution(void) {
+  update_state(CONTINUE);
+  continuous_execution_active = true;
+  set_tui_program_running(true);
+  nodelay(stdscr, TRUE);
+  draw_tui();
+}
+
+void stop_continuous_execution(void) {
+  if (!debug_mode || !continuous_execution_active) {
+    return;
+  }
+
+  continuous_execution_active = false;
+  nodelay(stdscr, FALSE);
+  set_tui_program_running(false);
+}
+
+void poll_running_debug_action(void) {
+  if (!debug_mode || !continuous_execution_active ||
+      uart_terminal_is_active()) {
+    return;
+  }
+
+  int key = getch();
+  if (key == 'E') {
+    update_state(BREAKPOINT_ENCOUNTERED);
+    stop_continuous_execution();
+    return;
+  }
+  if (key == 'V') {
+    activate_uart_terminal();
+  }
+}
+
 void evaluate_keyboard_input(void) {
   while (true) {
     int key = read_tui_key();
@@ -1463,7 +1499,7 @@ void evaluate_keyboard_input(void) {
       return;
     } else if (key == 'c') {
       reset_all_scroll_offsets();
-      update_state(CONTINUE);
+      start_continuous_execution();
       return;
     } else if (key == 'r') {
       reset_all_scroll_offsets();
@@ -1539,21 +1575,13 @@ void evaluate_keyboard_input(void) {
       draw_tui();
       continue;
     } else if (key == 'V') {
-      if (!start_terminal_viewer()) {
-        display_notification_box("Terminal Error",
-                                 "Failed to start terminal viewer");
-      }
-      draw_tui();
-      continue;
-    } else if (key == 'U') {
       reset_all_scroll_offsets();
-      if (!activate_uart_mode()) {
-        display_notification_box("UART Mode Error",
-                                 "Failed to activate (U)ART mode");
+      if (!activate_uart_terminal()) {
+        display_notification_box("Terminal Error",
+                                 "Failed to activate terminal view");
         draw_tui();
         continue;
       }
-      draw_tui();
       return;
     } else if (key == 'S' || key == 'R') {
       reset_all_scroll_offsets();
@@ -1645,15 +1673,12 @@ void wait_for_tui_quit(void) {
       draw_tui();
       continue;
     case 'V':
-      if (!start_terminal_viewer()) {
+      if (!activate_uart_terminal()) {
         display_notification_box("Terminal Error",
-                                 "Failed to start terminal viewer");
+                                 "Failed to activate terminal view");
+      } else {
+        wait_for_uart_terminal_exit();
       }
-      draw_tui();
-      continue;
-    case 'U':
-      display_notification_box("UART Mode",
-                               "(U)ART mode is unavailable after program halt");
       draw_tui();
       continue;
     case 'S':

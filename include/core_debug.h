@@ -71,6 +71,8 @@ void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
 void set_sram_debug_sections(Program_Sections sections);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
+void poll_running_debug_action(void);
+void stop_continuous_execution(void);
 void wait_for_tui_quit(void);
 void debug(void);
 void handle_heading(bool simple_debug_tui, Box *box,
