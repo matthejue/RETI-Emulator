@@ -427,8 +427,11 @@ void interpr_prgrm() {
       free(assembly_instr);
       break;
     } else if (assembly_instr->op == INT && assembly_instr->opd1 == 3) {
-      update_state(BREAKPOINT_ENCOUNTERED);
-      stop_continuous_execution();
+      // Keeps the live terminal from entering a hidden paused state
+      if (!debug_mode || !uart_terminal_is_active()) {
+        update_state(BREAKPOINT_ENCOUNTERED);
+        stop_continuous_execution();
+      }
       write_array(regs, PC, read_array(regs, PC, false) + 1, false);
     } else {
       interpr_instr(assembly_instr);
