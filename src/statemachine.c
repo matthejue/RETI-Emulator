@@ -283,6 +283,11 @@ void update_state(Event event) {
   case CONTINUE:
     breakpoint_encountered = false;
     break;
+  case ENTER_AGAIN:
+    breakpoint_encountered = true;
+    isr_finished = true;
+    isr_step_into = true;
+    break;
   case BREAKPOINT_ENCOUNTERED:
     breakpoint_encountered = true;
     break;

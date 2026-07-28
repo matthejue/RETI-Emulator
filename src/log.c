@@ -89,6 +89,8 @@ static const char *event_to_string(Event e) {
   switch (e) {
   case CONTINUE:
     return "CONTINUE";
+  case ENTER_AGAIN:
+    return "ENTER_AGAIN";
   case FINALIZE:
     return "FINALIZE";
   case BREAKPOINT_ENCOUNTERED:

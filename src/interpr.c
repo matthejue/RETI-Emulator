@@ -427,8 +427,9 @@ void interpr_prgrm() {
       free(assembly_instr);
       break;
     } else if (assembly_instr->op == INT && assembly_instr->opd1 == 3) {
-      // Keeps the live terminal from entering a hidden paused state
-      if (!debug_mode || !uart_terminal_is_active()) {
+      // Keeps hidden interrupt execution from entering a paused state
+      if (!debug_mode ||
+          (!uart_terminal_is_active() && isr_finished && isr_step_into)) {
         update_state(BREAKPOINT_ENCOUNTERED);
         stop_continuous_execution();
       }

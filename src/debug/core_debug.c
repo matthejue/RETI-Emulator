@@ -1479,7 +1479,7 @@ void poll_running_debug_action(void) {
 
   int key = getch();
   if (key == 'E') {
-    update_state(BREAKPOINT_ENCOUNTERED);
+    update_state(ENTER_AGAIN);
     stop_continuous_execution();
     return;
   }

@@ -7,6 +7,7 @@
 #include "../include/parse/parse_instrs.h"
 #include "../include/parse/parse_sections.h"
 #include "../include/reti.h"
+#include "../include/statemachine.h"
 #include "../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
@@ -92,9 +93,26 @@ void test_interpr_prgrm() {
   assert(read_array(regs, SP, false) == (SRAM_CONST << 30 | 42));
 }
 
+void test_enter_again_restores_debug_visibility() {
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  breakpoint_encountered = false;
+  isr_finished = false;
+  isr_step_into = false;
+  update_state(ENTER_AGAIN);
+
+  assert(breakpoint_encountered);
+  assert(isr_finished);
+  assert(isr_step_into);
+
+  fin_reti();
+}
+
 int main() {
   test_periphery_timer_interrupt_interval_cell();
   test_interpr_prgrm();
+  test_enter_again_restores_debug_visibility();
 
   return 0;
 }
