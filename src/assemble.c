@@ -154,6 +154,42 @@ uint32_t assembly_to_machine(String_Instruction *str_instr) {
   return machine_instr;
 }
 
+static bool is_exact_opcode(uint8_t op, const Unique_Opcode *opcodes,
+                            size_t num_opcodes) {
+  for (size_t i = 0; i < num_opcodes; i++) {
+    if (op == opcodes[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool machine_word_is_valid_instruction(uint32_t machine_instr) {
+  uint8_t mode = machine_instr >> 30;
+  if (mode == COMPUTE_M) {
+    uint8_t compute_mode = machine_instr >> 25;
+    return (ADDI <= compute_mode && compute_mode <= ANDI) ||
+           (ADDR <= compute_mode && compute_mode <= ANDR) ||
+           (ADDM <= compute_mode && compute_mode <= ANDM);
+  }
+
+  if (mode == LOAD_M || mode == STORE_M) {
+    static const Unique_Opcode load_store_opcodes[] = {
+        LOAD, LOADIN, LOADI, STORE, STOREIN, TSL, MOVE};
+    uint8_t load_store_mode = (machine_instr >> 28) << 3;
+    return is_exact_opcode(load_store_mode, load_store_opcodes,
+                           sizeof(load_store_opcodes) /
+                               sizeof(load_store_opcodes[0]));
+  }
+
+  static const Unique_Opcode jump_opcodes[] = {
+      NOP,    INT,    RTI,    JUMPGT, JUMPEQ, JUMPGE,
+      JUMPLT, JUMPNE, JUMPLE, JUMP};
+  uint8_t jump_mode = machine_instr >> 25;
+  return is_exact_opcode(jump_mode, jump_opcodes,
+                         sizeof(jump_opcodes) / sizeof(jump_opcodes[0]));
+}
+
 Instruction *machine_to_assembly(uint32_t machine_instr) {
   Instruction *instr = malloc(sizeof(Instruction));
   memset(instr, 0, sizeof(Instruction));

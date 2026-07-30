@@ -7,3 +7,6 @@
   preempt lower priority.
 - `9`: timer interrupt interval; `0` disables the timer interrupt, any value
   `>0` enables it and sets the instruction interval.
+
+CPU exceptions use fixed vector slot `3` and do not pass through this
+priority-controlled device mapping. See `doc/cpu_exceptions.md`.

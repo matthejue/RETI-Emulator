@@ -24,11 +24,11 @@
 
 uint32_t mod(int32_t a, int32_t b) {
   // r = a − m x trunc(a/m)
-  int32_t result = a % b;
+  int64_t result = (int64_t)a % b;
   if (result < 0) {
     result += b;
   }
-  return result;
+  return (uint32_t)result;
 }
 
 int64_t max(int64_t a, int64_t b) { return (a > b) ? a : b; }

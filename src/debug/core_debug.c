@@ -88,6 +88,8 @@ static void cycle_sram_transcode_mode(void) {
 typedef enum {
   PERIPHERY_UART_VIEW,
   PERIPHERY_INTERRUPTS_VIEW,
+  PERIPHERY_EXCEPTIONS_VIEW,
+  NUM_PERIPHERY_VIEWS,
 } Periphery_View;
 
 static BoxIdentifier active_box_identifier = EPROM_BOX;
@@ -227,42 +229,6 @@ char *assembly_to_str(Instruction *instr) {
   return instr_str;
 }
 
-static bool is_exact_opcode(uint8_t op, const Unique_Opcode *opcodes,
-                            size_t num_opcodes) {
-  for (size_t i = 0; i < num_opcodes; i++) {
-    if (op == opcodes[i]) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool machine_word_is_valid_instruction(uint32_t machine_instr) {
-  uint8_t mode = machine_instr >> 30;
-  if (mode == COMPUTE_M) {
-    uint8_t compute_mode = machine_instr >> 25;
-    return (ADDI <= compute_mode && compute_mode <= ANDI) ||
-           (ADDR <= compute_mode && compute_mode <= ANDR) ||
-           (ADDM <= compute_mode && compute_mode <= ANDM);
-  }
-
-  if (mode == LOAD_M || mode == STORE_M) {
-    static const Unique_Opcode load_store_opcodes[] = {
-        LOAD, LOADIN, LOADI, STORE, STOREIN, TSL, MOVE};
-    uint8_t load_store_mode = (machine_instr >> 28) << 3;
-    return is_exact_opcode(load_store_mode, load_store_opcodes,
-                           sizeof(load_store_opcodes) /
-                               sizeof(load_store_opcodes[0]));
-  }
-
-  static const Unique_Opcode jump_opcodes[] = {
-      NOP,    INT,    RTI,    JUMPGT, JUMPEQ, JUMPGE,
-      JUMPLT, JUMPNE, JUMPLE, JUMP};
-  uint8_t jump_mode = machine_instr >> 25;
-  return is_exact_opcode(jump_mode, jump_opcodes,
-                         sizeof(jump_opcodes) / sizeof(jump_opcodes[0]));
-}
-
 char *mem_value_to_str(int32_t mem_content, bool is_unsigned) {
   char *instr_str = malloc(12); // -2147483649
   if (is_unsigned) {
@@ -335,7 +301,8 @@ uint64_t determine_watchobject_value(WatchBox *watchbox);
 static Box *get_box_for_box_identifier(BoxIdentifier box_identifier);
 
 static void cycle_periphery_view(void) {
-  periphery_view = (periphery_view + 1) % 2;
+  periphery_view =
+      (Periphery_View)((periphery_view + 1) % NUM_PERIPHERY_VIEWS);
 }
 
 static void handle_watchobject_assignment(void) {
@@ -1119,6 +1086,10 @@ static const char *uart_cell_label(uint64_t idx) {
     return "uart priority";
   case SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL:
     return "timer interrupt interval";
+  case STACK_HEAP_BOUNDARY_REGISTER:
+    return "stack/heap boundary";
+  case CPU_EXCEPTION_CAUSE_REGISTER:
+    return "CPU exception cause";
   default:
     return "peripheral reserved";
   }
@@ -1718,10 +1689,16 @@ void handle_heading(bool simple_debug_tui, Box *box, char *format_str,
 }
 
 static void print_interrupts_view(void) {
-  handle_heading(true, &uart_box, "Interrupts [a: UART]", "", 0);
+  handle_heading(true, &uart_box, "Interrupts [a: Exceptions]", "", 0);
   print_array_with_idcs_from_to(UART, INTERRUPT_CONTROLLER_ISR_BASE,
-                                NUM_PERIPHERY_ADDRESSES - 1, false);
+                                SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL, false);
   print_interrupt_timer_meta_data();
+}
+
+static void print_exceptions_view(void) {
+  handle_heading(true, &uart_box, "Exceptions [a: UART]", "", 0);
+  print_array_with_idcs_from_to(UART, STACK_HEAP_BOUNDARY_REGISTER,
+                                CPU_EXCEPTION_CAUSE_REGISTER, false);
 }
 
 bool draw_tui(void) {
@@ -1788,6 +1765,8 @@ bool draw_tui(void) {
 
   if (periphery_view == PERIPHERY_INTERRUPTS_VIEW) {
     print_interrupts_view();
+  } else if (periphery_view == PERIPHERY_EXCEPTIONS_VIEW) {
+    print_exceptions_view();
   } else {
     handle_heading(true, &uart_box, "UART [a: Interrupts]", "", 0);
     print_array_with_idcs_from_to(UART, 0, 2, false);

@@ -1,6 +1,7 @@
 #include "../include/reti.h"
 #include "../include/assemble.h"
 #include "../include/core_debug.h"
+#include "../include/exception.h"
 #include "../include/interrupt.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_sections.h"
@@ -37,6 +38,7 @@ void init_reti() {
   }
 
   memset(regs, 0, sizeof(uint32_t) * NUM_REGISTERS);
+  init_cpu_exceptions();
   init_uart();
 
   // TODO: Tobias: Die ganzen Speicher nicht mit 0 initialisiert
@@ -132,6 +134,12 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
     if (addr == SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) {
       return interrupt_timer_interval;
     }
+    if (addr == STACK_HEAP_BOUNDARY_REGISTER) {
+      return stack_heap_boundary;
+    }
+    if (addr == CPU_EXCEPTION_CAUSE_REGISTER) {
+      return cpu_exception_cause;
+    }
     if (addr < 3 && !(uart[2] & 0b00000010) && addr == 1) {
       fprintf(stderr, "Warning: No new data in the receive register\n");
     } else if (addr < 3 && addr == 0) {
@@ -149,6 +157,13 @@ void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
     if (addr == SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) {
       interrupt_timer_interval = buffer;
       timer_cnt = 0;
+      return;
+    }
+    if (addr == STACK_HEAP_BOUNDARY_REGISTER) {
+      set_stack_heap_boundary(buffer);
+      return;
+    }
+    if (addr == CPU_EXCEPTION_CAUSE_REGISTER) {
       return;
     }
     if (addr < 3 && !(uart[2] & 0b00000001) && addr == 0) {

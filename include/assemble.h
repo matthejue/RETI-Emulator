@@ -97,6 +97,7 @@ typedef struct {
 
 uint8_t get_register_code(char *reg);
 uint8_t get_mnemonic(char *mnemonic);
+bool machine_word_is_valid_instruction(uint32_t machine_instr);
 Instruction *machine_to_assembly(uint32_t machine_instr);
 uint32_t assembly_to_machine(String_Instruction *str_instr);
 

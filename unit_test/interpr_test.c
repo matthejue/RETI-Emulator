@@ -16,7 +16,9 @@ void test_periphery_timer_interrupt_interval_cell() {
   assert(INTERRUPT_CONTROLLER_ISR_BASE == 3);
   assert(INTERRUPT_CONTROLLER_PRIO_BASE == 6);
   assert(SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL == 9);
-  assert(NUM_PERIPHERY_ADDRESSES == 10);
+  assert(STACK_HEAP_BOUNDARY_REGISTER == 10);
+  assert(CPU_EXCEPTION_CAUSE_REGISTER == 11);
+  assert(NUM_PERIPHERY_ADDRESSES == 12);
 
   peripherals_dir = "/tmp";
   interrupt_timer_interval = 7;

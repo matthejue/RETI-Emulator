@@ -69,8 +69,15 @@ void check_not_stepped_into_isr_completed(void) {
 }
 
 bool decide_if_int_i() {
-  return machine_to_assembly(read_storage(read_array(regs, PC, false)))->op ==
-         INT;
+  uint32_t machine_instr = read_storage(read_array(regs, PC, false));
+  if (!machine_word_is_valid_instruction(machine_instr)) {
+    return false;
+  }
+
+  Instruction *instr = machine_to_assembly(machine_instr);
+  bool is_interrupt = instr->op == INT;
+  free(instr);
+  return is_interrupt;
 }
 
 void check_activation_step_into() {
@@ -279,6 +286,12 @@ void update_state(Event event) {
     } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {
       check_heap_size_before_insert_into_heap(in.arg8);
     }
+    break;
+  case CPU_EXCEPTION:
+    write_array(regs, PC, read_array(regs, PC, false) - 1, false);
+    setup_interrupt(in.arg8);
+    remember_was_software_int();
+    stacked_isrs_cnt++;
     break;
   case CONTINUE:
     breakpoint_encountered = false;
