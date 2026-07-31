@@ -171,29 +171,59 @@ void test_escaped_uart_read_range_command_appends_only_requested_bytes() {
       "\x1bread-range 2 3 uart_read_range_test.bin\x1b/";
   send_uart_bytes(command, sizeof(command) - 1);
 
-  assert(input_len == 2 + sizeof(expected_file_size) +
-                          sizeof(expected_byte_count) + 3);
+  assert(input_len == 2 + sizeof(expected_byte_count) + 3);
   assert(input_idx == 1);
   assert(uart_input[1] == 'y');
-  assert(memcmp(uart_input + 2, expected_file_size,
-                sizeof(expected_file_size)) == 0);
-  assert(memcmp(uart_input + 2 + sizeof(expected_file_size),
-                expected_byte_count, sizeof(expected_byte_count)) == 0);
-  assert(memcmp(uart_input + 2 + sizeof(expected_file_size) +
-                    sizeof(expected_byte_count),
+  assert(memcmp(uart_input + 2, expected_byte_count,
+                sizeof(expected_byte_count)) == 0);
+  assert(memcmp(uart_input + 2 + sizeof(expected_byte_count),
                 file_content + 2, 3) == 0);
 
   const size_t previous_input_len = input_len;
-  const uint8_t existence_command[] =
+  const uint8_t zero_range_command[] =
       "\x1bread-range 0 0 uart_read_range_test.bin\x1b/";
-  send_uart_bytes(existence_command, sizeof(existence_command) - 1);
-  assert(input_len == previous_input_len + sizeof(expected_file_size) +
-                          sizeof(uint32_t));
-  assert(memcmp(uart_input + previous_input_len, expected_file_size,
-                sizeof(expected_file_size)) == 0);
+  send_uart_bytes(zero_range_command, sizeof(zero_range_command) - 1);
+  assert(input_len == previous_input_len + sizeof(uint32_t));
   const uint8_t zero_byte_count[] = {0, 0, 0, 0};
-  assert(memcmp(uart_input + previous_input_len + sizeof(expected_file_size),
-                zero_byte_count, sizeof(zero_byte_count)) == 0);
+  assert(memcmp(uart_input + previous_input_len, zero_byte_count,
+                sizeof(zero_byte_count)) == 0);
+
+  const size_t before_short_range = input_len;
+  const uint8_t short_range_command[] =
+      "\x1bread-range 6 4 uart_read_range_test.bin\x1b/";
+  const uint8_t short_byte_count[] = {0, 0, 0, 2};
+  send_uart_bytes(short_range_command, sizeof(short_range_command) - 1);
+  assert(input_len ==
+         before_short_range + sizeof(short_byte_count) + 2);
+  assert(memcmp(uart_input + before_short_range, short_byte_count,
+                sizeof(short_byte_count)) == 0);
+  assert(memcmp(uart_input + before_short_range + sizeof(short_byte_count),
+                file_content + 6, 2) == 0);
+
+  const size_t before_missing_range = input_len;
+  const uint8_t missing_range_command[] =
+      "\x1bread-range 0 1 uart_read_range_missing.bin\x1b/";
+  const uint8_t missing_file[] = {255, 255, 255, 255};
+  send_uart_bytes(missing_range_command, sizeof(missing_range_command) - 1);
+  assert(input_len == before_missing_range + sizeof(missing_file));
+  assert(memcmp(uart_input + before_missing_range, missing_file,
+                sizeof(missing_file)) == 0);
+
+  const size_t before_file_size = input_len;
+  const uint8_t file_size_command[] =
+      "\x1b" "file-size uart_read_range_test.bin\x1b/";
+  send_uart_bytes(file_size_command, sizeof(file_size_command) - 1);
+  assert(input_len == before_file_size + sizeof(expected_file_size));
+  assert(memcmp(uart_input + before_file_size, expected_file_size,
+                sizeof(expected_file_size)) == 0);
+
+  const size_t before_missing_file = input_len;
+  const uint8_t missing_file_command[] =
+      "\x1b" "file-size uart_read_range_missing.bin\x1b/";
+  send_uart_bytes(missing_file_command, sizeof(missing_file_command) - 1);
+  assert(input_len == before_missing_file + sizeof(missing_file));
+  assert(memcmp(uart_input + before_missing_file, missing_file,
+                sizeof(missing_file)) == 0);
 
   free(uart_input);
   uart_input = NULL;

@@ -48,18 +48,19 @@ or the currently selected output file.
 - `<esc>read <path><esc>/` appends a regular file's 32-bit big-endian byte count
   and then its exact bytes. A missing or unreadable file returns `UINT32_MAX`
   instead of file data.
-- `<esc>read-range <offset> <count> <path><esc>/` appends the file's 32-bit
-  big-endian byte count, the returned slice's byte count, and at most `count`
-  bytes beginning at `offset`. A zero `count` queries the file size without
-  transferring contents. A missing or unreadable file returns `UINT32_MAX`
-  followed by a zero slice count.
-  Plain, unframed `load`, `read`, or `read-range` text has no special meaning
-  and is printed normally.
+- `<esc>read-range <offset> <count> <path><esc>/` appends the returned slice's
+  32-bit big-endian byte count and at most `count` bytes beginning at `offset`.
+  A range reaching past the end of the file returns fewer bytes. A missing or
+  unreadable file returns `UINT32_MAX` instead of file data.
+- `<esc>file-size <path><esc>/` appends the regular file's 32-bit big-endian
+  byte size. A missing or unreadable file returns `UINT32_MAX`.
+  Plain, unframed `load`, `read`, `read-range`, or `file-size` text has no
+  special meaning and is printed normally.
 
-PicoOS's `file_exists()` uses a zero-count `read-range` request for a
-metadata-only existence/readability check. Regular file reads, `SEEK_END`, and
-bounded text configuration reads use non-zero ranges. The older `read` command
-remains available for clients that request complete files.
+PicoOS's `file_exists()` and `SEEK_END` use `file-size`. Regular file reads and
+bounded text configuration reads use `read-range`, whose response does not
+repeat the complete file size. The older `read` command remains available for
+clients that request complete files.
 
 The exact byte count is required because configuration files are text and may
 not have a size divisible by four. The explicit failure value is required

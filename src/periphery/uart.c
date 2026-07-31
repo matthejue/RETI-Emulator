@@ -41,6 +41,7 @@ uint8_t *uart;
 #define UART_LOAD_COMMAND_PREFIX "load "
 #define UART_READ_COMMAND_PREFIX "read "
 #define UART_READ_RANGE_COMMAND_PREFIX "read-range "
+#define UART_FILE_SIZE_COMMAND_PREFIX "file-size "
 #define UART_WRITE_COMMAND_PREFIX "write "
 #define UART_APPEND_COMMAND_PREFIX "append "
 #define UART_CONTROL_ESCAPE 27
@@ -216,7 +217,6 @@ static bool load_file_into_uart_input(const char *path, size_t len,
 
 static void append_uart_read_range_error(void) {
   append_uart_input_u32(UINT32_MAX);
-  append_uart_input_u32(0);
 }
 
 static void process_uart_read_range_command(char *command) {
@@ -257,7 +257,7 @@ static void process_uart_read_range_command(char *command) {
 
   struct stat st;
   if (*path == '\0' || stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
-      st.st_size < 0 || (uintmax_t)st.st_size > UINT32_MAX) {
+      st.st_size < 0 || (uintmax_t)st.st_size >= UINT32_MAX) {
     append_uart_read_range_error();
     return;
   }
@@ -272,7 +272,6 @@ static void process_uart_read_range_command(char *command) {
   }
   if (requested == 0) {
     fclose(file);
-    append_uart_input_u32(file_size);
     append_uart_input_u32(0);
     return;
   }
@@ -292,10 +291,37 @@ static void process_uart_read_range_command(char *command) {
   size_t bytes_read = fread(buffer, 1, requested, file);
   fclose(file);
 
-  append_uart_input_u32(file_size);
   append_uart_input_u32((uint32_t)bytes_read);
   append_uart_input_bytes(buffer, bytes_read);
   free(buffer);
+}
+
+static void process_uart_file_size_command(char *command) {
+  char *path = command + strlen(UART_FILE_SIZE_COMMAND_PREFIX);
+  while (*path == ' ' || *path == '\t') {
+    path++;
+  }
+
+  char *path_end = path + strlen(path);
+  while (path_end > path &&
+         (path_end[-1] == ' ' || path_end[-1] == '\t')) {
+    *--path_end = '\0';
+  }
+
+  struct stat st;
+  if (*path == '\0' || stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
+      st.st_size < 0 || (uintmax_t)st.st_size >= UINT32_MAX) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  fclose(file);
+  append_uart_input_u32((uint32_t)st.st_size);
 }
 
 static void process_uart_load_command(char *command) {
@@ -420,6 +446,9 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_READ_RANGE_COMMAND_PREFIX,
                      strlen(UART_READ_RANGE_COMMAND_PREFIX)) == 0) {
     process_uart_read_range_command(uart_control);
+  } else if (strncmp(uart_control, UART_FILE_SIZE_COMMAND_PREFIX,
+                     strlen(UART_FILE_SIZE_COMMAND_PREFIX)) == 0) {
+    process_uart_file_size_command(uart_control);
   } else if (strncmp(uart_control, UART_READ_COMMAND_PREFIX,
                      strlen(UART_READ_COMMAND_PREFIX)) == 0) {
     process_uart_read_command(uart_control);
@@ -545,6 +574,7 @@ static bool uart_send_completes_input_control(void) {
   size_t load_prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   size_t read_prefix_len = strlen(UART_READ_COMMAND_PREFIX);
   size_t read_range_prefix_len = strlen(UART_READ_RANGE_COMMAND_PREFIX);
+  size_t file_size_prefix_len = strlen(UART_FILE_SIZE_COMMAND_PREFIX);
   return uart_send_requested() && uart_control_active &&
          uart_control_end_candidate && uart[0] == '/' &&
          !uart_control_overflow &&
@@ -554,6 +584,9 @@ static bool uart_send_completes_input_control(void) {
           (uart_control_len >= read_range_prefix_len &&
            memcmp(uart_control, UART_READ_RANGE_COMMAND_PREFIX,
                   read_range_prefix_len) == 0) ||
+          (uart_control_len >= file_size_prefix_len &&
+           memcmp(uart_control, UART_FILE_SIZE_COMMAND_PREFIX,
+                  file_size_prefix_len) == 0) ||
           (uart_control_len >= read_prefix_len &&
            memcmp(uart_control, UART_READ_COMMAND_PREFIX, read_prefix_len) ==
                0));
