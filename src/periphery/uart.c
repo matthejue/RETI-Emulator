@@ -40,6 +40,7 @@ uint8_t *uart;
 #define UART_INPUT_BOX_LEN 80
 #define UART_LOAD_COMMAND_PREFIX "load "
 #define UART_READ_COMMAND_PREFIX "read "
+#define UART_READ_RANGE_COMMAND_PREFIX "read-range "
 #define UART_WRITE_COMMAND_PREFIX "write "
 #define UART_APPEND_COMMAND_PREFIX "append "
 #define UART_CONTROL_ESCAPE 27
@@ -213,6 +214,90 @@ static bool load_file_into_uart_input(const char *path, size_t len,
   return true;
 }
 
+static void append_uart_read_range_error(void) {
+  append_uart_input_u32(UINT32_MAX);
+  append_uart_input_u32(0);
+}
+
+static void process_uart_read_range_command(char *command) {
+  char *cursor = command + strlen(UART_READ_RANGE_COMMAND_PREFIX);
+  char *number_end;
+  errno = 0;
+  unsigned long offset = strtoul(cursor, &number_end, 10);
+  if (errno != 0 || number_end == cursor ||
+      (*number_end != ' ' && *number_end != '\t') ||
+      offset > UINT32_MAX) {
+    append_uart_read_range_error();
+    return;
+  }
+
+  cursor = number_end;
+  while (*cursor == ' ' || *cursor == '\t') {
+    cursor++;
+  }
+  errno = 0;
+  unsigned long count = strtoul(cursor, &number_end, 10);
+  if (errno != 0 || number_end == cursor ||
+      (*number_end != ' ' && *number_end != '\t') ||
+      count > UINT32_MAX) {
+    append_uart_read_range_error();
+    return;
+  }
+
+  cursor = number_end;
+  while (*cursor == ' ' || *cursor == '\t') {
+    cursor++;
+  }
+  char *path = cursor;
+  char *path_end = path + strlen(path);
+  while (path_end > path &&
+         (path_end[-1] == ' ' || path_end[-1] == '\t')) {
+    *--path_end = '\0';
+  }
+
+  struct stat st;
+  if (*path == '\0' || stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
+      st.st_size < 0 || (uintmax_t)st.st_size > UINT32_MAX) {
+    append_uart_read_range_error();
+    return;
+  }
+
+  uint32_t file_size = (uint32_t)st.st_size;
+  size_t available = offset < file_size ? file_size - offset : 0;
+  size_t requested = count < available ? count : available;
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    append_uart_read_range_error();
+    return;
+  }
+  if (requested == 0) {
+    fclose(file);
+    append_uart_input_u32(file_size);
+    append_uart_input_u32(0);
+    return;
+  }
+
+  if (fseek(file, (long)offset, SEEK_SET) != 0) {
+    fclose(file);
+    append_uart_read_range_error();
+    return;
+  }
+
+  uint8_t *buffer = malloc(requested);
+  if (buffer == NULL) {
+    fclose(file);
+    fprintf(stderr, "Error: Couldn't allocate UART input file buffer\n");
+    exit(EXIT_FAILURE);
+  }
+  size_t bytes_read = fread(buffer, 1, requested, file);
+  fclose(file);
+
+  append_uart_input_u32(file_size);
+  append_uart_input_u32((uint32_t)bytes_read);
+  append_uart_input_bytes(buffer, bytes_read);
+  free(buffer);
+}
+
 static void process_uart_load_command(char *command) {
   const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   if (strncmp(command, UART_LOAD_COMMAND_PREFIX, prefix_len) != 0) {
@@ -332,6 +417,9 @@ static void process_uart_control(void) {
   if (strncmp(uart_control, UART_LOAD_COMMAND_PREFIX,
               strlen(UART_LOAD_COMMAND_PREFIX)) == 0) {
     process_uart_load_command(uart_control);
+  } else if (strncmp(uart_control, UART_READ_RANGE_COMMAND_PREFIX,
+                     strlen(UART_READ_RANGE_COMMAND_PREFIX)) == 0) {
+    process_uart_read_range_command(uart_control);
   } else if (strncmp(uart_control, UART_READ_COMMAND_PREFIX,
                      strlen(UART_READ_COMMAND_PREFIX)) == 0) {
     process_uart_read_command(uart_control);
@@ -456,12 +544,16 @@ static bool uart_receive_requested(void) {
 static bool uart_send_completes_input_control(void) {
   size_t load_prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   size_t read_prefix_len = strlen(UART_READ_COMMAND_PREFIX);
+  size_t read_range_prefix_len = strlen(UART_READ_RANGE_COMMAND_PREFIX);
   return uart_send_requested() && uart_control_active &&
          uart_control_end_candidate && uart[0] == '/' &&
          !uart_control_overflow &&
          ((uart_control_len >= load_prefix_len &&
            memcmp(uart_control, UART_LOAD_COMMAND_PREFIX, load_prefix_len) ==
                0) ||
+          (uart_control_len >= read_range_prefix_len &&
+           memcmp(uart_control, UART_READ_RANGE_COMMAND_PREFIX,
+                  read_range_prefix_len) == 0) ||
           (uart_control_len >= read_prefix_len &&
            memcmp(uart_control, UART_READ_COMMAND_PREFIX, read_prefix_len) ==
                0));

@@ -147,6 +147,64 @@ void test_escaped_uart_load_command_appends_file_to_input() {
   remove(filename);
 }
 
+void test_escaped_uart_read_range_command_appends_only_requested_bytes() {
+  const char *filename = "uart_read_range_test.bin";
+  const uint8_t file_content[] = {'A', '\0', 255, 'B', 'C', 'D', 'E', 'F'};
+  const uint8_t expected_file_size[] = {0, 0, 0, 8};
+  const uint8_t expected_byte_count[] = {0, 0, 0, 3};
+  FILE *file = fopen(filename, "wb");
+  assert(file != NULL);
+  assert(fwrite(file_content, 1, sizeof(file_content), file) ==
+         sizeof(file_content));
+  fclose(file);
+
+  init_uart();
+  max_waiting_instrs = 0;
+  free(uart_input);
+  uart_input = malloc(3);
+  memcpy(uart_input, "xy", 2);
+  uart_input[2] = '\0';
+  input_len = 2;
+  input_idx = 1;
+
+  const uint8_t command[] =
+      "\x1bread-range 2 3 uart_read_range_test.bin\x1b/";
+  send_uart_bytes(command, sizeof(command) - 1);
+
+  assert(input_len == 2 + sizeof(expected_file_size) +
+                          sizeof(expected_byte_count) + 3);
+  assert(input_idx == 1);
+  assert(uart_input[1] == 'y');
+  assert(memcmp(uart_input + 2, expected_file_size,
+                sizeof(expected_file_size)) == 0);
+  assert(memcmp(uart_input + 2 + sizeof(expected_file_size),
+                expected_byte_count, sizeof(expected_byte_count)) == 0);
+  assert(memcmp(uart_input + 2 + sizeof(expected_file_size) +
+                    sizeof(expected_byte_count),
+                file_content + 2, 3) == 0);
+
+  const size_t previous_input_len = input_len;
+  const uint8_t existence_command[] =
+      "\x1bread-range 0 0 uart_read_range_test.bin\x1b/";
+  send_uart_bytes(existence_command, sizeof(existence_command) - 1);
+  assert(input_len == previous_input_len + sizeof(expected_file_size) +
+                          sizeof(uint32_t));
+  assert(memcmp(uart_input + previous_input_len, expected_file_size,
+                sizeof(expected_file_size)) == 0);
+  const uint8_t zero_byte_count[] = {0, 0, 0, 0};
+  assert(memcmp(uart_input + previous_input_len + sizeof(expected_file_size),
+                zero_byte_count, sizeof(zero_byte_count)) == 0);
+
+  free(uart_input);
+  uart_input = NULL;
+  input_len = 0;
+  input_idx = 0;
+  close_uart_output();
+  free(uart);
+  uart = NULL;
+  remove(filename);
+}
+
 void test_uart_completes_load_command_before_receive() {
   const char *filename = "uart_load_order_test.bin";
   const uint8_t file_content[] = {'A', 'B', 'C', 'D'};
@@ -198,6 +256,7 @@ int main() {
   test_decimal_escape_above_byte_range_stays_literal();
   test_format_uart_byte();
   test_escaped_uart_load_command_appends_file_to_input();
+  test_escaped_uart_read_range_command_appends_only_requested_bytes();
   test_uart_completes_load_command_before_receive();
   return 0;
 }
