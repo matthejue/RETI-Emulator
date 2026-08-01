@@ -59,7 +59,7 @@ void display_error_message(const char *error_type, const char *error_message,
   }
 
   adjust_print(false, "%s: ", NULL, error_type);
-  adjust_print(true, NULL, "%s ", error_type);
+  adjust_print(true, NULL, "%s", error_type);
 
   char *error_message_inserted;
   if (to_insert != NULL) {

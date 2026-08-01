@@ -1,0 +1,42 @@
+# input:T
+# output:TTTTT
+# Maps the timer device to vector 1 from isrs.picoc
+LOADI DS 1048576
+MULTI DS 1024
+LOADI ACC 1
+STORE ACC 3
+STORE ACC 6
+
+# Receives one byte through syscall 1
+LOADI ACC 1
+INT 0
+MOVE ACC BAF
+
+# Sends it repeatedly through syscall 0 while timer interrupts preempt execution
+MOVE BAF IN1
+LOADI ACC 0
+INT 0
+MOVE BAF IN1
+LOADI ACC 0
+INT 0
+MOVE BAF IN1
+LOADI ACC 0
+INT 0
+MOVE BAF IN1
+LOADI ACC 0
+INT 0
+MOVE BAF IN1
+LOADI ACC 0
+INT 0
+
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+NOP
+JUMP 0

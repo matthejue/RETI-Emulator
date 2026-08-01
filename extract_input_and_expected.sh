@@ -12,7 +12,7 @@ for test in "${paths[@]}"; do
   output_line=$(
     sed -n '1,3p' "$test" \
       | awk '/^# output:/ {
-          sub(/^# output:[ \t]*/, "")
+          sub(/^# output:[ \t]?/, "")
           gsub(/\t/, " ")
           printf "%s", $0
           exit

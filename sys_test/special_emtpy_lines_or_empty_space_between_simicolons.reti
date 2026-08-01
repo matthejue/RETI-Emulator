@@ -1,12 +1,14 @@
-# input: 41
-# output: 42
-INT 1
+# input:)
+# output:*
+LOADI ACC 1
+INT 0
 
-DIVI ACC 2; ; # don't care about readable code
+ADDI ACC 1; ; # don't care about readable code
 
 
-MULTI ACC 3; SUBI ACC 18
+ADDI ACC 1; SUBI ACC 1
 
+MOVE ACC IN1; LOADI ACC 0
 INT 0
 
      JUMP 0

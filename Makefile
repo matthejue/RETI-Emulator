@@ -75,7 +75,11 @@ SHELL := /bin/bash -x
 unit-test: $(BIN_TEST)
 	@bash -c 'for T in $(BIN_TEST); do \
 		echo "Running $$T"; \
-		./$$T || echo "$$T failed with exit code $$?"; \
+		./$$T || { \
+			test_status=$$?; \
+			echo "$$T failed with exit code $$test_status"; \
+			exit $$test_status; \
+		}; \
 	done'
 
 $(BIN_DIR)/%_main: $(OBJ_DIR)/%_main.o $(OBJ_SRC) | $(BIN_DIR)

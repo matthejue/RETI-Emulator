@@ -1,10 +1,14 @@
-# input:	14	3
-# output:	42
-INT 1			# important comment
-MOVE ACC IN1	# important comment
-INT 1			# important comment
-MULT ACC IN1	# important comment
-INT 0			# important comment
+# input:\tA
+# output:\tB
+LOADI ACC 1		# Receives the tab
+INT 0
+MOVE ACC IN1		# Sends the tab
+LOADI ACC 0
+INT 0
+LOADI ACC 1		# Receives A
+INT 0
+ADDI ACC 1		# Produces B
+MOVE ACC IN1
+LOADI ACC 0
+INT 0
 JUMP 0
-
-
