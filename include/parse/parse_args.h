@@ -20,6 +20,7 @@ extern bool ds_vals_unsigned;
 extern bool keep_tui_alive_after_halt;
 extern bool os_mode;
 extern bool has_sram_prgrm;
+extern uint16_t isr_num_override;
 
 extern char *peripherals_dir;
 extern char *eprom_prgrm_path;
@@ -30,6 +31,7 @@ extern char *sections_path;
 extern char *debuginfo_path;
 
 void parse_args(int argc, char *argv[]);
+void apply_isr_num_override(void);
 void print_args();
 
 #endif // PARSE_PARSE_ARGS_H

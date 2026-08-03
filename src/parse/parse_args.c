@@ -1,4 +1,5 @@
 #include "../../include/parse/parse_args.h"
+#include "../../include/assemble.h"
 #include "../../include/interpr.h"
 #include "../../include/interrupt.h"
 #include "../../include/reti.h"
@@ -28,6 +29,7 @@ bool ds_vals_unsigned = false;
 bool keep_tui_alive_after_halt = false;
 bool os_mode = false;
 bool has_sram_prgrm = false;
+uint16_t isr_num_override = UINT16_MAX;
 
 char *peripherals_dir = ".";
 char *eprom_prgrm_path = "";
@@ -44,6 +46,7 @@ void print_help(char *bin_name) {
       "-f file_dir -e eprom_prgrm_path -i isrs_prgrm_path "
       "-C interrupt_controller_config_path "
       "-S sections_path -D debuginfo_path "
+      "-n isr_count "
       "-w max_waiting_instrs -t (test mode) -m (read metadata comments) -c (show source comments in tui) -v (verbose) "
       "-b (binary mode) -E (extended features) -a, --assemble (write encoded .bin and exit) -u (ds vals unsigned) "
       "-K (keep tui open after final JUMP 0 until q) "
@@ -57,10 +60,11 @@ void parse_args(int argc, char *argv[]) {
   uint32_t opt;
   static struct option long_options[] = {
       {"assemble", no_argument, NULL, 'a'},
+      {"isr-count", required_argument, NULL, 'n'},
       {0, 0, 0, 0},
   };
 
-  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:w:hdvtmbEcauKOI:",
+  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:n:w:hdvtmbEcauKOI:",
                             long_options, NULL)) != -1) {
     char *endptr;
     int64_t tmp_val;
@@ -114,6 +118,16 @@ void parse_args(int argc, char *argv[]) {
       break;
     case 'D':
       debuginfo_path = optarg;
+      break;
+    case 'n':
+      tmp_val = strtol(optarg, &endptr, 10);
+      if (endptr == optarg || *endptr != '\0' || tmp_val < 0 ||
+          tmp_val > UINT8_MAX) {
+        fprintf(stderr,
+                "Error: ISR count must be between 0 and 255\n");
+        exit(EXIT_FAILURE);
+      }
+      isr_num_override = tmp_val;
       break;
     case 'w':
       tmp_val = strtol(optarg, &endptr, 10);
@@ -200,11 +214,22 @@ void parse_args(int argc, char *argv[]) {
   }
 }
 
+void apply_isr_num_override(void) {
+  if (isr_num_override != UINT16_MAX) {
+    isr_num = isr_num_override;
+  }
+}
+
 void print_args() {
   printf("SRAM size: %u\n", sram_size);
   printf("Page size: %u\n", page_size);
   printf("Maximum number of waiting instructions: %u\n", max_waiting_instrs);
   printf("Interrupt timer interval: %u\n", interrupt_timer_interval);
+  if (isr_num_override == UINT16_MAX) {
+    printf("ISR count override: none\n");
+  } else {
+    printf("ISR count override: %u\n", isr_num_override);
+  }
   printf("Debug mode: %s\n", debug_mode ? "true" : "false");
   printf("Read metadata: %s\n", read_metadata ? "true" : "false");
   printf("Collect comments: %s\n", collect_comments ? "true" : "false");

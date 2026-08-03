@@ -171,6 +171,7 @@ int main(int argc, char *argv[]) {
   } else {
     load_adjusted_eprom_prgrm(sections.stack_start);
   }
+  apply_isr_num_override();
 
   if (!debug_mode && !test_mode && !activate_uart_terminal()) {
     fprintf(stderr, "Warning: Couldn't activate UART terminal input\n");

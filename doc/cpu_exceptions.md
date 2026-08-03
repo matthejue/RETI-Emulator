@@ -32,8 +32,11 @@ exception handler that returns retries the faulting instruction. PicoOS is
 expected to terminate the affected process instead; a stack overflow in kernel
 context should cause a kernel panic.
 
-If vector slot `3` is not present, the emulator reports the exception as
-unhandled and stops.
+The emulator considers vector slot `3` available when the parsed or explicitly
+configured ISR count is at least `4`. Use `-n 4` (or `--isr-count 4`) when an
+EPROM loader installs the vector table at runtime and the emulator therefore
+cannot count its entries while parsing. If slot `3` is not declared this way,
+the emulator reports the exception as unhandled and stops.
 
 In the debugger, focus the UART box and press `a` to cycle through its `UART`,
 `Interrupts`, and `Exceptions` pages. The `Exceptions` page displays periphery

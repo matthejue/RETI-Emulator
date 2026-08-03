@@ -26,6 +26,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-f file_dir`: Gibt an, wo die Datei `sram.bin` erzeugt werden soll
 - `-e eprom_prgrm_path`: Parst und lädt Eprom-Startprogramm aus Datei, die über Dateipfad gefunden werden kann
 - `-i isrs_prgrm_path`: Parst und lädt Interrupt-Service Routinen aus Datei, die über Dateipfad gefunden werden kann
+- `-n isr_count`, `--isr-count isr_count`: Setzt die Anzahl der Einträge in der Interrupt-Vektor-Tabelle explizit auf einen Wert zwischen `0` und `255`
 - `-S sections_path`: Verwendet die angegebene `.sections`-Datei anstelle von `<program>.sections`
 - `-D debuginfo_path`: Verwendet die angegebene `.debuginfo`-Datei anstelle von `<program>.debuginfo`
 - `-w max_waiting_instrs`: Setzt raximale Wartezeit der UART für das Senden und Empfangen von Daten (Anzahle Befehle)
@@ -186,6 +187,14 @@ Falls eine `.sections`-Datei existiert, gibt es zwei Fälle:
 Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder mit einer explizit angegebenen ISR-Datei kombiniert werden.
 
 Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
+
+Normalerweise ermittelt der Emulator die Anzahl der Vektoreinträge beim Parsen der `.reti`-Datei. Lädt stattdessen ein EPROM-Startprogramm die Vektortabelle erst zur Laufzeit in den SRAM, kann der Emulator diese Einträge nicht beim Parsen zählen. In diesem Fall kann die Anzahl mit `-n isr_count` beziehungsweise `--isr-count isr_count` explizit angegeben werden. Die explizite Angabe überschreibt die automatisch ermittelte Anzahl, nachdem alle Programmdateien geladen wurden. Ein Betriebssystem mit vier Vektoreinträgen wird beispielsweise so gestartet:
+
+```bash
+reti_emulator -n 4 -e startprogram.reti
+```
+
+CPU-Ausnahmen für Division durch null, Stacküberlauf und ungültige Instruktionen verwenden fest den Vektoreintrag `3`. Die Ausnahmebehandlung ist deshalb nur verfügbar, wenn die Interrupt-Vektortabelle mindestens vier Einträge besitzt. Ist die ermittelte oder mit `-n` angegebene Anzahl kleiner als `4`, meldet der Emulator eine auftretende CPU-Ausnahme als unbehandelt und beendet die Ausführung, anstatt zu einer nicht vorhandenen Exception-Routine zu springen.
 
 Die Zuordnung von Hardware-Interrupt-Signalleitungen zu ISRs liegt nicht in der Vektortabelle, sondern im speicherabgebildeten Interrupt-Controller im bisherigen UART-Speicherbereich. Nach 3 UART-Zellen folgen 3 Zellen für `signal line -> isr` und danach 3 Zellen für `signal line -> priority`. In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert, größere Werte haben höhere Priorität. Es gibt Signal-Line `0` (`INTTIMER`), Signal-Line `1` (`CUSTOM`) und Signal-Line `2` (`UART`).
 
