@@ -72,24 +72,25 @@ static uint32_t read_uint32_section_value(cJSON *root, const char *key,
   return (uint32_t)item->valuedouble;
 }
 
-static uint32_t read_stack_start_section_value(cJSON *root, const char *path,
-                                               bool required, bool *exists) {
-  cJSON *item = cJSON_GetObjectItemCaseSensitive(root, "stack_start");
+static uint32_t read_auto_uint32_section_value(cJSON *root, const char *key,
+                                               const char *path, bool required,
+                                               bool *exists) {
+  cJSON *item = cJSON_GetObjectItemCaseSensitive(root, key);
   if (item == NULL) {
     if (required) {
-      fprintf(stderr, "Error: Missing \"stack_start\" in %s\n", path);
+      fprintf(stderr, "Error: Missing \"%s\" in %s\n", key, path);
       exit(EXIT_FAILURE);
     }
     *exists = false;
-    return STACK_START_AUTO;
+    return UINT32_MAX;
   }
 
   if (!cJSON_IsNumber(item) || item->valuedouble < -1 ||
       item->valuedouble > UINT32_MAX ||
       item->valuedouble != (int64_t)item->valuedouble) {
     fprintf(stderr,
-            "Error: \"stack_start\" in %s must be -1 or an unsigned 32-bit integer\n",
-            path);
+            "Error: \"%s\" in %s must be -1 or an unsigned 32-bit integer\n",
+            key, path);
     exit(EXIT_FAILURE);
   }
 
@@ -103,9 +104,11 @@ static Program_Sections parse_sections_file(const char *sections_path,
                                .codesegment_start = 0,
                                .datasegment_start = 0,
                                .heap_start = 0,
+                               .heap_size = HEAP_SIZE_AUTO,
                                .interrupt_service_routines_start = 0,
                                .stack_start = STACK_START_AUTO,
                                .has_heap_start = false,
+                               .has_heap_size = false,
                                .has_stack_start = false,
                                .has_interrupt_service_routines_start = false};
   char *content = read_file_content(sections_path);
@@ -125,11 +128,15 @@ static Program_Sections parse_sections_file(const char *sections_path,
   sections.heap_start = read_uint32_section_value(
       root, "heap_start", sections_path, require_stack_start,
       &sections.has_heap_start);
+  sections.heap_size = read_auto_uint32_section_value(
+      root, "heap_size", sections_path, require_stack_start,
+      &sections.has_heap_size);
   sections.interrupt_service_routines_start = read_uint32_section_value(
       root, "interrupt_service_routines_start", sections_path, false,
       &sections.has_interrupt_service_routines_start);
-  sections.stack_start = read_stack_start_section_value(
-      root, sections_path, require_stack_start, &sections.has_stack_start);
+  sections.stack_start = read_auto_uint32_section_value(
+      root, "stack_start", sections_path, require_stack_start,
+      &sections.has_stack_start);
 
   cJSON_Delete(root);
   free(content);
@@ -141,9 +148,11 @@ Program_Sections parse_sections_for_reti_path(const char *reti_path) {
                                .codesegment_start = 0,
                                .datasegment_start = 0,
                                .heap_start = 0,
+                               .heap_size = HEAP_SIZE_AUTO,
                                .interrupt_service_routines_start = 0,
                                .stack_start = STACK_START_AUTO,
                                .has_heap_start = false,
+                               .has_heap_size = false,
                                .has_stack_start = false,
                                .has_interrupt_service_routines_start = false};
   bool explicit_sections_path = strcmp(sections_path, "") != 0;

@@ -30,9 +30,11 @@ static Program_Sections empty_program_sections(void) {
                             .codesegment_start = 0,
                             .datasegment_start = 0,
                             .heap_start = 0,
+                            .heap_size = HEAP_SIZE_AUTO,
                             .interrupt_service_routines_start = 0,
                             .stack_start = STACK_START_AUTO,
                             .has_heap_start = false,
+                            .has_heap_size = false,
                             .has_stack_start = false,
                             .has_interrupt_service_routines_start = false};
 }
@@ -117,13 +119,14 @@ static void assemble_sram_program_to_binary(void) {
   write_file(bin_file, 0, sections.codesegment_start);
   write_file(bin_file, 1, sections.datasegment_start);
   write_file(bin_file, 2, sections.heap_start);
-  write_file(bin_file, 3, sections.stack_start);
+  write_file(bin_file, 3, sections.heap_size);
+  write_file(bin_file, 4, sections.stack_start);
   for (uint32_t i = 0; i < num_words; i++) {
-    write_file(bin_file, i + 4, read_file(sram, i));
+    write_file(bin_file, i + 5, read_file(sram, i));
   }
   fclose(bin_file);
 
-  printf("Wrote %u section words and %u SRAM words to %s\n", 4, num_words,
+  printf("Wrote %u section words and %u SRAM words to %s\n", 5, num_words,
          bin_path);
   free(bin_path);
 }

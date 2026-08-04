@@ -36,7 +36,7 @@ Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Be
 - `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
 - `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
 - `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
-- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start`, `heap_start` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
+- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start`, `heap_start`, `heap_size` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
 - `-O`: Startet mit einer synthetischen aktiven ISR für Betriebssysteme, deren erster Prozess per `RTI` gestartet wird
@@ -172,7 +172,9 @@ Die Adressen sind nullbasiert und beziehen sich auf die geparsten Speicherwörte
 
 Das Codesegment wird wie normale RETI-Instruktionen angezeigt. Das Datensegment wird als rohe Speicherwerte angezeigt, also werden die Inhalte dort nicht in RETI-Instruktionen zurückübersetzt. Direkte Zahlen und ASCII-Zeichen wie `'e'` sind dafür gedacht, in diesem Bereich Daten abzulegen.
 
-Wenn eine gleichnamige `program.sections`-Datei zusätzlich `stack_start` enthält, beeinflusst dieser Wert auch das automatisch erzeugte EPROM-Startprogramm. `stack_start: -1` behält das bisherige Verhalten bei und setzt den Stackpointer an das Ende des SRAM. Jeder andere `stack_start`-Wert setzt den Stackpointer auf `stack_start` plus SRAM-Adresskonstante.
+Für den Assemble-Modus muss die Datei zusätzlich `heap_start`, `heap_size` und `stack_start` enthalten. `heap_size: -1` fordert den Standardwert des ladenden Systems an; ein anderer Wert legt die Heapgröße in SRAM-Wörtern fest. Der Binärkopf enthält diese fünf Werte in der Reihenfolge `codesegment_start`, `datasegment_start`, `heap_start`, `heap_size`, `stack_start`.
+
+Wenn eine gleichnamige `program.sections`-Datei `stack_start` enthält, beeinflusst dieser Wert auch das automatisch erzeugte EPROM-Startprogramm. `stack_start: -1` behält das bisherige Verhalten bei und setzt den Stackpointer an das Ende des SRAM. Jeder andere `stack_start`-Wert setzt den Stackpointer auf `stack_start` plus SRAM-Adresskonstante.
 
 Wenn nur ein EPROM-Startprogramm mittels `-e eprom.reti` geladen wird, liest der Debugger optional `eprom.sections` aus demselben Verzeichnis. Diese Datei beschreibt dann das SRAM-Layout, das das EPROM-Startprogramm lädt. Ohne diese Datei zeigt der Debugger SRAM-Inhalte nur als Dezimalwerte bzw. mit `-b` als Binärwerte an.
 

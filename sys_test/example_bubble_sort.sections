@@ -2,5 +2,6 @@
   "codesegment_start": 0,
   "datasegment_start": 6034,
   "heap_start": 6065,
+  "heap_size": -1,
   "stack_start": -1
 }
