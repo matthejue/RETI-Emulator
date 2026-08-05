@@ -6,6 +6,7 @@ lib/
 compile_commands.json
 hdd.bin
 sram.bin
+.reti_emulaor/
 *.expected_output
 *.output
 *.error

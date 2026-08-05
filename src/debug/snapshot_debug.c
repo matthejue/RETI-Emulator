@@ -21,9 +21,6 @@ static bool snapshot_available = false;
 static pid_t snapshot_child_pid = -1;
 static int snapshot_child_write_fd = -1;
 
-static const char *SNAPSHOT_ROOT_DIR = "/tmp/reti_emulator";
-static const char *SNAPSHOT_SRAM_PATH = "/tmp/reti_emulator/sram.bin";
-
 static bool copy_file_contents(const char *src_path, const char *dest_path) {
   int src_fd = open(src_path, O_RDONLY);
   if (src_fd < 0) {
@@ -74,10 +71,6 @@ static void set_snapshot_available(bool available) {
   set_tui_snapshot_available(available);
 }
 
-static bool ensure_runtime_dir(void) {
-  return mkdir(SNAPSHOT_ROOT_DIR, 0700) == 0 || errno == EEXIST;
-}
-
 void cleanup_snapshot_debug(void) {
   if (snapshot_child_write_fd != -1) {
     close(snapshot_child_write_fd);
@@ -94,16 +87,22 @@ void cleanup_snapshot_debug(void) {
 }
 
 static bool copy_current_sram_to_snapshot(void) {
-  char *sram_path = proper_str_cat(peripherals_dir, "/sram.bin");
+  char *sram_path = build_reti_emulator_file_path(peripherals_dir, "sram.bin");
+  char *snapshot_path =
+      build_reti_emulator_file_path(peripherals_dir, "snapshot_sram.bin");
   bool ok = fflush(sram) == 0 && fsync(fileno(sram)) == 0 &&
-            copy_file_contents(sram_path, SNAPSHOT_SRAM_PATH);
+            copy_file_contents(sram_path, snapshot_path);
   free(sram_path);
+  free(snapshot_path);
   return ok;
 }
 
 static bool reopen_snapshot_sram(void) {
+  char *snapshot_path =
+      build_reti_emulator_file_path(peripherals_dir, "snapshot_sram.bin");
   fclose(sram);
-  sram = fopen(SNAPSHOT_SRAM_PATH, "r+b");
+  sram = fopen(snapshot_path, "r+b");
+  free(snapshot_path);
   return sram != NULL;
 }
 
@@ -150,7 +149,7 @@ static void wait_for_restore_command(int read_fd) {
 
 // returns -1 on error, 0 in the restored child, 1 in the current process
 static int create_snapshot(void) {
-  if (!ensure_runtime_dir()) {
+  if (!ensure_reti_emulator_directory(peripherals_dir)) {
     return -1;
   }
 
@@ -210,7 +209,7 @@ bool handle_snapshot_debug_key(char key) {
     int snapshot_result = create_snapshot();
     if (snapshot_result == 1) {
       display_notification_box("Snapshot",
-                               "Saved process state to /tmp/reti_emulator");
+                               "Saved process state to .reti_emulaor");
     } else if (snapshot_result == 0) {
       draw_tui();
       return true;

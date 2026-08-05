@@ -1,27 +1,23 @@
 #include "../../include/terminal_view.h"
-#include <errno.h>
+#include "../../include/parse/parse_args.h"
+#include "../../include/utils.h"
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/stat.h>
+#include <stdlib.h>
 #include <unistd.h>
-
-static const char *TERMINAL_ROOT_DIR = "/tmp/reti_emulator";
-static const char *TERMINAL_OUTPUT_PATH =
-    "/tmp/reti_emulator/terminal_output.bin";
 
 static int terminal_output_fd = -1;
 
-static bool ensure_terminal_dir(void) {
-  return mkdir(TERMINAL_ROOT_DIR, 0700) == 0 || errno == EEXIST;
-}
-
 bool init_terminal_output(void) {
-  if (!ensure_terminal_dir()) {
+  if (!ensure_reti_emulator_directory(peripherals_dir)) {
     return false;
   }
 
+  char *output_path =
+      build_reti_emulator_file_path(peripherals_dir, "terminal_output.bin");
   terminal_output_fd =
-      open(TERMINAL_OUTPUT_PATH, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600);
+      open(output_path, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600);
+  free(output_path);
   return terminal_output_fd >= 0;
 }
 
@@ -34,7 +30,10 @@ void append_terminal_output(uint8_t byte) {
 }
 
 bool replay_terminal_output(void) {
-  FILE *output = fopen(TERMINAL_OUTPUT_PATH, "rb");
+  char *output_path =
+      build_reti_emulator_file_path(peripherals_dir, "terminal_output.bin");
+  FILE *output = fopen(output_path, "rb");
+  free(output_path);
   if (output == NULL) {
     return false;
   }

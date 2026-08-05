@@ -1,10 +1,12 @@
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifndef UTILS_H
 #define UTILS_H
 
 #define INITIAL_BUFFER_SIZE 1024
+#define RETI_EMULATOR_DIRECTORY_NAME ".reti_emulaor"
 
 uint32_t mod(int32_t a, int32_t b);
 int64_t max(int64_t a, int64_t b);
@@ -13,6 +15,10 @@ int64_t min(int64_t a, int64_t b);
 uint32_t sign_extend_22_to_32(uint32_t num);
 uint32_t swap_endian_32(uint32_t value);
 char *proper_str_cat(const char *prefix, const char *suffix);
+char *build_reti_emulator_directory_path(const char *peripherals_dir);
+char *build_reti_emulator_file_path(const char *peripherals_dir,
+                                    const char *filename);
+bool ensure_reti_emulator_directory(const char *peripherals_dir);
 char *read_stdin_content();
 char *read_file_content(const char *file_path);
 char *get_prgrm_content(const char *prgrm_path);

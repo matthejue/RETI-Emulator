@@ -1,7 +1,9 @@
 #include "../include/assemble.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
+#include "../include/parse/parse_args.h"
 #include "../include/statemachine.h"
+#include "../include/utils.h"
 #include <errno.h>
 #include <fcntl.h> // open()
 #include <inttypes.h>
@@ -10,8 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>  // mkdir, stat
-#include <sys/types.h> // mkdir, stat
 #include <time.h>
 #include <unistd.h> // close()
 
@@ -111,26 +111,6 @@ static const char *event_to_string(Event e) {
 /* Session-stable logfile path */
 static char s_logfile[512] = {0};
 
-static int ensure_dir_exists(const char *path) {
-  struct stat st;
-  if (stat(path, &st) == 0) {
-    if (S_ISDIR(st.st_mode))
-      return 0;
-    fprintf(stderr, "Path exists but is not a directory: %s\n", path);
-    errno = ENOTDIR;
-    return -1;
-  }
-  if (errno != ENOENT) {
-    fprintf(stderr, "stat('%s') failed: %s\n", path, strerror(errno));
-    return -1;
-  }
-  if (mkdir(path, 0777) == -1 && errno != EEXIST) {
-    fprintf(stderr, "mkdir('%s') failed: %s\n", path, strerror(errno));
-    return -1;
-  }
-  return 0;
-}
-
 static int touch_file(const char *path) {
   int fd = open(path, O_CREAT | O_APPEND | O_WRONLY, 0666);
   if (fd == -1) {
@@ -143,13 +123,10 @@ static int touch_file(const char *path) {
 }
 
 void log_statemachine(Event event) {
-  const char *log_dir = "/tmp/reti_emulator";
-
   // Initialize the session logfile path once
   if (s_logfile[0] == '\0') {
-    if (ensure_dir_exists(log_dir) != 0) {
-      fprintf(stderr, "Cannot use log directory '%s'. Logging disabled.\n",
-              log_dir);
+    if (!ensure_reti_emulator_directory(peripherals_dir)) {
+      fprintf(stderr, "Cannot create emulator directory. Logging disabled.\n");
       return;
     }
 
@@ -160,8 +137,17 @@ void log_statemachine(Event event) {
     char ts[64];
     strftime(ts, sizeof(ts), "%Y-%m-%d_%H-%M-%S", &tm_now);
 
-    snprintf(s_logfile, sizeof(s_logfile), "%s/statemachine_%s.log", log_dir,
-             ts);
+    char filename[96];
+    snprintf(filename, sizeof(filename), "statemachine_%s.log", ts);
+    char *logfile_path =
+        build_reti_emulator_file_path(peripherals_dir, filename);
+    if (logfile_path == NULL || strlen(logfile_path) >= sizeof(s_logfile)) {
+      free(logfile_path);
+      fprintf(stderr, "Log file path is too long. Logging disabled.\n");
+      return;
+    }
+    strcpy(s_logfile, logfile_path);
+    free(logfile_path);
 
     if (touch_file(s_logfile) != 0) {
       s_logfile[0] = '\0';

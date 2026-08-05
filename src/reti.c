@@ -42,8 +42,13 @@ void init_reti() {
   init_uart();
 
   // TODO: Tobias: Die ganzen Speicher nicht mit 0 initialisiert
-  char *file_path = proper_str_cat(peripherals_dir, "/sram.bin");
+  if (!ensure_reti_emulator_directory(peripherals_dir)) {
+    fprintf(stderr, "Failed to create emulator directory\n");
+    exit(EXIT_FAILURE);
+  }
+  char *file_path = build_reti_emulator_file_path(peripherals_dir, "sram.bin");
   sram = fopen(file_path, "w+b");
+  free(file_path);
 
   // file_path = proper_str_cat(peripherals_dir, "/hdd.bin");
   // hdd = fopen(file_path, "w+b");

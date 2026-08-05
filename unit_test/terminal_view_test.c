@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 static const char *TERMINAL_OUTPUT_PATH =
-    "/tmp/reti_emulator/terminal_output.bin";
+    "/tmp/.reti_emulaor/terminal_output.bin";
 
 static void start_uart(void) {
   init_uart();
@@ -197,6 +197,7 @@ static void test_uart_terminal_command_runs_in_emulator_directory(void) {
 }
 
 int main(void) {
+  peripherals_dir = "/tmp";
   test_debug_uart_output_is_captured_and_replayed();
   test_non_debug_uart_output_uses_stdout();
   test_uart_controls_are_hidden_from_debug_terminal();

@@ -1,4 +1,5 @@
 #include "../include/utils.h"
+#include <errno.h>
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -6,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 // r = a % m <-> r + m * q = a + m * p <-> r = a - m * q (q is biggest q such
@@ -62,6 +64,37 @@ char *proper_str_cat(const char *prefix, const char *suffix) {
   char *new_file_dir = malloc(strlen(prefix) + strlen(suffix) + 1);
   strcpy(new_file_dir, prefix);
   return strcat(new_file_dir, suffix);
+}
+
+char *build_reti_emulator_directory_path(const char *peripherals_dir) {
+  return proper_str_cat(peripherals_dir, "/" RETI_EMULATOR_DIRECTORY_NAME);
+}
+
+char *build_reti_emulator_file_path(const char *peripherals_dir,
+                                    const char *filename) {
+  char *directory_path = build_reti_emulator_directory_path(peripherals_dir);
+  char *file_path = proper_str_cat(directory_path, "/");
+  free(directory_path);
+  char *result = proper_str_cat(file_path, filename);
+  free(file_path);
+  return result;
+}
+
+bool ensure_reti_emulator_directory(const char *peripherals_dir) {
+  char *directory_path = build_reti_emulator_directory_path(peripherals_dir);
+  struct stat st;
+  bool success = false;
+
+  if (stat(directory_path, &st) == 0) {
+    success = S_ISDIR(st.st_mode);
+  } else if (errno == ENOENT) {
+    success = mkdir(directory_path, 0700) == 0 ||
+              (errno == EEXIST && stat(directory_path, &st) == 0 &&
+               S_ISDIR(st.st_mode));
+  }
+
+  free(directory_path);
+  return success;
 }
 
 char *build_debug_script_path(const char *script_name) {

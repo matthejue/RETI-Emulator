@@ -5,7 +5,6 @@
 #include "../../include/statemachine.h"
 #include "../../include/utils.h"
 #include "../../vendor/cJSON/cJSON.h"
-#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stddef.h>
@@ -13,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #ifdef __linux__
 #include <sys/prctl.h>
@@ -21,12 +19,6 @@
 #include <unistd.h>
 
 static pid_t source_debugger_pid = -1;
-
-static const char *SOURCE_DEBUG_ROOT_DIR = "/tmp/reti_emulator";
-static const char *SOURCE_DEBUG_STATE_PATH =
-    "/tmp/reti_emulator/source_debug_state.bin";
-static const char *SOURCE_DEBUG_STATE_TMP_PATH =
-    "/tmp/reti_emulator/source_debug_state.bin.tmp";
 
 typedef struct {
   char *name;
@@ -64,14 +56,16 @@ static uint32_t source_debug_last_event_cs = 0;
 static bool source_debug_symbols_load_attempted = false;
 const char *current_stackframe_function = NULL;
 
-static bool ensure_source_debug_dir(void) {
-  return mkdir(SOURCE_DEBUG_ROOT_DIR, 0700) == 0 || errno == EEXIST;
-}
-
 static bool write_source_debug_state_file(uint32_t pc, uint32_t cs) {
+  char *state_path =
+      build_reti_emulator_file_path(peripherals_dir, "source_debug_state.bin");
+  char *temporary_state_path = build_reti_emulator_file_path(
+      peripherals_dir, "source_debug_state.bin.tmp");
   int state_fd =
-      open(SOURCE_DEBUG_STATE_TMP_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+      open(temporary_state_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (state_fd < 0) {
+    free(state_path);
+    free(temporary_state_path);
     return false;
   }
 
@@ -83,18 +77,19 @@ static bool write_source_debug_state_file(uint32_t pc, uint32_t cs) {
   if (close(state_fd) != 0) {
     success = false;
   }
-  if (success &&
-      rename(SOURCE_DEBUG_STATE_TMP_PATH, SOURCE_DEBUG_STATE_PATH) != 0) {
+  if (success && rename(temporary_state_path, state_path) != 0) {
     success = false;
   }
   if (!success) {
-    unlink(SOURCE_DEBUG_STATE_TMP_PATH);
+    unlink(temporary_state_path);
   }
+  free(state_path);
+  free(temporary_state_path);
   return success;
 }
 
 void write_source_debug_state(void) {
-  if (regs == NULL || !ensure_source_debug_dir()) {
+  if (regs == NULL || !ensure_reti_emulator_directory(peripherals_dir)) {
     return;
   }
 
@@ -413,7 +408,7 @@ bool start_source_debugger(void) {
   if (source_debugger_pid > 0) {
     return true;
   }
-  if (!ensure_source_debug_dir()) {
+  if (!ensure_reti_emulator_directory(peripherals_dir)) {
     return false;
   }
 
@@ -422,9 +417,12 @@ bool start_source_debugger(void) {
 
   char *script_path = build_debug_script_path("source_debug.py");
   char *debuginfo_path = build_debuginfo_path();
-  if (script_path == NULL || debuginfo_path == NULL) {
+  char *state_path =
+      build_reti_emulator_file_path(peripherals_dir, "source_debug_state.bin");
+  if (script_path == NULL || debuginfo_path == NULL || state_path == NULL) {
     free(script_path);
     free(debuginfo_path);
+    free(state_path);
     return false;
   }
 
@@ -432,6 +430,7 @@ bool start_source_debugger(void) {
   if (child_pid < 0) {
     free(script_path);
     free(debuginfo_path);
+    free(state_path);
     return false;
   }
 
@@ -441,13 +440,14 @@ bool start_source_debugger(void) {
       _exit(EXIT_FAILURE);
     }
 #endif
-    execlp("python3", "python3", script_path, debuginfo_path,
-           SOURCE_DEBUG_STATE_PATH, NULL);
+    execlp("python3", "python3", script_path, debuginfo_path, state_path,
+           NULL);
     _exit(EXIT_FAILURE);
   }
 
   free(script_path);
   free(debuginfo_path);
+  free(state_path);
   source_debugger_pid = child_pid;
   return true;
 }

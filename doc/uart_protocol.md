@@ -83,7 +83,7 @@ running unless they are absolute.
 
 Without `-d`, completed UART sends are written directly to standard output. With
 `-d`, they are instead appended as raw bytes to
-`/tmp/reti_emulator/terminal_output.bin`, preventing output from corrupting the
+`.reti_emulaor/terminal_output.bin`, preventing output from corrupting the
 ncurses TUI. Capturing starts with the emulator and does not depend on the
 viewer being open.
 
