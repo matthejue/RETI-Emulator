@@ -8,6 +8,7 @@ OBJ_TEST_DIR := object_test
 LIB_DIR      := library
 INCLUDE_DIR  := include
 VENDOR_DIR   := vendor
+NCURSES_PREFIX ?= /usr
 
 BIN_SRC  := $(BIN_DIR)/$(basename $(notdir $(wildcard $(SRC_DIR)/*_main.c)))
 BIN_TEST := $(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(wildcard $(TEST_DIR)/*_test.c))
@@ -15,31 +16,38 @@ SRC      := $(filter-out %_main.c %_test.c, $(wildcard $(SRC_DIR)/*.c) $(wildcar
 VENDOR_SRC := $(wildcard $(VENDOR_DIR)/cJSON/*.c)
 OBJ_SRC  := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) $(VENDOR_SRC:%.c=$(OBJ_DIR)/%.o)
 
-CC       := gcc
-CPPFLAGS := -I$(INCLUDE_DIR) -I$(VENDOR_DIR)/cJSON -MMD -MP
-CFLAGS   := -Wall
-LDFLAGS  :=
-LDLIBS   := -lm
+CC       ?= cc
+CPPFLAGS := -I$(INCLUDE_DIR) -I$(VENDOR_DIR)/cJSON -MMD -MP $(CPPFLAGS)
+CFLAGS   := -Wall $(CFLAGS)
+LDLIBS   := -lm $(LDLIBS)
+
+ifeq ($(RELEASE), 1)
+	CFLAGS += -O2 -DNDEBUG
+else
+	CFLAGS += -g
+endif
 
 ifeq ($(LINUX_STATIC), 1)
-	CPPFLAGS += -I$(INCLUDE_DIR)/ncursesw
-	LDFLAGS  += -static -L$(LIB_DIR)
-	LDLIBS   += -lncursesw
+	CPPFLAGS += -DNCURSES_ENABLE_STDBOOL_H=1 -I$(NCURSES_PREFIX)/include/ncursesw -I$(NCURSES_PREFIX)/include
+	LDFLAGS  += -static -L$(NCURSES_PREFIX)/lib
+	LDLIBS   += -lncursesw -ltinfow
 else
-	ifeq ($(LINUX), 1)
-		LDLIBS += -lncurses
+	ifeq ($(ANDROID), 1)
+		CPPFLAGS += -DNCURSES_ENABLE_STDBOOL_H=1 -I$(NCURSES_PREFIX)/include/ncursesw -I$(NCURSES_PREFIX)/include
+		LDFLAGS  += -L$(NCURSES_PREFIX)/lib
+		LDLIBS   += -lncursesw -ltinfow
 	else
-		ifeq ($(WINDOWS), 1)
-			CPPFLAGS += -I$(INCLUDE_DIR)/ncurses
-			CFLAGS   += -DNCURSES_STATIC
-			LDFLAGS  += -L$(LIB_DIR)
-			LDLIBS   += -lncurses
+		ifeq ($(LINUX), 1)
+			LDLIBS += -lncursesw
 		else
-			ifeq ($(MACOS), 1)
-				LDLIBS += -lncurses
+			ifeq ($(WINDOWS), 1)
+				LDLIBS += -lncursesw
 			else
-				CFLAGS += -g
-				LDLIBS += -lncurses
+				ifeq ($(MACOS), 1)
+					LDLIBS += -lncurses
+				else
+					LDLIBS += -lncurses
+				endif
 			endif
 		endif
 	endif
@@ -49,6 +57,7 @@ endif
 
 .PHONY: \
 	all \
+	ci-build \
 	sys-test \
 	test_no_passed \
 	unit-test \
@@ -69,6 +78,9 @@ endif
 	uninstall-linux-global
 
 all: $(BIN_SRC)
+
+ci-build: $(BIN_SRC)
+	./$(BIN_SRC) -h >/dev/null
 
 SHELL := /bin/bash -x
 

@@ -1,32 +1,28 @@
-name: run system tests
+name: Run system tests
 
 on:
-  push:
-    branches: [ main ]
-    tags:
-      - "*"
-  pull_request:
-    branches: [ main ]
-    tags:
-      - "*"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  system-tests:
+    name: RETI unit and system tests
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
-    - name: Install RETI-Emulator
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        make DYNAMIC=1
-    - name: Test with Shellscript
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        make unit-test
-        ./run_sys_tests.sh 79
+      - uses: actions/checkout@v6
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libncurses-dev
+
+      - name: Build emulator
+        run: make ci-build LINUX=1 RELEASE=1
+
+      - name: Run unit tests
+        run: make unit-test LINUX=1 RELEASE=1
+
+      - name: Run system tests
+        run: ./run_sys_tests.sh 120

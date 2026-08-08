@@ -1,0 +1,7 @@
+{
+  "codesegment_start": 0,
+  "datasegment_start": 2,
+  "heap_start": 2,
+  "heap_size": 16,
+  "stack_start": 32
+}

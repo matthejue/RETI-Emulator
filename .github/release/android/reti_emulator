@@ -1,0 +1,13 @@
+#!/system/bin/sh
+
+set -eu
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+install_root=$(CDPATH= cd "$script_dir" && pwd)
+
+export TERMINFO="$install_root/share/terminfo"
+export LD_LIBRARY_PATH="$install_root/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$install_root/binary/reti_emulator_main" "$@"

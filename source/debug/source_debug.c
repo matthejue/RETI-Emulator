@@ -415,11 +415,13 @@ bool start_source_debugger(void) {
   activate_source_debug();
   write_source_debug_state();
 
+  char *helper_path = build_debug_helper_path("source_debug");
   char *script_path = build_debug_script_path("source_debug.py");
   char *debuginfo_path = build_debuginfo_path();
   char *state_path =
       build_reti_emulator_file_path(peripherals_dir, "source_debug_state.bin");
   if (script_path == NULL || debuginfo_path == NULL || state_path == NULL) {
+    free(helper_path);
     free(script_path);
     free(debuginfo_path);
     free(state_path);
@@ -428,6 +430,7 @@ bool start_source_debugger(void) {
 
   pid_t child_pid = fork();
   if (child_pid < 0) {
+    free(helper_path);
     free(script_path);
     free(debuginfo_path);
     free(state_path);
@@ -440,11 +443,18 @@ bool start_source_debugger(void) {
       _exit(EXIT_FAILURE);
     }
 #endif
+    if (helper_path != NULL && access(helper_path, X_OK) == 0) {
+      execl(helper_path, helper_path, debuginfo_path, state_path, NULL);
+    }
     execlp("python3", "python3", script_path, debuginfo_path, state_path,
            NULL);
+    fprintf(stderr,
+            "Source debugger unavailable: use the packaged source_debug "
+            "helper or install Python 3 with tkinter\n");
     _exit(EXIT_FAILURE);
   }
 
+  free(helper_path);
   free(script_path);
   free(debuginfo_path);
   free(state_path);

@@ -9,6 +9,9 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 // r = a % m <-> r + m * q = a + m * p <-> r = a - m * q (q is biggest q such
 // that q*m <= a) = a − m * (a / m) 0 <= r < m, a,q € Z, m € N/0 (normal C /
@@ -97,13 +100,20 @@ bool ensure_reti_emulator_directory(const char *peripherals_dir) {
   return success;
 }
 
-char *build_debug_script_path(const char *script_name) {
+static char *build_install_root_path(void) {
   char exe_path[PATH_MAX];
+#ifdef __APPLE__
+  uint32_t path_size = sizeof(exe_path);
+  if (_NSGetExecutablePath(exe_path, &path_size) != 0) {
+    return NULL;
+  }
+#else
   ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
   if (len < 0) {
     return NULL;
   }
   exe_path[len] = '\0';
+#endif
 
   char *last_slash = strrchr(exe_path, '/');
   if (last_slash == NULL) {
@@ -116,14 +126,43 @@ char *build_debug_script_path(const char *script_name) {
     *bin_slash = '\0';
   }
 
-  const char *debug_dir = "/source/debug/";
-  size_t path_len =
-      strlen(exe_path) + strlen(debug_dir) + strlen(script_name) + 1;
-  char *script_path = malloc(path_len);
-  if (script_path != NULL) {
-    snprintf(script_path, path_len, "%s%s%s", exe_path, debug_dir, script_name);
+  return allocate_and_copy_string(exe_path);
+}
+
+static char *build_install_path(const char *directory, const char *filename) {
+  char *install_root = build_install_root_path();
+  if (install_root == NULL) {
+    return NULL;
   }
-  return script_path;
+
+  size_t path_len =
+      strlen(install_root) + strlen(directory) + strlen(filename) + 1;
+  char *path = malloc(path_len);
+  if (path != NULL) {
+    snprintf(path, path_len, "%s%s%s", install_root, directory, filename);
+  }
+  free(install_root);
+  return path;
+}
+
+char *build_debug_script_path(const char *script_name) {
+  return build_install_path("/source/debug/", script_name);
+}
+
+char *build_debug_helper_path(const char *helper_name) {
+#ifdef _WIN32
+  size_t filename_len = strlen(helper_name) + strlen(".exe") + 1;
+  char *filename = malloc(filename_len);
+  if (filename == NULL) {
+    return NULL;
+  }
+  snprintf(filename, filename_len, "%s.exe", helper_name);
+  char *path = build_install_path("/libexec/reti-emulator/", filename);
+  free(filename);
+  return path;
+#else
+  return build_install_path("/libexec/reti-emulator/", helper_name);
+#endif
 }
 
 char *read_stdin_content() {
