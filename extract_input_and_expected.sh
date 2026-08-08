@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 if [[ $1 == "all" ]]; then
-  paths=(./sys_test/*.reti)
+  paths=(./system_test/*.reti)
 elif [[ -n "$1" ]]; then
-  paths=(./sys_test/*$1*.reti)
+  paths=(./system_test/*$1*.reti)
 else
-  paths=(./sys_test/{basic,special,example,error}*.reti)
+  paths=(./system_test/{basic,special,example,error}*.reti)
 fi
 
 for test in "${paths[@]}"; do

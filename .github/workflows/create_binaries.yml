@@ -52,32 +52,32 @@ jobs:
     - name: Build with Make
       if: matrix.os == 'windows-latest'
       run: |
-        mkdir -p lib include/ncurses
-        cp /ucrt64/lib/libncurses.a ./lib
+        mkdir -p library include/ncurses
+        cp /ucrt64/lib/libncurses.a ./library
         cp /ucrt64/include/ncurses/ncurses.h ./include/ncurses
         mingw32-make WINDOWS=1
-        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
+        mv ./binary/reti_emulator_main ./binary/${{ matrix.output }}
       shell: msys2 {0}
 
     - name: Build with Make
       if: matrix.os == 'ubuntu-latest'
       run: |
         make LINUX_STATIC=1
-        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
+        mv ./binary/reti_emulator_main ./binary/${{ matrix.output }}
       shell: bash
 
     - name: Build with Make
       if: matrix.os == 'macos-latest'
       run: |
         make MACOS=1
-        mv ./bin/reti_emulator_main ./bin/${{ matrix.output }}
+        mv ./binary/reti_emulator_main ./binary/${{ matrix.output }}
       shell: bash
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.output }}
-        path: ./bin/${{ matrix.output }}
+        path: ./binary/${{ matrix.output }}
 
   release:
     needs: build

@@ -1,8 +1,8 @@
 .cache/
-obj/
-obj_test/
-bin/
-lib/
+object/
+object_test/
+binary/
+library/
 compile_commands.json
 hdd.bin
 sram.bin

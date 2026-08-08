@@ -80,9 +80,9 @@
       "problemMatcher": []
     },
     {
-      "label": "RETI: Open src in vifm",
+      "label": "RETI: Open source in vifm",
       "type": "shell",
-      "command": "vifm ./src -c 'goto statemachine.c'",
+      "command": "vifm ./source -c 'goto statemachine.c'",
       "options": {
         "cwd": "${workspaceFolder}"
       },

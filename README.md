@@ -291,7 +291,7 @@ Für die UART zeigt das TUI fürs Debuggen neben offensichtlich den Registern R0
 
 > *Tipp:* Um beim Debuggen nicht immer selbst einen Input eingeben zu müssen können sie mittels der Kommandozeilenoption `-m` (metadata) leerzeichenseparierte Inputs aus dem Kommentar `# input: 16909060 a hallo` am Anfang des Programms `prgrm.reti` rauslesen.
 
-Eine kurze Kontext-Zusammenfassung steht in [doc/uart_protocol.md](doc/uart_protocol.md).
+Eine kurze Kontext-Zusammenfassung steht in [documentation/uart_protocol.md](documentation/uart_protocol.md).
 
 # TSL Extension
 ```

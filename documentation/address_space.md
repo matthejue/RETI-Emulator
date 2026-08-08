@@ -14,7 +14,7 @@ section.
   `9 timer_interrupt_interval` (`0 = timer interrupt disabled`),
   `10 stack_heap_boundary` (`0 = stack-overflow detection disabled`),
   `11 cpu_exception_cause` (read-only)
-  Interrupt-controller meaning: `doc/interrupt_controller_control.md`.
+  Interrupt-controller meaning: `documentation/interrupt_controller_control.md`.
   CPU-exception meaning:
-  `../../RETI-Emulator/doc/cpu_exceptions.md`.
+  `../../RETI-Emulator/documentation/cpu_exceptions.md`.
 - `10` + `11`: SRAM

@@ -81,7 +81,7 @@ class SourceDebugApp:
         debuginfo_dir = self.debuginfo_path.parent
         candidates = [
             debuginfo_dir / file_path,
-            debuginfo_dir.parent / "lib" / file_path.stem / file_path.name,
+            debuginfo_dir.parent / "library" / file_path.stem / file_path.name,
         ]
 
         for candidate in candidates:

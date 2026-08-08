@@ -1,0 +1,1 @@
+-v -f /tmp -i ./config/isrs.reti -I 10 -d

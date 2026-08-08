@@ -1,11 +1,11 @@
 # based on source: https://stackoverflow.com/a/30602701
 
-SRC_DIR      := src
-OBJ_DIR      := obj
-BIN_DIR      := bin
+SRC_DIR      := source
+OBJ_DIR      := object
+BIN_DIR      := binary
 TEST_DIR     := unit_test
-OBJ_TEST_DIR := obj_test
-LIB_DIR      := lib
+OBJ_TEST_DIR := object_test
+LIB_DIR      := library
 INCLUDE_DIR  := include
 VENDOR_DIR   := vendor
 
@@ -104,7 +104,7 @@ $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR):
 
 sys-test: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
-	./run_sys_tests.sh "$${COLUMNS}" "$(shell cat ./opts/test_pattern.txt)" "$(EXTRA_ARGS)"
+	./run_sys_tests.sh "$${COLUMNS}" "$(shell cat ./config/test_pattern.txt)" "$(EXTRA_ARGS)"
 
 test_no_passed: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
@@ -114,7 +114,7 @@ patch-pico-os-kernel-stack:
 	sed -i -E 's/"stack_start": *-?[0-9]+/"stack_start": 5000/' /home/areo/Documents/Studium/Pico-OS/kernel.sections
 
 run: $(BIN_SRC)
-	./bin/reti_emulator_main $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
+	./binary/reti_emulator_main $(shell cat ./config/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./config/run_path.txt)
 
 clean: clean-files clean-directories
 
@@ -123,22 +123,22 @@ clean-directories:
 	find . -type d -wholename ".cache" -delete
 
 clean-files:
-	find . -type f -wholename "./sys_test/*.output" -delete
-	find . -type f -wholename "./sys_test/*.expected_output" -delete
-	find . -type f -wholename "./sys_test/*.error" -delete
+	find . -type f -wholename "./system_test/*.output" -delete
+	find . -type f -wholename "./system_test/*.expected_output" -delete
+	find . -type f -wholename "./system_test/*.error" -delete
 	find . -type f -name "sram.bin" -delete
 	find . -type f -name "test_results" -delete
 
 DEB_BIN := reti_emulator_main
 
 run_send_keypresses:
-	./send_keypresses.py --input ./opts/input.txt ./bin/$(DEB_BIN) $(shell cat ./opts/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/run_path.txt)
+	./send_keypresses.py --input ./config/input.txt ./binary/$(DEB_BIN) $(shell cat ./config/run_opts.txt) $(EXTRA_ARGS) $(shell cat ./config/run_path.txt)
 
 debug: $(BIN_SRC) $(BIN_TEST)
-	gdb --tui -n -x ./.gdbinit --args ./bin/$(DEB_BIN) $(shell cat ./opts/deb_opts.txt) $(EXTRA_ARGS) $(shell cat ./opts/debug_path.txt)
+	gdb --tui -n -x ./.gdbinit --args ./binary/$(DEB_BIN) $(shell cat ./config/deb_opts.txt) $(EXTRA_ARGS) $(shell cat ./config/debug_path.txt)
 
 debug_send_keypresses:
-	./send_keypresses.py --input ./opts/debug_input.txt make debug DEB_BIN=$(DEB_BIN) EXTRA_ARGS=$(EXTRA_ARGS)
+	./send_keypresses.py --input ./config/debug_input.txt make debug DEB_BIN=$(DEB_BIN) EXTRA_ARGS=$(EXTRA_ARGS)
 
 install-linux-local:
 	if [ -f ~/.local/bin/reti_emulator ]; then rm ~/.local/bin/reti_emulator; fi
@@ -157,7 +157,7 @@ uninstall-linux-local:
 	sed -i '/export PATH="~\/.local\/bin:$$PATH"/d' ~/.bashrc
 
 install-linux-global: $(BIN_SRC)
-	@sudo bash -c "if [ -L /usr/local/bin/reti_emulator ]; then rm -f /usr/local/bin/reti_emulator; fi && chmod 700 ./bin/reti_emulator_main && ln -s $(realpath .)/bin/reti_emulator_main /usr/local/bin/reti_emulator"
+	@sudo bash -c "if [ -L /usr/local/bin/reti_emulator ]; then rm -f /usr/local/bin/reti_emulator; fi && chmod 700 ./binary/reti_emulator_main && ln -s $(realpath .)/binary/reti_emulator_main /usr/local/bin/reti_emulator"
 
 update-linux-global: pull-latest-version install-linux-global
 

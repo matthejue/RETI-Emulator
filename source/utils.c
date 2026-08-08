@@ -112,11 +112,11 @@ char *build_debug_script_path(const char *script_name) {
   *last_slash = '\0';
 
   char *bin_slash = strrchr(exe_path, '/');
-  if (bin_slash != NULL && strcmp(bin_slash + 1, "bin") == 0) {
+  if (bin_slash != NULL && strcmp(bin_slash + 1, "binary") == 0) {
     *bin_slash = '\0';
   }
 
-  const char *debug_dir = "/src/debug/";
+  const char *debug_dir = "/source/debug/";
   size_t path_len =
       strlen(exe_path) + strlen(debug_dir) + strlen(script_name) + 1;
   char *script_path = malloc(path_len);

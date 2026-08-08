@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-NOT_PASSED_TESTS_FILE="./opts/not_passed_tests.txt"
+NOT_PASSED_TESTS_FILE="./config/not_passed_tests.txt"
 MAX_EMULATOR_DURATION_SECONDS=5
 
 use_not_passed_tests=false
@@ -90,11 +90,11 @@ if [[ "$use_not_passed_tests" == true ]]; then
       sed '/^[[:space:]]*$/d'
   )
 elif [[ "$test_pattern" == "all" ]]; then
-  paths=(./sys_test/*.reti)
+  paths=(./system_test/*.reti)
 elif [[ -n "$test_pattern" ]]; then
-  paths=(./sys_test/*"$test_pattern"*.reti)
+  paths=(./system_test/*"$test_pattern"*.reti)
 else
-  paths=(./sys_test/{basic,special,example,error}*.reti)
+  paths=(./system_test/{basic,special,example,error}*.reti)
 fi
 
 if [[ ${#paths[@]} -eq 0 ]]; then
@@ -162,8 +162,8 @@ for test in "${paths[@]}"; do
   # shellcheck disable=SC2046,SC2086
   timeout \
     "${MAX_EMULATOR_DURATION_SECONDS}s" \
-    ./bin/reti_emulator_main \
-    $(cat ./opts/test_opts.txt) \
+    ./binary/reti_emulator_main \
+    $(cat ./config/test_opts.txt) \
     $extra_emu_args \
     "$test"
 
@@ -223,16 +223,16 @@ fi
 
 echo \
   "Running through: $((num_tests - ${#not_running_through[@]})) / $num_tests" |
-  tee -a ./sys_test/test_results
+  tee -a ./system_test/test_results
 
 echo "Not running through: ${not_running_through[*]}" |
-  tee -a ./sys_test/test_results
+  tee -a ./system_test/test_results
 
 echo "Passed: $((num_tests - ${#not_passed[@]})) / $num_tests" |
-  tee -a ./sys_test/test_results
+  tee -a ./system_test/test_results
 
 echo "Not passed: ${not_passed[*]}" |
-  tee -a ./sys_test/test_results
+  tee -a ./system_test/test_results
 
 echo "Updated test list: $NOT_PASSED_TESTS_FILE"
 
