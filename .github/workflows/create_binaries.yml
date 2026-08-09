@@ -251,6 +251,7 @@ jobs:
           if-no-files-found: error
 
   release:
+    name: Publish GitHub Release for version tag
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, android]
     runs-on: ubuntu-22.04
