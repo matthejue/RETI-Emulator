@@ -449,8 +449,7 @@ bool start_source_debugger(void) {
     execlp("python3", "python3", script_path, debuginfo_path, state_path,
            NULL);
     fprintf(stderr,
-            "Source debugger unavailable: use the packaged source_debug "
-            "helper or install Python 3 with tkinter\n");
+            "Source debugger unavailable: install Python 3 with tkinter\n");
     _exit(EXIT_FAILURE);
   }
 

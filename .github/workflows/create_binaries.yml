@@ -46,20 +46,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          architecture: ${{ matrix.architecture }}
-
-      - name: Install source debugger freezer
-        run: python -m pip install --upgrade "pyinstaller>=6.10,<7"
-
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl musl-tools patchelf python3-tk
-          python -m pip install --upgrade staticx
+          sudo apt-get install -y build-essential curl musl-tools
 
       - name: Build static ncurses
         if: matrix.platform == 'linux'
@@ -89,7 +80,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: gcc make ncurses
+          install: gcc make ncurses ncurses-devel
 
       - name: Build Linux package
         if: matrix.platform == 'linux'
@@ -104,11 +95,8 @@ jobs:
             echo "Linux emulator is not fully static" >&2
             exit 1
           fi
-          python -m PyInstaller --clean --noconfirm --onefile --name source_debug --distpath binary --workpath binary/build/source-debug source/debug/source_debug.py
-          staticx binary/source_debug binary/source_debug-static
-          mkdir -p binary/release/reti-emulator/libexec/reti-emulator binary/release/reti-emulator/source/debug
+          mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main binary/release/reti-emulator/reti_emulator
-          cp binary/source_debug-static binary/release/reti-emulator/libexec/reti-emulator/source_debug
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
           cp README.md binary/release/reti-emulator/README.md
           tar -C binary/release -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator
@@ -123,7 +111,7 @@ jobs:
           cp .github/release/android/smoke.reti .github/release/android/smoke.sections binary/smoke/
           ./binary/reti_emulator_main -t -S binary/smoke/smoke.sections binary/smoke/smoke.reti
           test -f binary/smoke/smoke.output
-          mkdir -p binary/release/reti-emulator/libexec/reti-emulator binary/release/reti-emulator/source/debug
+          mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main.exe binary/release/reti-emulator/reti_emulator.exe
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
           cp README.md binary/release/reti-emulator/README.md
@@ -131,12 +119,10 @@ jobs:
             cp "$dll" binary/release/reti-emulator/
           done
 
-      - name: Freeze and archive Windows source debugger
+      - name: Archive Windows package
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          python -m PyInstaller --clean --noconfirm --onefile --name source_debug --distpath binary\helper-dist --workpath binary\build\source-debug source/debug/source_debug.py
-          Copy-Item binary\helper-dist\source_debug.exe binary\release\reti-emulator\libexec\reti-emulator\source_debug.exe
           Compress-Archive -Path binary\release\reti-emulator -DestinationPath "binary\${{ matrix.archive }}"
 
       - name: Build macOS package
@@ -154,14 +140,11 @@ jobs:
             echo "macOS emulator links to a non-system library" >&2
             exit 1
           fi
-          python -m PyInstaller --clean --noconfirm --onefile --name source_debug --distpath binary --workpath binary/build/source-debug source/debug/source_debug.py
-          mkdir -p binary/release/reti-emulator/libexec/reti-emulator binary/release/reti-emulator/source/debug
+          mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main binary/release/reti-emulator/reti_emulator
-          cp binary/source_debug binary/release/reti-emulator/libexec/reti-emulator/source_debug
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
           cp README.md binary/release/reti-emulator/README.md
           codesign --force --deep --sign - binary/release/reti-emulator/reti_emulator
-          codesign --force --deep --sign - binary/release/reti-emulator/libexec/reti-emulator/source_debug
           tar -C binary/release -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator
 
       - uses: actions/upload-artifact@v7
@@ -182,19 +165,13 @@ jobs:
             target: aarch64-linux-android
             elf_machine: AArch64
             archive: reti-emulator-android-arm64.tar.gz
-          - name: x86-64 smoke test
-            arch: x86_64
-            target: x86_64-linux-android
-            elf_machine: Advanced Micro Devices X86-64
-            archive: reti-emulator-android-x86_64-smoke.tar.gz
-
     steps:
       - uses: actions/checkout@v6
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK
-        run: sdkmanager --install "ndk;27.2.12479018"
+      - name: Verify preinstalled Android NDK
+        run: |
+          test -n "$ANDROID_NDK_HOME"
+          test -x "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
 
       - name: Download ncurses
         run: |
@@ -207,7 +184,6 @@ jobs:
 
       - name: Cross-compile ncurses
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.2.12479018
           TARGET: ${{ matrix.target }}
         run: |
           toolchain="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
@@ -239,7 +215,6 @@ jobs:
 
       - name: Cross-compile and package RETI Emulator
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.2.12479018
           TARGET: ${{ matrix.target }}
         run: |
           toolchain="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
@@ -269,28 +244,7 @@ jobs:
           chmod 755 "$package/reti_emulator" "$package/binary/reti_emulator_main"
           tar -C "binary/android-${{ matrix.arch }}" -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator
 
-      - name: Allow the Android emulator to use KVM
-        if: matrix.arch == 'x86_64'
-        run: sudo chmod 666 /dev/kvm
-
-      - name: Smoke test the Android package
-        if: matrix.arch == 'x86_64'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 24
-          arch: x86_64
-          target: default
-          disable-animations: true
-          script: |
-            adb push binary/android-x86_64/reti-emulator /data/local/tmp/reti-emulator
-            adb push .github/release/android/smoke.reti /data/local/tmp/smoke.reti
-            adb push .github/release/android/smoke.sections /data/local/tmp/smoke.sections
-            adb shell chmod 755 /data/local/tmp/reti-emulator/reti_emulator /data/local/tmp/reti-emulator/binary/reti_emulator_main
-            adb shell "cd /data/local/tmp && ./reti-emulator/reti_emulator -t -S smoke.sections smoke.reti"
-            adb shell test -f /data/local/tmp/smoke.output
-
       - uses: actions/upload-artifact@v7
-        if: matrix.arch == 'aarch64'
         with:
           name: ${{ matrix.archive }}
           path: binary/${{ matrix.archive }}

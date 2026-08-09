@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h> // open()
 #include <inttypes.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -217,7 +218,7 @@ void log_statemachine(Event event) {
 void debug() {
   if (debug_activated) {
 #ifdef __linux__
-    __asm__("int3"); // ../.gdbinit
+    raise(SIGTRAP);
 #endif
   }
 }
