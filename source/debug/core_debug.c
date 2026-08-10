@@ -1454,8 +1454,8 @@ void poll_running_debug_action(void) {
     stop_continuous_execution();
     return;
   }
-  if (key == 'V') {
-    if (!activate_uart_terminal()) {
+  if (key == 'v' || key == 'V') {
+    if (!activate_uart_terminal(key == 'V')) {
       update_term_and_box_sizes();
       draw_tui();
     }
@@ -1548,9 +1548,9 @@ void evaluate_keyboard_input(void) {
       }
       draw_tui();
       continue;
-    } else if (key == 'V') {
+    } else if (key == 'v' || key == 'V') {
       reset_all_scroll_offsets();
-      if (!activate_uart_terminal()) {
+      if (!activate_uart_terminal(key == 'V')) {
         display_notification_box("Terminal Error",
                                  "Failed to activate terminal view");
         draw_tui();
@@ -1649,8 +1649,9 @@ void wait_for_tui_quit(void) {
       }
       draw_tui();
       continue;
+    case 'v':
     case 'V':
-      if (!activate_uart_terminal()) {
+      if (!activate_uart_terminal(key == 'V')) {
         display_notification_box("Terminal Error",
                                  "Failed to activate terminal view");
       } else {

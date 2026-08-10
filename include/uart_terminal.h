@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-bool activate_uart_terminal(void);
+bool activate_uart_terminal(bool raw_input);
 bool uart_terminal_is_active(void);
 void update_uart_terminal(void);
 void wait_for_uart_terminal_exit(void);

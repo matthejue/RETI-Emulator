@@ -89,7 +89,8 @@ flowchart LR
 | `S` / `R` | Snapshot speichern / wiederherstellen |
 | `d` | PicoC-Quellcodeansicht öffnen |
 | `t` | Sichtbare SRAM-Werte zwischen Zahl, RETI-Instruktion und ASCII transkodieren |
-| `V` | UART-Terminalansicht öffnen; `Escape` kehrt zur Debug-TUI zurück |
+| `v` | UART-Terminalansicht öffnen; `Escape` kehrt zur Debug-TUI zurück |
+| `V` | Rohe UART-Terminalansicht öffnen; `Ctrl+]` kehrt zur Debug-TUI zurück |
 | `q` | Menü oder Emulator verlassen |
 
 # Installation und Updates
@@ -400,7 +401,7 @@ Die Datei `isrs.reti` beginnt also mit den rohen Adress-Einträgen der Interrupt
 
 ## Debugging
 
-Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils nächsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. Während dieser kontinuierlichen Ausführung ersetzt die Infobox `(c)ontinue` durch `(E)nter again, (V)iew terminal`. `E` unterbricht die Ausführung an der aktuellen Programmadresse und ermöglicht wieder alle schrittweisen Debug-Aktionen. In der untersten Zeile des Text-User-Interfaces (TUI) stehen die Aktionen, die Sie in diesem Debug-Modus ausführen können.
+Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils nächsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. Während dieser kontinuierlichen Ausführung ersetzt die Infobox `(c)ontinue` durch `(E)nter again, (v)iew terminal, (V)iew raw terminal`. `E` unterbricht die Ausführung an der aktuellen Programmadresse und ermöglicht wieder alle schrittweisen Debug-Aktionen. In der untersten Zeile des Text-User-Interfaces (TUI) stehen die Aktionen, die Sie in diesem Debug-Modus ausführen können.
 
 Mit `-K` bleibt das TUI nach dem abschließenden `JUMP 0` geöffnet. Register, Speicher, Peripherie, Quellansicht und UART-Ausgabe können dann weiter untersucht werden; `r` startet dieselbe Befehlszeile erneut.
 
@@ -410,7 +411,7 @@ $ reti_emulator -d -K pico_os.reti
 
 Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(T)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `T` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden. Mit `t` (`t`ranscode) wechselt die Anzeige sichtbarer SRAM-Werte zwischen Zahl, RETI-Instruktion und ASCII-Zeichen, sofern der jeweilige Wert so dekodiert werden kann.
 
-Auf der dritten Hilfeseite wechselt `V` (`V`iew terminal) aus der Ncurses-TUI in eine UART-Terminalansicht im selben aufrufenden Terminal. Die Ansicht zeigt zuerst die gesamte seit dem Emulatorstart aufgezeichnete UART-Terminalausgabe und danach neue Ausgaben direkt an. `Escape` kehrt zur Debug-TUI zurück und wird nicht als UART-Eingabe übertragen. Wird `V` im angehaltenen Debugger geöffnet, bleibt die Programmausführung angehalten; die Ansicht zeigt nur die bisherige Ausgabe, bis `Escape` zum schrittweisen Debuggen zurückkehrt. `V` kann außerdem während einer mit `c` gestarteten Ausführung gedrückt werden. In diesem Fall läuft das Programm auch in der Terminalansicht weiter, Tastendrücke werden als UART-Eingaben verarbeitet und lösen UART-Hardwareinterrupts aus. Nach `Escape` wird die Debug-TUI vollständig neu gezeichnet, die Ausführung läuft weiter und die Infobox bietet `(E)nter again` sowie `(V)iew terminal` an.
+Auf der dritten Hilfeseite wechseln `v` (`v`iew terminal) und `V` (`V`iew raw terminal) aus der Ncurses-TUI in eine UART-Terminalansicht im selben aufrufenden Terminal. Beide Ansichten zeigen zuerst die gesamte seit dem Emulatorstart aufgezeichnete UART-Terminalausgabe und danach neue Ausgaben direkt an. Die normale Ansicht behält die Signalbehandlung des aufrufenden Terminals bei; `Escape` kehrt zur Debug-TUI zurück und wird nicht als UART-Eingabe übertragen. Die rohe Ansicht deaktiviert unter anderem die Terminalbehandlung für `Ctrl+C`, `Ctrl+\` und `Ctrl+Z`, überträgt diese Tastendrücke sowie `Escape` an die UART und kehrt mit `Ctrl+]` zur Debug-TUI zurück. Dadurch erreichen Pfeiltasten sowie die PicoOS-Shortcuts `Ctrl+C` und `Ctrl+Z` PicoOS nur in der rohen Ansicht vollständig. Wird eine Ansicht im angehaltenen Debugger geöffnet, bleibt die Programmausführung angehalten. Während einer mit `c` gestarteten Ausführung läuft das Programm in beiden Ansichten weiter und Tastendrücke lösen UART-Hardwareinterrupts aus. Nach dem Schließen wird die Debug-TUI vollständig neu gezeichnet.
 
 Mit `-c` werden zusätzlich Quellkommentare im Debugmode angezeigt. Dazu werden Kommentare beim Parsen in einer internen Struktur mit Ziel-Speicherbereich, referenziertem Instruktionsindex und Anzeigeposition gespeichert. Beim Anzeigen einer Instruktion wird geprüft, welche gespeicherten Kommentare diesem Instruktionsindex im aktuellen Speicherbereich zugeordnet sind, und diese werden dann vor oder nach der Instruktion ausgegeben.
 
@@ -486,7 +487,7 @@ flowchart LR
 - Zum Senden schreibt das RETI-Programm ein Byte nach R0 und setzt danach `b0` in R2 auf `0`. Nach der simulierten UART-Wartezeit setzt der Emulator `b0` wieder auf `1`; dann wurde dieses Byte vom simulierten Ausgabegerät übernommen und als ASCII-Zeichen ausgegeben.
 - Zum Empfangen setzt das RETI-Programm `b1` in R2 auf `0`, sobald es bereit für das nächste Byte ist. Nach der simulierten UART-Wartezeit schreibt der Emulator das nächste ASCII-Byte nach R1 und setzt `b1` wieder auf `1`; das Programm sollte R1 lesen, bevor es das nächste Byte anfordert.
 - Ohne `-d` ist das aufrufende Terminal immer als UART-Terminal aktiv. Jeder Tastendruck wird als einzelnes 8-Bit-Byte nach R1 geschrieben, setzt `b1` und löst die Hardware-Signalleitung `UART` aus. Solange der vorherige UART-Interrupt noch aussteht, werden weitere Tasten gepuffert. Normale UART-Ausgaben erscheinen direkt auf `stdout`.
-- Mit `-d` bietet `(V)iew terminal` dieselbe UART-Ein- und -Ausgabe im aufrufenden Terminal. `Escape` kehrt hier zur Debug-TUI zurück und wird nicht nach R1 übertragen.
+- Mit `-d` bietet `(v)iew terminal` dieselbe UART-Ein- und -Ausgabe mit der normalen Signalbehandlung des aufrufenden Terminals; `Escape` kehrt zur Debug-TUI zurück. `(V)iew raw terminal` deaktiviert diese Signalbehandlung und kehrt mit `Ctrl+]` zurück. Die jeweilige Rückkehrtaste wird nicht nach R1 übertragen.
 - Wenn kein gepufferter Input mehr vorhanden ist, fragt der Emulator in einer Input-Box nach UART-Eingabe. Mehrere eingegebene Zeichen werden als Buffer gespeichert und danach byteweise verbraucht. Eine leere Eingabe entspricht `\n`; alternativ können `\n` und `\t` als Escape-Sequenzen eingegeben werden.
 - Mit `-m` können Eingaben aus dem Kommentar `# input: ...` gelesen werden. Ein einzelnes Trennleerzeichen oder Tab nach `input:` wird übersprungen; der restliche Text wird als Zeichenbuffer übernommen, inklusive weiterer Leerzeichen, und danach Zeichen für Zeichen über die UART ausgeliefert.
 
@@ -517,7 +518,6 @@ Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`. R
 | Aktion | Antwort oder Wirkung |
 | --- | --- |
 | `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms |
-| `read <path>` | 32-Bit-Byteanzahl, danach unveränderte Bytes einer regulären Datei |
 | `read-range <offset> <count> <path>` | Tatsächliche 32-Bit-Byteanzahl, danach höchstens `count` Bytes ab `offset` |
 | `file-size <path>` | 32-Bit-Dateigröße; geeignet für `file_exists()` und `SEEK_END` |
 | `!<terminal_command>` | Führt einen Host-Shellbefehl im Arbeitsverzeichnis des Emulators aus |
@@ -525,19 +525,19 @@ Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`. R
 | `append <path>` | Legt eine Datei bei Bedarf an und hängt folgende UART-Ausgaben an |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
 
-Bei `read`, `read-range` und `file-size` meldet `UINT32_MAX` eine fehlende oder nicht lesbare Datei.
+Bei `read-range` und `file-size` meldet `UINT32_MAX` eine fehlende oder nicht lesbare Datei.
 
 ### UART-Terminal im Debugger
 
-| Debuggerzustand beim Drücken von `V` | Anzeige | Läuft PicoOS? | Werden Tastendrücke übertragen? |
-| --- | --- | :---: | :---: |
-| Angehalten | Bisher aufgezeichnete UART-Ausgabe | Nein | Nein |
-| Kontinuierliche Ausführung mit `c` | Bisherige und neue Live-Ausgabe | Ja | Ja |
+| Aktion | Terminalbehandlung | Rückkehr zum TUI |
+| --- | --- | --- |
+| `(v)iew terminal` | Signalzeichen wie `Ctrl+C` und `Ctrl+Z` bleiben aktiv | `Escape` |
+| `(V)iew raw terminal` | Signalzeichen und Escape-Sequenzen werden an PicoOS übertragen | `Ctrl+]` |
 
-`Escape` kehrt zum TUI zurück, ohne an PicoOS übertragen zu werden. `E` beendet die kontinuierliche Ausführung an der aktuellen Programmadresse.
+Im angehaltenen Debugger zeigen beide Ansichten nur die bisher aufgezeichnete UART-Ausgabe und übertragen keine Eingabe. Während der kontinuierlichen Ausführung mit `c` zeigen sie zusätzlich neue Live-Ausgabe und übertragen Tastendrücke. `E` beendet die kontinuierliche Ausführung an der aktuellen Programmadresse.
 
 Für die UART zeigt das TUI fürs Debuggen neben offensichtlich den Registern R0, R1 und R2 (Senderegister, Empfangsregister und Statusregister) in Form der ersten 3 Adressen noch Informationen an, wie
-- `Waiting time sending: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART an das vom RETI-Emulator simulierte Anzeigegerät zu versenden. Die Wartezeit wird zufällig generiert und ihr Maximalwert wird über `-w i` festgelegt (default für `i` ist 10). Die Wartezeit fängt an sobald durch setzen des Bit b0 im Statusregister auf 0 signalisiert wurde, dass das Byte im Senderegister R0 final feststeht und versandt werden kann. Sobald die Wartezeit abgelaufen ist, wird b0 wieder auf 1 gesetzt. Ohne `-d` wird das Byte über `stdout` ausgegeben. Mit `-d` wird es unabhängig davon, ob die Terminalansicht gerade geöffnet ist, fortlaufend in `.reti_emulaor/terminal_output.bin` aufgezeichnet. `(V)iew terminal` löscht die sichtbare Terminalfläche, gibt die vollständige Aufzeichnung wieder und zeigt neue Bytes danach direkt an. Das Byte wird außerdem unter `Current send data: ...` sowie `All send data: ...` angezeigt.
+- `Waiting time sending: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART an das vom RETI-Emulator simulierte Anzeigegerät zu versenden. Die Wartezeit wird zufällig generiert und ihr Maximalwert wird über `-w i` festgelegt (default für `i` ist 10). Die Wartezeit fängt an sobald durch setzen des Bit b0 im Statusregister auf 0 signalisiert wurde, dass das Byte im Senderegister R0 final feststeht und versandt werden kann. Sobald die Wartezeit abgelaufen ist, wird b0 wieder auf 1 gesetzt. Ohne `-d` wird das Byte über `stdout` ausgegeben. Mit `-d` wird es unabhängig davon, ob eine Terminalansicht gerade geöffnet ist, fortlaufend in `.reti_emulaor/terminal_output.bin` aufgezeichnet. `(v)iew terminal` und `(V)iew raw terminal` löschen die sichtbare Terminalfläche, geben die vollständige Aufzeichnung wieder und zeigen neue Bytes danach direkt an. Das Byte wird außerdem unter `Current send data: ...` sowie `All send data: ...` angezeigt.
 - `Current send data: ...`, was das zuletzt gesendete ASCII-Zeichen zeigt.
 - `All send data: ...`, was die bisher gesendeten ASCII-Zeichen zeigt.
 - `Waiting time receiving: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART von dem vom RETI-Emulator simulierte Eingaberät zu empfangen. Für das Setzen der Wartezeit, die für das Empfangen notwendig ist gilt das selbe wie für die Wartezeit, die für das Senden notwendig ist. Die Wartezeit fängt an sobald durch setzen des Bit b1 im Statusregister auf 0 signalisiert wurde, dass man für den Empfang eines weiteren 8-Bit Packets vom Eingabegerät bereit ist, also u.a. das zuletzt empfangene 8-Bit Packet aus dem Empfangsregister R1 gesichert hat und das Empfangsregister R1 somit mit neuen Daten überschreiben kann. Sobald die Wartezeit abgelaufen ist, wird b1 wieder auf 1 gesetzt und unter `Current input: ...` verschwindet das gerade empfangende 8-Bit Packet und wird dafür ins Empfangsregister R1 geladen und dort angezeigt.

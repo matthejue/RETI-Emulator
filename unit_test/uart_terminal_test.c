@@ -75,7 +75,7 @@ static void test_non_debug_uart_terminal_reads_every_byte(void) {
   write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
   write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
 
-  assert(activate_uart_terminal());
+  assert(activate_uart_terminal(true));
   assert(uart_terminal_is_active());
   assert(write(input_pipe[1], "x", 1) == 1);
   update_uart_terminal();

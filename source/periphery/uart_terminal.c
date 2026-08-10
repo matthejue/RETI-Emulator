@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #define UART_TERMINAL_ESCAPE 27
+#define UART_RAW_TERMINAL_EXIT 29 // Uses Ctrl+] to leave raw input
 
 static struct termios saved_stdin_termios;
 static int saved_stdin_flags = 0;
@@ -22,12 +23,15 @@ static bool stdin_flags_saved = false;
 static bool restore_at_exit_registered = false;
 static bool termination_handlers_saved = false;
 static void (*saved_sigint_handler)(int) = SIG_DFL;
+static void (*saved_sigquit_handler)(int) = SIG_DFL;
 static void (*saved_sigterm_handler)(int) = SIG_DFL;
+static void (*saved_sigtstp_handler)(int) = SIG_DFL;
 static volatile sig_atomic_t termination_signal = 0;
 static uint8_t *queued_input = NULL;
 static size_t queued_input_len = 0;
 static size_t queued_input_idx = 0;
 static bool terminal_active = false;
+static bool raw_terminal_active = false;
 
 static void clear_queued_input(void) {
   free(queued_input);
@@ -57,7 +61,9 @@ static void restore_stdin(void) {
   }
   if (termination_handlers_saved) {
     signal(SIGINT, saved_sigint_handler);
+    signal(SIGQUIT, saved_sigquit_handler);
     signal(SIGTERM, saved_sigterm_handler);
+    signal(SIGTSTP, saved_sigtstp_handler);
     termination_handlers_saved = false;
   }
 }
@@ -66,7 +72,7 @@ static void request_termination(int signal_number) {
   termination_signal = signal_number;
 }
 
-static bool prepare_stdin(void) {
+static bool prepare_stdin(bool raw_input) {
   saved_stdin_flags = fcntl(STDIN_FILENO, F_GETFL);
   if (saved_stdin_flags < 0 ||
       fcntl(STDIN_FILENO, F_SETFL, saved_stdin_flags | O_NONBLOCK) < 0) {
@@ -78,6 +84,9 @@ static bool prepare_stdin(void) {
     struct termios uart_termios = saved_stdin_termios;
     uart_termios.c_iflag &= ~(ICRNL | IXON);
     uart_termios.c_lflag &= ~(ICANON | ECHO);
+    if (raw_input) {
+      uart_termios.c_lflag &= ~(ISIG | IEXTEN);
+    }
     uart_termios.c_cc[VMIN] = 0;
     uart_termios.c_cc[VTIME] = 0;
     if (tcsetattr(STDIN_FILENO, TCSANOW, &uart_termios) < 0) {
@@ -95,9 +104,24 @@ static bool prepare_stdin(void) {
     restore_stdin();
     return false;
   }
+  saved_sigquit_handler = signal(SIGQUIT, request_termination);
+  if (saved_sigquit_handler == SIG_ERR) {
+    signal(SIGINT, saved_sigint_handler);
+    restore_stdin();
+    return false;
+  }
   saved_sigterm_handler = signal(SIGTERM, request_termination);
   if (saved_sigterm_handler == SIG_ERR) {
     signal(SIGINT, saved_sigint_handler);
+    signal(SIGQUIT, saved_sigquit_handler);
+    restore_stdin();
+    return false;
+  }
+  saved_sigtstp_handler = signal(SIGTSTP, request_termination);
+  if (saved_sigtstp_handler == SIG_ERR) {
+    signal(SIGINT, saved_sigint_handler);
+    signal(SIGQUIT, saved_sigquit_handler);
+    signal(SIGTERM, saved_sigterm_handler);
     restore_stdin();
     return false;
   }
@@ -120,7 +144,7 @@ static void show_debug_terminal(void) {
   replay_terminal_output();
 }
 
-bool activate_uart_terminal(void) {
+bool activate_uart_terminal(bool raw_input) {
   if (terminal_active) {
     return true;
   }
@@ -132,7 +156,7 @@ bool activate_uart_terminal(void) {
     endwin();
   }
 
-  if (!prepare_stdin()) {
+  if (!prepare_stdin(raw_input)) {
     if (debug_mode) {
       restore_debug_tui();
     }
@@ -140,6 +164,7 @@ bool activate_uart_terminal(void) {
   }
 
   terminal_active = true;
+  raw_terminal_active = raw_input;
   if (debug_mode) {
     show_debug_terminal();
   }
@@ -158,6 +183,7 @@ void close_uart_terminal(void) {
   restore_stdin();
   clear_queued_input();
   terminal_active = false;
+  raw_terminal_active = false;
 
   if (debug_mode) {
     restore_debug_tui();
@@ -165,7 +191,9 @@ void close_uart_terminal(void) {
 }
 
 static bool handle_input_byte(uint8_t byte) {
-  if (debug_mode && byte == UART_TERMINAL_ESCAPE) {
+  if (debug_mode &&
+      ((!raw_terminal_active && byte == UART_TERMINAL_ESCAPE) ||
+       (raw_terminal_active && byte == UART_RAW_TERMINAL_EXIT))) {
     close_uart_terminal();
     return false;
   }

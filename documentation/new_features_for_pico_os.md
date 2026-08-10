@@ -615,17 +615,20 @@ flowchart LR
 The invoking terminal is activated automatically; no separate UART option is
 needed.
 
-Debug-terminal behavior depends on how `V` is opened:
+The debugger offers a normal terminal with `v` and a raw terminal with `V`:
 
-| Debug state | What `V` shows | Does PicoOS run? | Is keyboard input delivered? |
-| --- | --- | --- | --- |
-| Paused | Captured UART output | No | No |
-| Continuous execution (`c`) | Captured output, then live output | Yes | Yes |
+| Action | Host control keys | Return key |
+| --- | --- | --- |
+| `(v)iew terminal` | Remain active | `Escape` |
+| `(V)iew raw terminal` | Delivered to PicoOS | `Ctrl+]` |
+
+Opening either view while paused only shows captured output. During continuous
+execution (`c`), both views show live output and deliver keyboard input.
 
 By default, the capture is stored in `.reti_emulaor/terminal_output.bin` below
 the working directory. With `-f <directory>`, that directory becomes the parent
-instead. `Escape` returns to the TUI without being delivered to PicoOS; capital
-`E` stops continuous execution at the current address.
+instead. Each return key is consumed by its view rather than delivered to
+PicoOS; capital `E` stops continuous execution at the current address.
 
 This supplies the interactive console needed by the PicoOS shell while keeping
 UART output from corrupting the debugger display and preserving the full

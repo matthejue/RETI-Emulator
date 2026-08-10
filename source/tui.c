@@ -45,7 +45,9 @@ static Box *active_box = &eprom_box;
 
 static void update_info_box_text(void) {
   if (tui_program_running) {
-    info_box.title = "Program running, (E)nter again, (V)iew terminal";
+    info_box.title =
+        "Program running, (E)nter again, (v)iew terminal, "
+        "(V)iew raw terminal";
     return;
   }
 
@@ -85,10 +87,10 @@ static void update_info_box_text(void) {
     snprintf(info_box_third_page, sizeof(info_box_third_page),
              tui_snapshot_available
                  ? "(S)napshot, (R)estore, (d)ebug source, "
-                   "(V)iew terminal, "
+                   "(v)iew terminal, (V)iew raw terminal, "
                    "(t)ranscode, (o)ther actions"
                  : "(S)napshot, (d)ebug source, "
-                   "(V)iew terminal, "
+                   "(v)iew terminal, (V)iew raw terminal, "
                    "(t)ranscode, (o)ther actions");
     info_box.title = info_box_third_page;
     return;

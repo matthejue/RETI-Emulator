@@ -105,8 +105,9 @@ jobs:
         if: matrix.platform == 'windows'
         shell: msys2 {0}
         run: |
-          make WINDOWS=1 RELEASE=1
+          make WINDOWS=1 RELEASE=1 binary/reti_emulator_main binary/uart_terminal_test
           ./binary/reti_emulator_main -h
+          ./binary/uart_terminal_test
           mkdir -p binary/smoke
           cp .github/release/android/smoke.reti .github/release/android/smoke.sections binary/smoke/
           ./binary/reti_emulator_main -t -S binary/smoke/smoke.sections binary/smoke/smoke.reti

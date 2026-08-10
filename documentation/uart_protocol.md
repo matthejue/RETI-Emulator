@@ -27,12 +27,19 @@ triggers the `UART` hardware interrupt. Further input is buffered while an
 earlier UART interrupt is pending. Without `-d`, `Escape` is delivered as an
 ordinary UART input byte.
 
-With `-d`, capital `V` suspends ncurses and switches the invoking terminal to
-the UART terminal view. `Escape` restores the debug TUI and is not delivered
-as UART input. Opening the view from a paused debugger keeps execution paused
-and only displays output captured so far. `V` is also polled while a `c`
-continue run is active; execution and live UART input continue in the terminal
-view. Closing that view redraws the debug TUI and returns to the still-running
+With `-d`, lowercase `v` and uppercase `V` suspend ncurses and switch the
+invoking terminal to a UART terminal view. The normal `v` view keeps host
+terminal signal handling enabled and uses `Escape` to restore the debug TUI.
+The raw `V` view disables terminal handling of control keys such as `Ctrl+C`,
+`Ctrl+\`, and `Ctrl+Z`; those bytes and `Escape` are delivered as UART input,
+while `Ctrl+]` restores the TUI. This lets arrow-key escape sequences and
+PicoOS control-key shortcuts reach the guest. The MSYS2 Windows build uses the
+same byte and terminal-mode behavior as the Linux and macOS builds
+
+Opening either view from a paused debugger keeps execution paused and only
+displays output captured so far. Both keys are also polled while a `c` continue
+run is active; execution and live UART input continue in the terminal view.
+Closing the view redraws the debug TUI and returns to the still-running
 debugger. Capital `E` stops that run at its current program address.
 
 ## Output control frames
@@ -87,11 +94,11 @@ Without `-d`, completed UART sends are written directly to standard output. With
 ncurses TUI. Capturing starts with the emulator and does not depend on the
 viewer being open.
 
-The third infobox page provides `(V)iew terminal`. Capital `V` clears the
-invoking terminal, replays all raw output captured since emulator startup, and
-then displays new output directly. Capturing continues while the debug TUI is
-visible, so entering the view never starts in the middle of an otherwise
-missing message. Terminal handling of carriage return, newline, backspace, tab,
-and printable output is the same as during a non-debug run. The view is
-available without advancing the program while stepping, during a `c` continue
-run, and after halt when `-K` keeps the TUI open.
+The third infobox page provides `(v)iew terminal` and `(V)iew raw terminal`.
+Both clear the invoking terminal, replay all raw output captured since emulator
+startup, and then display new output directly. Capturing continues while the
+debug TUI is visible, so entering either view never starts in the middle of an
+otherwise missing message. Terminal handling of carriage return, newline,
+backspace, tab, and printable output is the same as during a non-debug run.
+Both views are available without advancing the program while stepping, during
+a `c` continue run, and after halt when `-K` keeps the TUI open.
