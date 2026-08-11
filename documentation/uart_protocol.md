@@ -51,23 +51,21 @@ or the currently selected output file.
 
 - `<esc>load <path><esc>/` appends a file to the UART input buffer. The emulator
   first appends the file's 32-bit big-endian word count and then the file bytes.
-  A missing or unreadable file returns a zero word count.
-- `<esc>read <path><esc>/` appends a regular file's 32-bit big-endian byte count
-  and then its exact bytes. A missing or unreadable file returns `UINT32_MAX`
-  instead of file data.
+  A missing or unreadable path, a non-regular file, or an unrepresentable word
+  count returns `UINT32_MAX`. An existing empty regular file returns a zero word
+  count, so clients can distinguish it from failure.
 - `<esc>read-range <offset> <count> <path><esc>/` appends the returned slice's
   32-bit big-endian byte count and at most `count` bytes beginning at `offset`.
   A range reaching past the end of the file returns fewer bytes. A missing or
   unreadable file returns `UINT32_MAX` instead of file data.
 - `<esc>file-size <path><esc>/` appends the regular file's 32-bit big-endian
   byte size. A missing or unreadable file returns `UINT32_MAX`.
-  Plain, unframed `load`, `read`, `read-range`, or `file-size` text has no
+  Plain, unframed `load`, `read-range`, or `file-size` text has no
   special meaning and is printed normally.
 
 PicoOS's `file_exists()` and `SEEK_END` use `file-size`. Regular file reads and
 bounded text configuration reads use `read-range`, whose response does not
-repeat the complete file size. The older `read` command remains available for
-clients that request complete files.
+repeat the complete file size.
 
 The exact byte count is required because configuration files are text and may
 not have a size divisible by four. The explicit failure value is required

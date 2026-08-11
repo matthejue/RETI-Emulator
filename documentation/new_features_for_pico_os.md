@@ -477,9 +477,9 @@ The currently supported services are:
 
 - `load <path>` returns a big-endian 32-bit word count followed by the binary
   file contents, which is suitable for loading assembled program images; for a
-  40-byte file the response starts with `[00 00 00 0A]`
-- `read <path>` returns a big-endian byte count followed by the entire regular
-  file, or `UINT32_MAX` on failure
+  40-byte file the response starts with `[00 00 00 0A]`; a missing or unreadable
+  path, a non-regular file, or an unrepresentable word count returns
+  `UINT32_MAX`, while an existing empty regular file returns zero
 - `read-range <offset> <count> <path>` returns the number of bytes actually
   read followed by at most `count` bytes from the requested offset; for
   `read-range 4 3 file.txt`, a successful three-byte response is

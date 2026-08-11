@@ -517,7 +517,7 @@ Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`. R
 
 | Aktion | Antwort oder Wirkung |
 | --- | --- |
-| `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms |
+| `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms; `UINT32_MAX` bei einem fehlenden oder nicht lesbaren Pfad, einer nicht regulären Datei oder einer nicht darstellbaren Wortanzahl |
 | `read-range <offset> <count> <path>` | Tatsächliche 32-Bit-Byteanzahl, danach höchstens `count` Bytes ab `offset` |
 | `file-size <path>` | 32-Bit-Dateigröße; geeignet für `file_exists()` und `SEEK_END` |
 | `!<terminal_command>` | Führt einen Host-Shellbefehl im Arbeitsverzeichnis des Emulators aus |
@@ -525,7 +525,8 @@ Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`. R
 | `append <path>` | Legt eine Datei bei Bedarf an und hängt folgende UART-Ausgaben an |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
 
-Bei `read-range` und `file-size` meldet `UINT32_MAX` eine fehlende oder nicht lesbare Datei.
+Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler. Eine
+vorhandene leere Datei liefert bei `load` dagegen die Wortanzahl `0`.
 
 ### UART-Terminal im Debugger
 
