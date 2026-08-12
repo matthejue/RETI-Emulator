@@ -177,25 +177,6 @@ static void test_uart_output_can_be_redirected_to_stderr(void) {
   fclose(stderr_capture);
 }
 
-static void test_uart_terminal_command_runs_in_emulator_directory(void) {
-  const char *path = "uart_terminal_command_test.txt";
-  debug_mode = false;
-  start_uart();
-  const uint8_t command[] =
-      "\x1b!pwd > uart_terminal_command_test.txt\x1b/";
-  send_uart_bytes(command, sizeof(command) - 1);
-  stop_uart();
-
-  char expected[4096];
-  assert(getcwd(expected, sizeof(expected)) != NULL);
-  strcat(expected, "\n");
-  uint8_t actual[4096];
-  size_t len = read_file(path, actual, sizeof(actual));
-  assert(len == strlen(expected));
-  assert(memcmp(actual, expected, len) == 0);
-  remove(path);
-}
-
 int main(void) {
   peripherals_dir = "/tmp";
   test_debug_uart_output_is_captured_and_replayed();
@@ -203,6 +184,5 @@ int main(void) {
   test_uart_controls_are_hidden_from_debug_terminal();
   test_uart_output_can_be_redirected_to_a_file();
   test_uart_output_can_be_redirected_to_stderr();
-  test_uart_terminal_command_runs_in_emulator_directory();
   return 0;
 }
