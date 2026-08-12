@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void send_uart_byte(uint8_t byte) {
@@ -17,6 +18,12 @@ static void send_uart_bytes(const uint8_t *bytes, size_t len) {
   for (size_t i = 0; i < len; i++) {
     send_uart_byte(bytes[i]);
   }
+}
+
+static uint32_t read_uart_u32(size_t offset) {
+  return ((uint32_t)uart_input[offset] << 24) |
+         ((uint32_t)uart_input[offset + 1] << 16) |
+         ((uint32_t)uart_input[offset + 2] << 8) | uart_input[offset + 3];
 }
 
 void test_extract_comment_metadata() {
@@ -279,6 +286,99 @@ void test_uart_completes_load_command_before_receive() {
   remove(filename);
 }
 
+void test_uart_host_filesystem_commands() {
+  char original_directory[4096];
+  assert(getcwd(original_directory, sizeof(original_directory)) != NULL);
+  char temporary_directory[] = "/tmp/uart_host_services_XXXXXX";
+  assert(mkdtemp(temporary_directory) != NULL);
+
+  char marker_path[4096];
+  snprintf(marker_path, sizeof(marker_path), "%s/marker.txt",
+           temporary_directory);
+  FILE *marker = fopen(marker_path, "wb");
+  assert(marker != NULL);
+  assert(fwrite("abc", 1, 3, marker) == 3);
+  fclose(marker);
+
+  init_uart();
+  max_waiting_instrs = 0;
+  free(uart_input);
+  uart_input = NULL;
+  input_len = 0;
+  input_idx = 0;
+
+  const uint8_t pwd_command[] = "\x1bpwd\x1b/";
+  send_uart_bytes(pwd_command, sizeof(pwd_command) - 1);
+  uint32_t length = read_uart_u32(0);
+  assert(length == strlen(original_directory));
+  assert(memcmp(uart_input + 4, original_directory, length) == 0);
+  size_t offset = 4 + length;
+
+  char command[8192];
+  snprintf(command, sizeof(command), "\x1b" "is-directory %s\x1b/",
+           temporary_directory);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+  char current_directory[4096];
+  assert(getcwd(current_directory, sizeof(current_directory)) != NULL);
+  assert(strcmp(current_directory, original_directory) == 0);
+
+  snprintf(command, sizeof(command), "\x1b" "is-directory %s\x1b/",
+           marker_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == UINT32_MAX);
+  offset += 4;
+
+  snprintf(command, sizeof(command), "\x1bmkdir %s/created\x1b/",
+           temporary_directory);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+
+  snprintf(command, sizeof(command), "\x1bls %s\x1b/",
+           temporary_directory);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  length = read_uart_u32(offset);
+  char *listing = malloc(length + 1);
+  assert(listing != NULL);
+  memcpy(listing, uart_input + offset + 4, length);
+  listing[length] = '\0';
+  assert(strstr(listing, "d .\n") != NULL);
+  assert(strstr(listing, "d ..\n") != NULL);
+  assert(strstr(listing, "- marker.txt\n") != NULL);
+  assert(strstr(listing, "d created\n") != NULL);
+  free(listing);
+  offset += 4 + length;
+
+  snprintf(command, sizeof(command), "\x1bunlink %s\x1b/", marker_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+
+  char created_path[4096];
+  snprintf(created_path, sizeof(created_path), "%s/created",
+           temporary_directory);
+  snprintf(command, sizeof(command), "\x1brmdir %s\x1b/", created_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+
+  const uint8_t removed_host_command[] = "\x1b!pwd\x1b/";
+  send_uart_bytes(removed_host_command, sizeof(removed_host_command) - 1);
+  assert(input_len == offset);
+
+  assert(rmdir(temporary_directory) == 0);
+
+  free(uart_input);
+  uart_input = NULL;
+  input_len = 0;
+  input_idx = 0;
+  close_uart_output();
+  free(uart);
+  uart = NULL;
+}
+
 int main() {
   test_extract_comment_metadata();
   test_extract_comment_metadata_decimal_escapes();
@@ -288,5 +388,6 @@ int main() {
   test_escaped_uart_load_command_appends_file_to_input();
   test_escaped_uart_read_range_command_appends_only_requested_bytes();
   test_uart_completes_load_command_before_receive();
+  test_uart_host_filesystem_commands();
   return 0;
 }

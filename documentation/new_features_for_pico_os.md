@@ -487,15 +487,25 @@ The currently supported services are:
 - `file-size <path>` returns the regular file's byte size, or `UINT32_MAX` on
   failure; PicoOS can use this for existence checks and `SEEK_END` without
   transferring file contents
-- `!<command>` runs a host shell command in the emulator's working directory
+- `pwd` returns the absolute result of `getcwd()` as a 32-bit byte count and
+  path bytes so PicoOS can discover the emulator startup directory
+- `is-directory <path>` checks an absolute path with `stat()` and returns a
+  success or failure word without changing the emulator working directory;
+  PicoOS stores successful directory changes in the calling process's PCB
+- `mkdir <path>`, `unlink <path>`, and `rmdir <path>` call the matching host
+  operation and return a success or failure word
+- `ls` and `ls <path>` return a counted directory listing; each line contains
+  `d ` or `- ` and the entry name, including hidden entries
 - `write <path>` creates or truncates a host file and routes later UART output
   to it, while `append <path>` routes output to the end of a file
 - `write stdout` and `write stderr` switch subsequent output back to the named
   standard stream
 
 Together these operations provide the current emulator-side bridge used by
-PicoOS for program loading, host-backed file access, output redirection, and
-launching host commands.
+PicoOS for program loading, per-process working directories, host-backed file
+access, directory creation, listing and removal, and output redirection. Each
+operation calls a matching C filesystem function directly; there is no generic
+host-command request.
 
 Relevant commits: `6767f10aeebe7038eac1b868758b5e03ca84eb5e`,
 `677fb68923986235fc3b3f9156bfb3cf3e75d2e1`,

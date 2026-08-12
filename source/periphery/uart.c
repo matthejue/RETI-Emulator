@@ -7,12 +7,26 @@
 #include "../../include/special_opts.h"
 #include "../../include/terminal_view.h"
 #include "../../include/uart_terminal.h"
+#include <dirent.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#define host_getcwd _getcwd
+#define host_rmdir _rmdir
+#define host_unlink _unlink
+#else
+#define host_getcwd getcwd
+#define host_rmdir rmdir
+#define host_unlink unlink
+#endif
 
 uint8_t *uart_input = NULL;
 size_t input_len = 0;
@@ -41,6 +55,13 @@ uint8_t *uart;
 #define UART_LOAD_COMMAND_PREFIX "load "
 #define UART_READ_RANGE_COMMAND_PREFIX "read-range "
 #define UART_FILE_SIZE_COMMAND_PREFIX "file-size "
+#define UART_PWD_COMMAND "pwd"
+#define UART_IS_DIRECTORY_COMMAND_PREFIX "is-directory "
+#define UART_MKDIR_COMMAND_PREFIX "mkdir "
+#define UART_LS_COMMAND "ls"
+#define UART_LS_COMMAND_PREFIX "ls "
+#define UART_UNLINK_COMMAND_PREFIX "unlink "
+#define UART_RMDIR_COMMAND_PREFIX "rmdir "
 #define UART_WRITE_COMMAND_PREFIX "write "
 #define UART_APPEND_COMMAND_PREFIX "append "
 #define UART_CONTROL_ESCAPE 27
@@ -176,6 +197,27 @@ static void append_uart_input_u32(uint32_t value) {
       (uint8_t)value,
   };
   append_uart_input_bytes(bytes, sizeof(bytes));
+}
+
+static void append_uart_input_string(const char *value) {
+  size_t length = strlen(value);
+  if (length >= UINT32_MAX) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  append_uart_input_u32((uint32_t)length);
+  append_uart_input_bytes((const uint8_t *)value, length);
+}
+
+static char *trim_uart_path(char *path) {
+  while (*path == ' ' || *path == '\t') {
+    path++;
+  }
+  char *end = path + strlen(path);
+  while (end > path && (end[-1] == ' ' || end[-1] == '\t')) {
+    *--end = '\0';
+  }
+  return path;
 }
 
 static bool load_file_into_uart_input(const char *path, size_t len) {
@@ -321,12 +363,106 @@ static void process_uart_file_size_command(char *command) {
   append_uart_input_u32((uint32_t)st.st_size);
 }
 
-static void process_uart_load_command(char *command) {
-  const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
-  if (strncmp(command, UART_LOAD_COMMAND_PREFIX, prefix_len) != 0) {
+static void process_uart_pwd_command(void) {
+  char path[UART_CONTROL_MAX + 1];
+
+  if (host_getcwd(path, sizeof(path)) == NULL) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  append_uart_input_string(path);
+}
+
+static void process_uart_is_directory_command(char *command) {
+  char *path =
+      trim_uart_path(command + strlen(UART_IS_DIRECTORY_COMMAND_PREFIX));
+  struct stat st;
+
+  append_uart_input_u32(*path != '\0' && stat(path, &st) == 0 &&
+                                S_ISDIR(st.st_mode)
+                            ? 0
+                            : UINT32_MAX);
+}
+
+static int make_directory(const char *path) {
+#ifdef _WIN32
+  return _mkdir(path);
+#else
+  return mkdir(path, 0777);
+#endif
+}
+
+static void process_uart_mkdir_command(char *command) {
+  char *path = trim_uart_path(command + strlen(UART_MKDIR_COMMAND_PREFIX));
+  append_uart_input_u32(*path != '\0' && make_directory(path) == 0 ? 0
+                                                                   : UINT32_MAX);
+}
+
+static bool append_directory_output(char **output, size_t *length,
+                                    const char *text) {
+  size_t text_length = strlen(text);
+  if (SIZE_MAX - *length <= text_length) {
+    return false;
+  }
+  char *new_output = realloc(*output, *length + text_length + 1);
+  if (new_output == NULL) {
+    return false;
+  }
+  memcpy(new_output + *length, text, text_length + 1);
+  *output = new_output;
+  *length += text_length;
+  return true;
+}
+
+static void process_uart_ls_command(char *command) {
+  char *path = trim_uart_path(command + strlen(UART_LS_COMMAND_PREFIX));
+  if (*path == '\0') {
+    append_uart_input_u32(UINT32_MAX);
     return;
   }
 
+  DIR *directory = opendir(path);
+  if (directory == NULL) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  char *output = NULL;
+  size_t output_length = 0;
+  bool success = true;
+  struct dirent *entry;
+  while ((entry = readdir(directory)) != NULL && success) {
+    success = append_directory_output(
+                  &output, &output_length,
+                  entry->d_type == DT_DIR ? "d " : "- ") &&
+              append_directory_output(&output, &output_length,
+                                      entry->d_name) &&
+              append_directory_output(&output, &output_length, "\n");
+  }
+  closedir(directory);
+  if (!success || output_length >= UINT32_MAX) {
+    free(output);
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  append_uart_input_u32((uint32_t)output_length);
+  append_uart_input_bytes((uint8_t *)output, output_length);
+  free(output);
+}
+
+static void process_uart_unlink_command(char *command) {
+  char *path = trim_uart_path(command + strlen(UART_UNLINK_COMMAND_PREFIX));
+  append_uart_input_u32(*path != '\0' && host_unlink(path) == 0 ? 0
+                                                                : UINT32_MAX);
+}
+
+static void process_uart_rmdir_command(char *command) {
+  char *path = trim_uart_path(command + strlen(UART_RMDIR_COMMAND_PREFIX));
+  append_uart_input_u32(*path != '\0' && host_rmdir(path) == 0 ? 0
+                                                               : UINT32_MAX);
+}
+
+static void process_uart_load_command(char *command) {
+  const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   char *path = command + prefix_len;
   while (*path == ' ' || *path == '\t') {
     path++;
@@ -422,11 +558,26 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_FILE_SIZE_COMMAND_PREFIX,
                      strlen(UART_FILE_SIZE_COMMAND_PREFIX)) == 0) {
     process_uart_file_size_command(uart_control);
-  } else if (uart_control[0] == '!') {
-    if (uart_control[1] != '\0' && system(uart_control + 1) == -1) {
-      fprintf(stderr, "Warning: Couldn't execute UART terminal command: %s\n",
-              strerror(errno));
-    }
+  } else if (strcmp(uart_control, UART_PWD_COMMAND) == 0) {
+    process_uart_pwd_command();
+  } else if (strncmp(uart_control, UART_IS_DIRECTORY_COMMAND_PREFIX,
+                     strlen(UART_IS_DIRECTORY_COMMAND_PREFIX)) == 0) {
+    process_uart_is_directory_command(uart_control);
+  } else if (strncmp(uart_control, UART_MKDIR_COMMAND_PREFIX,
+                     strlen(UART_MKDIR_COMMAND_PREFIX)) == 0) {
+    process_uart_mkdir_command(uart_control);
+  } else if (strcmp(uart_control, UART_LS_COMMAND) == 0) {
+    char default_ls_command[] = "ls .";
+    process_uart_ls_command(default_ls_command);
+  } else if (strncmp(uart_control, UART_LS_COMMAND_PREFIX,
+                     strlen(UART_LS_COMMAND_PREFIX)) == 0) {
+    process_uart_ls_command(uart_control);
+  } else if (strncmp(uart_control, UART_UNLINK_COMMAND_PREFIX,
+                     strlen(UART_UNLINK_COMMAND_PREFIX)) == 0) {
+    process_uart_unlink_command(uart_control);
+  } else if (strncmp(uart_control, UART_RMDIR_COMMAND_PREFIX,
+                     strlen(UART_RMDIR_COMMAND_PREFIX)) == 0) {
+    process_uart_rmdir_command(uart_control);
   } else if (strncmp(uart_control, UART_WRITE_COMMAND_PREFIX,
                      strlen(UART_WRITE_COMMAND_PREFIX)) == 0) {
     process_uart_write_command(uart_control);
@@ -544,6 +695,12 @@ static bool uart_send_completes_input_control(void) {
   size_t load_prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   size_t read_range_prefix_len = strlen(UART_READ_RANGE_COMMAND_PREFIX);
   size_t file_size_prefix_len = strlen(UART_FILE_SIZE_COMMAND_PREFIX);
+  size_t is_directory_prefix_len =
+      strlen(UART_IS_DIRECTORY_COMMAND_PREFIX);
+  size_t mkdir_prefix_len = strlen(UART_MKDIR_COMMAND_PREFIX);
+  size_t ls_prefix_len = strlen(UART_LS_COMMAND_PREFIX);
+  size_t unlink_prefix_len = strlen(UART_UNLINK_COMMAND_PREFIX);
+  size_t rmdir_prefix_len = strlen(UART_RMDIR_COMMAND_PREFIX);
   return uart_send_requested() && uart_control_active &&
          uart_control_end_candidate && uart[0] == '/' &&
          !uart_control_overflow &&
@@ -555,7 +712,27 @@ static bool uart_send_completes_input_control(void) {
                   read_range_prefix_len) == 0) ||
           (uart_control_len >= file_size_prefix_len &&
            memcmp(uart_control, UART_FILE_SIZE_COMMAND_PREFIX,
-                  file_size_prefix_len) == 0));
+                  file_size_prefix_len) == 0) ||
+          (uart_control_len == strlen(UART_PWD_COMMAND) &&
+           memcmp(uart_control, UART_PWD_COMMAND,
+                  strlen(UART_PWD_COMMAND)) == 0) ||
+          (uart_control_len >= is_directory_prefix_len &&
+           memcmp(uart_control, UART_IS_DIRECTORY_COMMAND_PREFIX,
+                  is_directory_prefix_len) == 0) ||
+          (uart_control_len >= mkdir_prefix_len &&
+           memcmp(uart_control, UART_MKDIR_COMMAND_PREFIX,
+                  mkdir_prefix_len) == 0) ||
+          (uart_control_len == strlen(UART_LS_COMMAND) &&
+           memcmp(uart_control, UART_LS_COMMAND,
+                  strlen(UART_LS_COMMAND)) == 0) ||
+          (uart_control_len >= ls_prefix_len &&
+           memcmp(uart_control, UART_LS_COMMAND_PREFIX, ls_prefix_len) == 0) ||
+          (uart_control_len >= unlink_prefix_len &&
+           memcmp(uart_control, UART_UNLINK_COMMAND_PREFIX,
+                  unlink_prefix_len) == 0) ||
+          (uart_control_len >= rmdir_prefix_len &&
+           memcmp(uart_control, UART_RMDIR_COMMAND_PREFIX,
+                  rmdir_prefix_len) == 0));
 }
 
 static void complete_send(void) {

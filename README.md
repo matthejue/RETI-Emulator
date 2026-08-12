@@ -513,20 +513,40 @@ sequenceDiagram
     Emulator-->>PicoOS: 00 00 00 78
 ```
 
-Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`. Relative Pfade beziehen sich auf das Arbeitsverzeichnis, in dem der Emulator gestartet wurde.
+Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`.
+PicoOS ermittelt das Startverzeichnis mit `pwd`, speichert ein absolutes
+Arbeitsverzeichnis pro Prozess und sendet danach normalerweise absolute Pfade.
 
 | Aktion | Antwort oder Wirkung |
 | --- | --- |
 | `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms; `UINT32_MAX` bei einem fehlenden oder nicht lesbaren Pfad, einer nicht regulären Datei oder einer nicht darstellbaren Wortanzahl |
 | `read-range <offset> <count> <path>` | Tatsächliche 32-Bit-Byteanzahl, danach höchstens `count` Bytes ab `offset` |
 | `file-size <path>` | 32-Bit-Dateigröße; geeignet für `file_exists()` und `SEEK_END` |
-| `!<terminal_command>` | Führt einen Host-Shellbefehl im Arbeitsverzeichnis des Emulators aus |
+| `pwd` | Ruft `getcwd()` auf und liefert 32-Bit-Byteanzahl plus absoluten Pfad |
+| `is-directory <path>` | Prüft mit `stat()`, ob der absolute Pfad ein Verzeichnis bezeichnet, und liefert `0` oder `UINT32_MAX` |
+| `mkdir <path>` | Ruft `mkdir()` auf und liefert `0` oder `UINT32_MAX` |
+| `ls` / `ls <path>` | Liefert eine Textliste mit 32-Bit-Byteanzahl; jede Zeile enthält `d ` oder `- ` und den Namen, auch für versteckte Einträge |
+| `unlink <path>` | Ruft `unlink()` auf und liefert `0` oder `UINT32_MAX` |
+| `rmdir <path>` | Ruft `rmdir()` auf und liefert `0` oder `UINT32_MAX` |
 | `write <path>` | Erstellt oder leert eine Datei und leitet folgende UART-Ausgaben dorthin um |
 | `append <path>` | Legt eine Datei bei Bedarf an und hängt folgende UART-Ausgaben an |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
 
 Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler. Eine
 vorhandene leere Datei liefert bei `load` dagegen die Wortanzahl `0`.
+`pwd` und `ls` melden Stringantworten mit einer 32-Bit-Byteanzahl. PicoOS nutzt
+`pwd` nur, um beim Start das Arbeitsverzeichnis des Emulators zu erfahren.
+Spätere Verzeichniswechsel ändern ausschließlich das im jeweiligen PicoOS-PCB
+gespeicherte Verzeichnis; `is-directory` prüft das neue Ziel, ohne das
+Arbeitsverzeichnis des Emulators zu ändern. `ls` verwendet die natürliche
+Reihenfolge von `readdir()` und liefert keine Größen oder weiteren Metadaten.
+Es gibt keinen allgemeinen Host-Befehl: jede unterstützte Aktion ruft direkt
+die passende C-Dateisystemfunktion auf.
+
+Unter Windows verwenden die Dienste bei Bedarf `_getcwd`, `_mkdir`, `_unlink`
+und `_rmdir`. Die unterstützte MSYS2-Umgebung stellt außerdem die für
+`ls` benötigte `dirent`-Kompatibilität bereit. Native Windows-Builds ohne diese
+Kompatibilität unterstützen diese Host-Dateisystemdienste nicht.
 
 ### UART-Terminal im Debugger
 

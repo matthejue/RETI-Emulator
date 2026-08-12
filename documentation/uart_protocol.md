@@ -42,7 +42,7 @@ run is active; execution and live UART input continue in the terminal view.
 Closing the view redraws the debug TUI and returns to the still-running
 debugger. Capital `E` stops that run at its current program address.
 
-## Output control frames
+## UART control frames
 
 `<esc>` below is the ASCII escape byte `27`. A control command has the byte form
 `<esc>command<esc>/`. Every byte in the command, including both escape bytes and
@@ -62,6 +62,18 @@ or the currently selected output file.
   byte size. A missing or unreadable file returns `UINT32_MAX`.
   Plain, unframed `load`, `read-range`, or `file-size` text has no
   special meaning and is printed normally.
+- `<esc>pwd<esc>/` calls `getcwd()` and returns a 32-bit byte count followed by
+  the absolute path bytes.
+- `<esc>is-directory <path><esc>/` uses `stat()` to check whether the absolute
+  path names a directory and returns `0`, or `UINT32_MAX` if it does not. It
+  does not change the emulator's working directory.
+- `<esc>mkdir <path><esc>/` calls `mkdir()` and returns `0`, or `UINT32_MAX`.
+- `<esc>ls<esc>/` lists the current directory. PicoOS normally sends
+  `<esc>ls <path><esc>/`. The response is a byte count followed by one
+  `d name` or `- name` line per entry in `readdir()` order. Hidden entries are
+  always included; sizes and other metadata are not returned.
+- `<esc>unlink <path><esc>/` calls `unlink()` and returns `0`, or `UINT32_MAX`.
+- `<esc>rmdir <path><esc>/` calls `rmdir()` and returns `0`, or `UINT32_MAX`.
 
 PicoOS's `file_exists()` and `SEEK_END` use `file-size`. Regular file reads and
 bounded text configuration reads use `read-range`, whose response does not
@@ -71,8 +83,6 @@ The exact byte count is required because configuration files are text and may
 not have a size divisible by four. The explicit failure value is required
 because a missing file must not leave the OS waiting indefinitely for a length.
 
-- `<esc>!<terminal_command><esc>/` runs the command through the shell in the
-  emulator process's current working directory.
 - `<esc>write <path><esc>/` creates or truncates `<path>` and routes subsequent
   UART output bytes to it.
 - `<esc>append <path><esc>/` creates `<path>` if needed and routes subsequent
@@ -81,8 +91,11 @@ because a missing file must not leave the OS waiting indefinitely for a length.
   thus to the terminal view when debug mode is active.
 - `<esc>write stderr<esc>/` routes subsequent output to standard error.
 
-Paths in these frames are relative to the directory in which the emulator is
-running unless they are absolute.
+PicoOS normally resolves relative operands from the calling process's PCB and
+sends absolute paths. The initial `pwd` response lets PID 1 discover the
+emulator startup directory. A later PicoOS `chdir()` updates only the calling
+process's PCB after `is-directory` accepts the path. There is no generic
+host-command frame.
 
 ## Debug terminal output
 
