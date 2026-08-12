@@ -6,23 +6,71 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    working-directory: RETI-Emulator
+
 jobs:
   system-tests:
     name: RETI unit and system tests
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout RETI-Emulator
+        uses: actions/checkout@v6
+        with:
+          path: RETI-Emulator
+
+      - name: Checkout PicoC-Compiler
+        uses: actions/checkout@v6
+        with:
+          repository: matthejue/PicoC-Compiler
+          ref: linker_update
+          path: PicoC-Compiler
+
+      - name: Checkout PicoOS
+        uses: actions/checkout@v6
+        with:
+          repository: matthejue/Pico-OS
+          ref: main
+          path: Pico-OS
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: PicoC-Compiler/requirements.txt
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libncurses-dev
+          python -m pip install --upgrade \
+            -r ../PicoC-Compiler/requirements.txt
 
-      - name: Build emulator
+      - name: Build PicoC-Compiler
+        run: make -C ../PicoC-Compiler ci-build PYTHON=python
+
+      - name: Build RETI-Emulator
         run: make ci-build LINUX=1 RELEASE=1
 
       - name: Run unit tests
         run: make unit-test LINUX=1 RELEASE=1
+
+      - name: Build PicoOS interrupt service routines
+        working-directory: Pico-OS
+        run: |
+          python ../PicoC-Compiler/run.py --show-input-files --direct-source-link \
+            interrupt_service_routines/isrs.picoc \
+            kernel/uart_hardware.picoc \
+            -O1 -i -w -s -v \
+            -o interrupt_service_routines/isrs.reti
+
+      - name: Install PicoOS test dependencies
+        run: |
+          rm -f config/isrs.reti
+          install -m 644 \
+            ../Pico-OS/interrupt_service_routines/isrs.reti \
+            config/isrs.reti
 
       - name: Run system tests
         run: ./run_sys_tests.sh 120
