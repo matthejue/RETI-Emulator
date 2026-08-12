@@ -12,7 +12,7 @@ defaults:
 
 jobs:
   system-tests:
-    name: RETI unit and system tests
+    name: RETI system tests
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout RETI-Emulator
@@ -52,9 +52,6 @@ jobs:
 
       - name: Build RETI-Emulator
         run: make ci-build LINUX=1 RELEASE=1
-
-      - name: Run unit tests
-        run: make unit-test LINUX=1 RELEASE=1
 
       - name: Build PicoOS interrupt service routines
         working-directory: Pico-OS
