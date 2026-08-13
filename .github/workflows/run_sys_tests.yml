@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 defaults:
   run:
@@ -71,3 +72,17 @@ jobs:
 
       - name: Run system tests
         run: ./run_sys_tests.sh 120
+
+      - name: Publish test status
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status == 'success' && 'success' || 'failure' }}',
+              context: 'RETI system tests',
+              description: '${{ job.status == 'success' && 'System tests passed' || 'System tests failed' }}'
+            })
