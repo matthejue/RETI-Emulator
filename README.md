@@ -528,6 +528,8 @@ Arbeitsverzeichnis pro Prozess und sendet danach normalerweise absolute Pfade.
 | `ls` / `ls <path>` | Liefert eine Textliste mit 32-Bit-Byteanzahl; jede Zeile enthält `d ` oder `- ` und den Namen, auch für versteckte Einträge |
 | `unlink <path>` | Ruft `unlink()` auf und liefert `0` oder `UINT32_MAX` |
 | `rmdir <path>` | Ruft `rmdir()` auf und liefert `0` oder `UINT32_MAX` |
+| `move <old path>\n<new path>` | Verschiebt oder benennt eine Datei oder ein Verzeichnis um und liefert `0` oder `UINT32_MAX` |
+| `touch <path>` | Erstellt eine Datei oder aktualisiert ihre Zeitstempel und liefert `0` oder `UINT32_MAX` |
 | `write <path>` | Erstellt oder leert eine Datei und leitet folgende UART-Ausgaben dorthin um |
 | `write-at <offset> <path>` | Legt eine Datei bei Bedarf an, positioniert folgende UART-Ausgaben am Byte-Offset und behält die übrigen vorhandenen Daten bei |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
@@ -550,7 +552,9 @@ mehrere PicoOS-Prozesse oder Hostprogramme werden nicht unterstützt, weil sich
 die Größe zwischen beiden Anfragen ändern kann.
 
 Unter Windows verwenden die Dienste bei Bedarf `_getcwd`, `_mkdir`, `_unlink`
-und `_rmdir`. Die unterstützte MSYS2-Umgebung stellt außerdem die für
+und `_rmdir`. `move` und `touch` verwenden ebenfalls direkte
+Dateisystemfunktionen. Die unterstützte
+MSYS2-Umgebung stellt außerdem die für
 `ls` benötigte `dirent`-Kompatibilität bereit. Native Windows-Builds ohne diese
 Kompatibilität unterstützen diese Host-Dateisystemdienste nicht.
 

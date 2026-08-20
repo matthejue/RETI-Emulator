@@ -293,6 +293,8 @@ void test_uart_host_filesystem_commands() {
   assert(mkdtemp(temporary_directory) != NULL);
 
   char marker_path[4096];
+  char renamed_path[4096];
+  char touched_path[4096];
   snprintf(marker_path, sizeof(marker_path), "%s/marker.txt",
            temporary_directory);
   FILE *marker = fopen(marker_path, "wb");
@@ -314,7 +316,7 @@ void test_uart_host_filesystem_commands() {
   assert(memcmp(uart_input + 4, original_directory, length) == 0);
   size_t offset = 4 + length;
 
-  char command[8192];
+  char command[16384];
   snprintf(command, sizeof(command), "\x1b" "is-directory %s\x1b/",
            temporary_directory);
   send_uart_bytes((uint8_t *)command, strlen(command));
@@ -351,7 +353,30 @@ void test_uart_host_filesystem_commands() {
   free(listing);
   offset += 4 + length;
 
-  snprintf(command, sizeof(command), "\x1bunlink %s\x1b/", marker_path);
+  snprintf(renamed_path, sizeof(renamed_path), "%s/renamed.txt",
+           temporary_directory);
+  snprintf(command, sizeof(command), "\x1bmove %s\n%s\x1b/", marker_path,
+           renamed_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+  assert(access(marker_path, F_OK) != 0);
+  assert(access(renamed_path, F_OK) == 0);
+
+  snprintf(touched_path, sizeof(touched_path), "%s/touched.txt",
+           temporary_directory);
+  snprintf(command, sizeof(command), "\x1btouch %s\x1b/", touched_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+  assert(access(touched_path, F_OK) == 0);
+
+  snprintf(command, sizeof(command), "\x1bunlink %s\x1b/", renamed_path);
+  send_uart_bytes((uint8_t *)command, strlen(command));
+  assert(read_uart_u32(offset) == 0);
+  offset += 4;
+
+  snprintf(command, sizeof(command), "\x1bunlink %s\x1b/", touched_path);
   send_uart_bytes((uint8_t *)command, strlen(command));
   assert(read_uart_u32(offset) == 0);
   offset += 4;

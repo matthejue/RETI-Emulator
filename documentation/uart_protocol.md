@@ -74,6 +74,10 @@ or the currently selected output file.
   always included; sizes and other metadata are not returned.
 - `<esc>unlink <path><esc>/` calls `unlink()` and returns `0`, or `UINT32_MAX`.
 - `<esc>rmdir <path><esc>/` calls `rmdir()` and returns `0`, or `UINT32_MAX`.
+- `<esc>move <old path>\n<new path><esc>/` moves or renames a file or directory
+  and returns `0`, or `UINT32_MAX`. A newline separates the two absolute paths.
+- `<esc>touch <path><esc>/` creates the file when needed, updates its access
+  and modification times, and returns `0`, or `UINT32_MAX`.
 
 PicoOS's `file_exists()` and `SEEK_END` use `file-size`. Regular file reads and
 bounded text configuration reads use `read-range`, whose response does not

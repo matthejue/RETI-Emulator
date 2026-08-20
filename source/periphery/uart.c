@@ -20,13 +20,17 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <io.h>
+#include <sys/utime.h>
 #define host_getcwd _getcwd
 #define host_rmdir _rmdir
 #define host_unlink _unlink
+#define host_utime _utime
 #else
+#include <utime.h>
 #define host_getcwd getcwd
 #define host_rmdir rmdir
 #define host_unlink unlink
+#define host_utime utime
 #endif
 
 uint8_t *uart_input = NULL;
@@ -63,6 +67,8 @@ uint8_t *uart;
 #define UART_LS_COMMAND_PREFIX "ls "
 #define UART_UNLINK_COMMAND_PREFIX "unlink "
 #define UART_RMDIR_COMMAND_PREFIX "rmdir "
+#define UART_MOVE_COMMAND_PREFIX "move "
+#define UART_TOUCH_COMMAND_PREFIX "touch "
 #define UART_WRITE_COMMAND_PREFIX "write "
 #define UART_WRITE_AT_COMMAND_PREFIX "write-at "
 #define UART_CONTROL_ESCAPE 27
@@ -462,6 +468,34 @@ static void process_uart_rmdir_command(char *command) {
                                                                : UINT32_MAX);
 }
 
+static void process_uart_move_command(char *command) {
+  char *old_path = command + strlen(UART_MOVE_COMMAND_PREFIX);
+  char *new_path = strchr(old_path, '\n');
+
+  if (new_path == NULL) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  *new_path = '\0';
+  new_path++;
+  append_uart_input_u32(*old_path != '\0' && *new_path != '\0' &&
+                                rename(old_path, new_path) == 0
+                            ? 0
+                            : UINT32_MAX);
+}
+
+static void process_uart_touch_command(char *command) {
+  char *path = trim_uart_path(command + strlen(UART_TOUCH_COMMAND_PREFIX));
+  FILE *file = fopen(path, "ab");
+
+  if (file == NULL) {
+    append_uart_input_u32(UINT32_MAX);
+    return;
+  }
+  fclose(file);
+  append_uart_input_u32(host_utime(path, NULL) == 0 ? 0 : UINT32_MAX);
+}
+
 static void process_uart_load_command(char *command) {
   const size_t prefix_len = strlen(UART_LOAD_COMMAND_PREFIX);
   char *path = command + prefix_len;
@@ -610,6 +644,12 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_RMDIR_COMMAND_PREFIX,
                      strlen(UART_RMDIR_COMMAND_PREFIX)) == 0) {
     process_uart_rmdir_command(uart_control);
+  } else if (strncmp(uart_control, UART_MOVE_COMMAND_PREFIX,
+                     strlen(UART_MOVE_COMMAND_PREFIX)) == 0) {
+    process_uart_move_command(uart_control);
+  } else if (strncmp(uart_control, UART_TOUCH_COMMAND_PREFIX,
+                     strlen(UART_TOUCH_COMMAND_PREFIX)) == 0) {
+    process_uart_touch_command(uart_control);
   } else if (strncmp(uart_control, UART_WRITE_AT_COMMAND_PREFIX,
                      strlen(UART_WRITE_AT_COMMAND_PREFIX)) == 0) {
     process_uart_write_at_command(uart_control);
@@ -733,6 +773,8 @@ static bool uart_send_completes_input_control(void) {
   size_t ls_prefix_len = strlen(UART_LS_COMMAND_PREFIX);
   size_t unlink_prefix_len = strlen(UART_UNLINK_COMMAND_PREFIX);
   size_t rmdir_prefix_len = strlen(UART_RMDIR_COMMAND_PREFIX);
+  size_t move_prefix_len = strlen(UART_MOVE_COMMAND_PREFIX);
+  size_t touch_prefix_len = strlen(UART_TOUCH_COMMAND_PREFIX);
   return uart_send_requested() && uart_control_active &&
          uart_control_end_candidate && uart[0] == '/' &&
          !uart_control_overflow &&
@@ -764,7 +806,13 @@ static bool uart_send_completes_input_control(void) {
                   unlink_prefix_len) == 0) ||
           (uart_control_len >= rmdir_prefix_len &&
            memcmp(uart_control, UART_RMDIR_COMMAND_PREFIX,
-                  rmdir_prefix_len) == 0));
+                  rmdir_prefix_len) == 0) ||
+          (uart_control_len >= move_prefix_len &&
+           memcmp(uart_control, UART_MOVE_COMMAND_PREFIX,
+                  move_prefix_len) == 0) ||
+          (uart_control_len >= touch_prefix_len &&
+           memcmp(uart_control, UART_TOUCH_COMMAND_PREFIX,
+                  touch_prefix_len) == 0));
 }
 
 static void complete_send(void) {
