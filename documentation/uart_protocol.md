@@ -85,8 +85,9 @@ because a missing file must not leave the OS waiting indefinitely for a length.
 
 - `<esc>write <path><esc>/` creates or truncates `<path>` and routes subsequent
   UART output bytes to it.
-- `<esc>append <path><esc>/` creates `<path>` if needed and routes subsequent
-  UART output bytes to its end without truncating existing data.
+- `<esc>write-at <offset> <path><esc>/` creates `<path>` if needed, seeks to the
+  byte offset without truncating existing data, and routes subsequent UART
+  output bytes there.
 - `<esc>write stdout<esc>/` routes subsequent output back to standard output and
   thus to the terminal view when debug mode is active.
 - `<esc>write stderr<esc>/` routes subsequent output to standard error.
@@ -96,6 +97,11 @@ sends absolute paths. The initial `pwd` response lets PID 1 discover the
 emulator startup directory. A later PicoOS `chdir()` updates only the calling
 process's PCB after `is-directory` accepts the path. There is no generic
 host-command frame.
+
+PicoOS implements `O_APPEND` by requesting `file-size` immediately before a
+`write-at`. Concurrent modification of one host file by multiple PicoOS
+processes or host programs is unsupported because another writer can change the
+size between those two requests.
 
 ## Debug terminal output
 

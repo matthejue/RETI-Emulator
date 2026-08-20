@@ -529,7 +529,7 @@ Arbeitsverzeichnis pro Prozess und sendet danach normalerweise absolute Pfade.
 | `unlink <path>` | Ruft `unlink()` auf und liefert `0` oder `UINT32_MAX` |
 | `rmdir <path>` | Ruft `rmdir()` auf und liefert `0` oder `UINT32_MAX` |
 | `write <path>` | Erstellt oder leert eine Datei und leitet folgende UART-Ausgaben dorthin um |
-| `append <path>` | Legt eine Datei bei Bedarf an und hängt folgende UART-Ausgaben an |
+| `write-at <offset> <path>` | Legt eine Datei bei Bedarf an, positioniert folgende UART-Ausgaben am Byte-Offset und behält die übrigen vorhandenen Daten bei |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
 
 Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler. Eine
@@ -542,6 +542,12 @@ Arbeitsverzeichnis des Emulators zu ändern. `ls` verwendet die natürliche
 Reihenfolge von `readdir()` und liefert keine Größen oder weiteren Metadaten.
 Es gibt keinen allgemeinen Host-Befehl: jede unterstützte Aktion ruft direkt
 die passende C-Dateisystemfunktion auf.
+
+PicoOS setzt normale Dateischreibvorgänge mit `write-at` an der im Deskriptor
+gespeicherten Position um. Für `O_APPEND` fragt es unmittelbar davor mit
+`file-size` das Dateiende ab. Gleichzeitige Änderungen derselben Hostdatei durch
+mehrere PicoOS-Prozesse oder Hostprogramme werden nicht unterstützt, weil sich
+die Größe zwischen beiden Anfragen ändern kann.
 
 Unter Windows verwenden die Dienste bei Bedarf `_getcwd`, `_mkdir`, `_unlink`
 und `_rmdir`. Die unterstützte MSYS2-Umgebung stellt außerdem die für

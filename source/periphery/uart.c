@@ -9,6 +9,7 @@
 #include "../../include/uart_terminal.h"
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,7 +64,7 @@ uint8_t *uart;
 #define UART_UNLINK_COMMAND_PREFIX "unlink "
 #define UART_RMDIR_COMMAND_PREFIX "rmdir "
 #define UART_WRITE_COMMAND_PREFIX "write "
-#define UART_APPEND_COMMAND_PREFIX "append "
+#define UART_WRITE_AT_COMMAND_PREFIX "write-at "
 #define UART_CONTROL_ESCAPE 27
 #define UART_CONTROL_MAX 4096
 
@@ -504,6 +505,14 @@ static void process_uart_load_command(char *command) {
   }
 }
 
+static void activate_uart_output_file(FILE *file) {
+  if (uart_output_file != NULL) {
+    fclose(uart_output_file);
+  }
+  uart_output_file = file;
+  uart_output = UART_OUTPUT_FILE;
+}
+
 static void select_uart_output_file(const char *path, const char *mode) {
   FILE *file = fopen(path, mode);
   if (file == NULL) {
@@ -511,12 +520,27 @@ static void select_uart_output_file(const char *path, const char *mode) {
             strerror(errno));
     return;
   }
+  activate_uart_output_file(file);
+}
 
-  if (uart_output_file != NULL) {
-    fclose(uart_output_file);
+static void select_uart_output_file_at(const char *path, long offset) {
+  FILE *file = fopen(path, "r+b");
+  if (file == NULL && errno == ENOENT) {
+    file = fopen(path, "w+b");
   }
-  uart_output_file = file;
-  uart_output = UART_OUTPUT_FILE;
+  if (file == NULL) {
+    fprintf(stderr, "Warning: Couldn't open UART output file %s: %s\n", path,
+            strerror(errno));
+    return;
+  }
+  if (fseek(file, offset, SEEK_SET) != 0) {
+    fprintf(stderr, "Warning: Couldn't seek UART output file %s: %s\n", path,
+            strerror(errno));
+    fclose(file);
+    return;
+  }
+
+  activate_uart_output_file(file);
 }
 
 static void select_uart_standard_output(Uart_Output output) {
@@ -539,11 +563,19 @@ static void process_uart_write_command(char *command) {
   }
 }
 
-static void process_uart_append_command(char *command) {
-  char *destination = command + strlen(UART_APPEND_COMMAND_PREFIX);
+static void process_uart_write_at_command(char *command) {
+  char *cursor = command + strlen(UART_WRITE_AT_COMMAND_PREFIX);
+  char *number_end;
+  errno = 0;
+  unsigned long offset = strtoul(cursor, &number_end, 10);
+  if (errno != 0 || number_end == cursor ||
+      (*number_end != ' ' && *number_end != '\t') || offset > LONG_MAX) {
+    return;
+  }
 
-  if (*destination != '\0') {
-    select_uart_output_file(destination, "ab");
+  char *path = trim_uart_path(number_end);
+  if (*path != '\0') {
+    select_uart_output_file_at(path, (long)offset);
   }
 }
 
@@ -578,12 +610,12 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_RMDIR_COMMAND_PREFIX,
                      strlen(UART_RMDIR_COMMAND_PREFIX)) == 0) {
     process_uart_rmdir_command(uart_control);
+  } else if (strncmp(uart_control, UART_WRITE_AT_COMMAND_PREFIX,
+                     strlen(UART_WRITE_AT_COMMAND_PREFIX)) == 0) {
+    process_uart_write_at_command(uart_control);
   } else if (strncmp(uart_control, UART_WRITE_COMMAND_PREFIX,
                      strlen(UART_WRITE_COMMAND_PREFIX)) == 0) {
     process_uart_write_command(uart_control);
-  } else if (strncmp(uart_control, UART_APPEND_COMMAND_PREFIX,
-                     strlen(UART_APPEND_COMMAND_PREFIX)) == 0) {
-    process_uart_append_command(uart_control);
   }
 }
 

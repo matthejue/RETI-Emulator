@@ -497,7 +497,8 @@ The currently supported services are:
 - `ls` and `ls <path>` return a counted directory listing; each line contains
   `d ` or `- ` and the entry name, including hidden entries
 - `write <path>` creates or truncates a host file and routes later UART output
-  to it, while `append <path>` routes output to the end of a file
+  to it, while `write-at <offset> <path>` preserves the file and routes output
+  to the requested byte offset
 - `write stdout` and `write stderr` switch subsequent output back to the named
   standard stream
 

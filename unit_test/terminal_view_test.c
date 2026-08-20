@@ -141,6 +141,27 @@ static void test_uart_output_can_be_redirected_to_a_file(void) {
   remove(path);
 }
 
+static void test_uart_output_can_overwrite_at_an_offset(void) {
+  const char *path = "/tmp/reti_uart_write_at_test.bin";
+  FILE *file = fopen(path, "wb");
+  assert(file != NULL);
+  assert(fwrite("abcdef", 1, 6, file) == 6);
+  fclose(file);
+
+  debug_mode = false;
+  start_uart();
+  const uint8_t output[] =
+      "\x1bwrite-at 2 /tmp/reti_uart_write_at_test.bin\x1b/"
+      "XY\x1bwrite stdout\x1b/";
+  send_uart_bytes(output, sizeof(output) - 1);
+  stop_uart();
+
+  uint8_t file_output[6];
+  assert(read_file(path, file_output, sizeof(file_output)) == 6);
+  assert(memcmp(file_output, "abXYef", sizeof(file_output)) == 0);
+  remove(path);
+}
+
 static void test_uart_output_can_be_redirected_to_stderr(void) {
   FILE *stdout_capture = tmpfile();
   FILE *stderr_capture = tmpfile();
@@ -183,6 +204,7 @@ int main(void) {
   test_non_debug_uart_output_uses_stdout();
   test_uart_controls_are_hidden_from_debug_terminal();
   test_uart_output_can_be_redirected_to_a_file();
+  test_uart_output_can_overwrite_at_an_offset();
   test_uart_output_can_be_redirected_to_stderr();
   return 0;
 }
