@@ -10,7 +10,7 @@ STORE ACC 6
 # Receives one byte through syscall 1
 LOADI ACC 1
 INT 0
-MOVE ACC BAF
+MOVE IN2 BAF
 
 # Sends it repeatedly through syscall 0 while timer interrupts preempt execution
 MOVE BAF IN1

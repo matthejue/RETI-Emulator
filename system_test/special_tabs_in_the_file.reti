@@ -2,11 +2,12 @@
 # output:\tB
 LOADI ACC 1		# Receives the tab
 INT 0
-MOVE ACC IN1		# Sends the tab
+MOVE IN2 IN1		# Sends the tab
 LOADI ACC 0
 INT 0
 LOADI ACC 1		# Receives A
 INT 0
+MOVE IN2 ACC
 ADDI ACC 1		# Produces B
 MOVE ACC IN1
 LOADI ACC 0

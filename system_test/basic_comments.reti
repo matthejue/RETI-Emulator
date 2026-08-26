@@ -4,7 +4,7 @@
 LOADI ACC 1 # A really important comment
 INT 0
 INT 3
-MOVE ACC IN1; LOADI ACC 0; INT 0;# A really close important comment
+MOVE IN2 IN1; LOADI ACC 0; INT 0;# A really close important comment
 # Another really important comment
 JUMP 0# A really close important comment
 # Last very important comment

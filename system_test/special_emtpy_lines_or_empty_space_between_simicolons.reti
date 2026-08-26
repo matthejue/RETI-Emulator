@@ -2,6 +2,7 @@
 # output:*
 LOADI ACC 1
 INT 0
+MOVE IN2 ACC
 
 ADDI ACC 1; ; # don't care about readable code
 

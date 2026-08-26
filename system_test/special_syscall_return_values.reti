@@ -2,6 +2,7 @@
 # Syscall 6 returns the test heap start address
 LOADI ACC 6
 INT 0
+MOVE IN2 ACC
 LOADI IN1 -2097120
 MULTI IN1 1024
 SUB ACC IN1
@@ -15,6 +16,7 @@ INT 0
 # Syscall 7 returns the test stack start address
 LOADI ACC 7
 INT 0
+MOVE IN2 ACC
 SUBI ACC 16000
 LOADI IN2 66
 JUMP== 2
@@ -26,6 +28,7 @@ INT 0
 # An unsupported selector returns zero
 LOADI ACC 2
 INT 0
+MOVE IN2 ACC
 LOADI IN2 67
 JUMP== 2
 LOADI IN2 88
