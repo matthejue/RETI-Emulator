@@ -1449,6 +1449,11 @@ void poll_running_debug_action(void) {
   }
 
   int key = getch();
+  if (key == KEY_RESIZE) {
+    update_term_and_box_sizes();
+    draw_tui();
+    return;
+  }
   if (key == 'E') {
     update_state(ENTER_AGAIN);
     stop_continuous_execution();
@@ -1468,7 +1473,11 @@ void evaluate_keyboard_input(void) {
     if (key == ERR) {
       continue;
     }
-    if (key == 'n') {
+    if (key == KEY_RESIZE) {
+      update_term_and_box_sizes();
+      draw_tui();
+      continue;
+    } else if (key == 'n') {
       reset_all_scroll_offsets();
       return;
     } else if (key == 'c') {
@@ -1600,6 +1609,10 @@ void wait_for_tui_quit(void) {
     }
 
     switch (key) {
+    case KEY_RESIZE:
+      update_term_and_box_sizes();
+      draw_tui();
+      continue;
     case 'r':
       reset_all_scroll_offsets();
       restart_emulator();

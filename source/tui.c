@@ -36,7 +36,7 @@ static bool tui_snapshot_available = false;
 Box info_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 // Box paging_box = {"", 0, 0, 0, 0, 1, 1, NULL};
 
-uint16_t term_width, term_height;
+int term_width, term_height;
 
 Box *boxes[] = {&regs_box,   &eprom_box,  &uart_box, &sram_c_box,
                 &sram_d_box, &sram_s_box, &info_box};
@@ -131,21 +131,20 @@ void init_tui() {
   update_info_box_text();
 }
 
-void update_term_and_box_sizes() {
-  refresh(); // has to be because term_height and term_width can only be
-             // determined after refresh
-  getmaxyx(stdscr, term_height, term_width);
+void calculate_tui_layout(int height, int width) {
+  term_height = height;
+  term_width = width;
 
-  uint16_t first_box_width = term_width / 4;
-  uint16_t remaining_width = term_width - first_box_width;
-  uint16_t other_box_width = remaining_width / 3;
-  uint16_t box_height = term_height - 1;
+  int first_box_width = term_width / 4;
+  int remaining_width = term_width - first_box_width;
+  int second_box_x = first_box_width + remaining_width / 3;
+  int third_box_x = first_box_width + 2 * remaining_width / 3;
+  int box_height = term_height - 1;
 
-  uint16_t first_box_height = HEIGHT_REGS_BOX;
-  uint16_t remaining_first_column_height = box_height - first_box_height;
-  uint16_t second_box_height = remaining_first_column_height / 2;
-  uint16_t third_box_height =
-      remaining_first_column_height - second_box_height;
+  int first_box_height = HEIGHT_REGS_BOX;
+  int remaining_first_column_height = box_height - first_box_height;
+  int second_box_height = remaining_first_column_height / 2;
+  int third_box_height = remaining_first_column_height - second_box_height;
 
   // regs_box.x = 0;
   // regs_box.y = 0;
@@ -164,23 +163,32 @@ void update_term_and_box_sizes() {
 
   sram_c_box.x = first_box_width;
   // sram_c_box.y = 0;
-  sram_c_box.width = other_box_width;
+  sram_c_box.width = second_box_x - sram_c_box.x;
   sram_c_box.height = box_height;
 
-  sram_d_box.x = first_box_width + other_box_width;
+  sram_d_box.x = second_box_x;
   // sram_d_box.y = 0;
-  sram_d_box.width = other_box_width;
+  sram_d_box.width = third_box_x - sram_d_box.x;
   sram_d_box.height = box_height;
 
-  sram_s_box.x = first_box_width + 2 * other_box_width;
+  sram_s_box.x = third_box_x;
   // sram_s_box.y = 0;
-  sram_s_box.width = other_box_width;
+  sram_s_box.width = term_width - sram_s_box.x;
   sram_s_box.height = box_height;
 
   // info_box.x = 0;
   info_box.y = term_height - 1;
-  info_box.width = term_width - 1;
+  info_box.width = term_width;
   info_box.height = 1;
+}
+
+void update_term_and_box_sizes() {
+  refresh(); // has to be because term_height and term_width can only be
+             // determined after refresh
+  int height;
+  int width;
+  getmaxyx(stdscr, height, width);
+  calculate_tui_layout(height, width);
 
   for (uint8_t i = 0; i < NUM_BOXES; i++) {
     wresize(boxes[i]->win, boxes[i]->height,
@@ -223,10 +231,10 @@ void draw_boxes() {
   update_info_box_text();
 
   for (uint8_t i = 0; i < NUM_BOXES; i++) {
-    const uint8_t TITLE_LEN = strlen(boxes[i]->title);
-    uint16_t rel_pos =
-        boxes[i]->width >= TITLE_LEN + 2
-            ? (boxes[i]->width - TITLE_LEN - 2 /* 2 spaces */) / 2
+    int title_len = strlen(boxes[i]->title);
+    int rel_pos =
+        boxes[i]->width >= title_len + 2
+            ? (boxes[i]->width - title_len - 2 /* 2 spaces */) / 2
             : 0;
     if (i < NUM_BOXES - 1) {
       box(boxes[i]->win, 0, 0);
@@ -235,8 +243,8 @@ void draw_boxes() {
       wattron(boxes[i]->win, COLOR_PAIR(ACTIVE_TITLE_COLOR_PAIR));
     }
     mvwprintw(boxes[i]->win, 0, rel_pos == 0 ? 1 : rel_pos, " %.*s ",
-              (uint32_t)min(boxes[i]->width - 4 /* 2 spaces + 2 corner */,
-                            TITLE_LEN + 2),
+              (int)min(boxes[i]->width - 4 /* 2 spaces + 2 corner */,
+                       title_len),
               boxes[i]->title);
     if (boxes[i] == active_box) {
       wattroff(boxes[i]->win, COLOR_PAIR(ACTIVE_TITLE_COLOR_PAIR));

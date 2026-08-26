@@ -7,13 +7,13 @@
 
 typedef struct {
   char *title;
-  uint8_t x, y;
-  uint8_t width, height;
-  uint8_t line, col;
+  int x, y;
+  int width, height;
+  int line, col;
   WINDOW *win;
 } Box;
 
-extern uint16_t term_width, term_height;
+extern int term_width, term_height;
 
 extern Box regs_box;
 extern Box eprom_box;
@@ -43,6 +43,7 @@ void fin_tui();
 
 void reset_box_line(Box *box);
 void make_unneccessary_spaces_visible(Box *box);
+void calculate_tui_layout(int height, int width);
 void update_term_and_box_sizes();
 void cycle_info_box_page(void);
 void set_tui_halted_mode(bool halted);
