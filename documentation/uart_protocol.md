@@ -40,7 +40,8 @@ Opening either view from a paused debugger keeps execution paused and only
 displays output captured so far. Both keys are also polled while a `c` continue
 run is active; execution and live UART input continue in the terminal view.
 Closing the view redraws the debug TUI and returns to the still-running
-debugger. Capital `E` stops that run at its current program address.
+debugger. Capital `E` stops that run at its current program address. Lowercase
+`q` stops the run and terminates the emulator.
 
 ## UART control frames
 

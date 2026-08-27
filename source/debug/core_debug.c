@@ -1401,6 +1401,13 @@ static void restart_emulator(void) {
 
 static bool continuous_execution_active = false;
 
+static void quit_emulator(void) {
+  reset_all_scroll_offsets();
+  cleanup_snapshot_debug();
+  finalize();
+  exit(EXIT_SUCCESS);
+}
+
 static int read_tui_key(void) {
   int key = getch();
   if (key != 27) {
@@ -1458,6 +1465,10 @@ void poll_running_debug_action(void) {
     update_state(ENTER_AGAIN);
     stop_continuous_execution();
     return;
+  }
+  if (key == 'q') {
+    stop_continuous_execution();
+    quit_emulator();
   }
   if (key == 'v' || key == 'V') {
     if (!activate_uart_terminal(key == 'V')) {
@@ -1588,10 +1599,7 @@ void evaluate_keyboard_input(void) {
       draw_tui();
       continue;
     } else if (key == 'q') {
-      reset_all_scroll_offsets();
-      cleanup_snapshot_debug();
-      finalize();
-      exit(EXIT_SUCCESS);
+      quit_emulator();
     }
   }
 }

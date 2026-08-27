@@ -47,7 +47,7 @@ static void update_info_box_text(void) {
   if (tui_program_running) {
     info_box.title =
         "Program running, (E)nter again, (v)iew terminal, "
-        "(V)iew raw terminal";
+        "(V)iew raw terminal, (q)uit";
     return;
   }
 
