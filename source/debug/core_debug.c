@@ -766,7 +766,7 @@ static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
       draw_tui();
       return false;
     }
-    write_array(eprom, idx, value, false);
+    write_storage((EPROM_CONST << 30) | idx, value);
     return true;
   case UART:
     if (idx >= NUM_PERIPHERY_ADDRESSES) {

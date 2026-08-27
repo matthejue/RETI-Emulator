@@ -254,8 +254,7 @@ void write_storage(uint32_t addr, uint32_t buffer) {
   uint8_t stor_mode = addr >> 30;
   switch (stor_mode) {
   case EPROM_CONST:
-    // addr = addr & 0x3FFFFFFF; makes no sense because it already is 0b00
-    write_array(eprom, addr, buffer, false);
+    // EPROM accepts writes without changing its contents
     break;
   case UART_CONST:
     addr = addr & 0x3FFFFFFF;

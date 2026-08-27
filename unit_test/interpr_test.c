@@ -53,6 +53,34 @@ void test_periphery_timer_interrupt_interval_cell() {
   interrupt_timer_interval = 0;
 }
 
+void test_eprom_writes_have_no_effect() {
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  write_array(eprom, 0, 123, false);
+  write_array(regs, ACC, 456, false);
+  write_array(regs, DS, 0, false);
+  Instruction store = {.op = STORE, .opd1 = ACC, .opd2 = 0};
+  interpr_instr(&store);
+  assert(read_storage(0) == 123);
+
+  write_array(regs, IN1, 0, false);
+  Instruction storein = {
+      .op = STOREIN, .opd1 = IN1, .opd2 = ACC, .opd3 = 0};
+  interpr_instr(&storein);
+  assert(read_storage(0) == 123);
+
+  Instruction tsl = {.op = TSL, .opd1 = IN1, .opd2 = IN2, .opd3 = 0};
+  interpr_instr(&tsl);
+  assert(read_array(regs, IN2, false) == 123);
+  assert(read_storage(0) == 123);
+
+  write_storage(0, 456);
+  assert(read_storage(0) == 123);
+
+  fin_reti();
+}
+
 void test_interpr_prgrm() {
   const char *test_input = "LOADI ACC 1;"
                            "STORE ACC 5;"
@@ -113,6 +141,7 @@ void test_enter_again_restores_debug_visibility() {
 
 int main() {
   test_periphery_timer_interrupt_interval_cell();
+  test_eprom_writes_have_no_effect();
   test_interpr_prgrm();
   test_enter_again_restores_debug_visibility();
 
