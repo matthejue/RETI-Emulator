@@ -346,10 +346,7 @@ void test_uart_host_filesystem_commands() {
   assert(listing != NULL);
   memcpy(listing, uart_input + offset + 4, length);
   listing[length] = '\0';
-  assert(strstr(listing, "d .\n") != NULL);
-  assert(strstr(listing, "d ..\n") != NULL);
-  assert(strstr(listing, "- marker.txt\n") != NULL);
-  assert(strstr(listing, "d created\n") != NULL);
+  assert(strcmp(listing, "d .\nd ..\nd created\n- marker.txt\n") == 0);
   free(listing);
   offset += 4 + length;
 

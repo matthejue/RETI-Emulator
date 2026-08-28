@@ -421,6 +421,12 @@ static bool append_directory_output(char **output, size_t *length,
   return true;
 }
 
+static int compare_directory_entries(const void *left, const void *right) {
+  const char *left_entry = *(const char *const *)left;
+  const char *right_entry = *(const char *const *)right;
+  return strcmp(left_entry + 2, right_entry + 2);
+}
+
 static void process_uart_ls_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_LS_COMMAND_PREFIX));
   if (*path == '\0') {
@@ -433,19 +439,45 @@ static void process_uart_ls_command(char *command) {
     append_uart_input_u32(UINT32_MAX);
     return;
   }
-  char *output = NULL;
-  size_t output_length = 0;
+  char **entries = NULL;
+  size_t entry_count = 0;
   bool success = true;
   struct dirent *entry;
   while ((entry = readdir(directory)) != NULL && success) {
-    success = append_directory_output(
-                  &output, &output_length,
-                  entry->d_type == DT_DIR ? "d " : "- ") &&
-              append_directory_output(&output, &output_length,
-                                      entry->d_name) &&
-              append_directory_output(&output, &output_length, "\n");
+    size_t entry_length = strlen(entry->d_name) + 4;
+    char *formatted_entry = malloc(entry_length);
+    char **new_entries;
+
+    if (formatted_entry == NULL) {
+      success = false;
+      break;
+    }
+    snprintf(formatted_entry, entry_length, "%s%s\n",
+             entry->d_type == DT_DIR ? "d " : "- ", entry->d_name);
+    new_entries = realloc(entries, (entry_count + 1) * sizeof(*entries));
+    if (new_entries == NULL) {
+      free(formatted_entry);
+      success = false;
+      break;
+    }
+    entries = new_entries;
+    entries[entry_count] = formatted_entry;
+    entry_count++;
   }
   closedir(directory);
+
+  if (entry_count > 1) {
+    qsort(entries, entry_count, sizeof(*entries), compare_directory_entries);
+  }
+  char *output = NULL;
+  size_t output_length = 0;
+  for (size_t index = 0; index < entry_count; index++) {
+    if (success) {
+      success = append_directory_output(&output, &output_length, entries[index]);
+    }
+    free(entries[index]);
+  }
+  free(entries);
   if (!success || output_length >= UINT32_MAX) {
     free(output);
     append_uart_input_u32(UINT32_MAX);
