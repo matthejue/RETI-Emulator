@@ -55,6 +55,7 @@ flowchart LR
 - `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
 - `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
 - `-O`: Startet mit einer synthetischen aktiven ISR für Betriebssysteme, deren erster Prozess per `RTI` gestartet wird
+- `-M`, `--dma`: Aktiviert den DMA-Controller beim Start
 - `-h`: Zeigt Verwendungshinweise an
 
 <!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
@@ -307,8 +308,20 @@ UART, Interrupt-Controller, Timer und Ausnahmezustand teilen sich den Peripherie
 | `9` | Timer-Interrupt-Intervall |
 | `10` | Inklusive Stack/Heap-Grenze des aktuellen Kontexts |
 | `11` | Ursache der letzten synchronen CPU-Ausnahme |
+| `12` | DMA aktiv; `0` deaktiviert, `1` aktiviert |
+| `13` | DMA-Quelladresse |
+| `14` | DMA-Zieladresse |
+| `15` | Anzahl zu übertragender 32-Bit-Wörter |
+| `16` | DMA-Status/Steuerung; `0` bereit, `1` starten/beschäftigt, `2` fertig, `3` Fehler |
 
 In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert; größere Werte haben höhere Priorität und dürfen Handler mit niedrigerer Priorität unterbrechen.
+
+Ohne `-M` ist nur Zelle `12` vorhanden. Ein Programm kann DMA später durch
+Schreiben von `1` nach Zelle `12` aktivieren; danach werden auch die Zellen
+`13..16` eingeblendet. Für einen UART-zu-SRAM-Transfer enthält Zelle `13` die
+absolute Adresse des UART-Empfangsregisters (`2^30 + 1`). Nach dem Schreiben
+von `1` nach Zelle `16` kopiert DMA pro Emulatorzyklus ein Wort in den SRAM und
+löst nach Abschluss die Hardware-Signalleitung `CUSTOM` aus.
 
 Die Peripherie-Zelle `9` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern. Die Interrupt-Ansicht des Debuggers zeigt zusätzlich den laufenden Timerzähler.
 

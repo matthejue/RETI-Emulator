@@ -1,6 +1,7 @@
 #include "../include/interpr.h"
 #include "../include/assemble.h"
 #include "../include/datastructures.h"
+#include "../include/dma.h"
 #include "../include/core_debug.h"
 #include "../include/error.h"
 #include "../include/exception.h"
@@ -503,6 +504,10 @@ void interpr_prgrm() {
     } else if (terminal_closed) {
       update_term_and_box_sizes();
       draw_tui();
+    }
+    update_dma();
+    if (dma_interrupt_check()) {
+      continue;
     }
     if (timer_interrupt_check()) {
       continue;

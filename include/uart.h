@@ -23,6 +23,7 @@ extern uint8_t *uart;
 
 void update_uart(void);
 void init_uart() ;
+bool uart_dma_read_word(uint32_t *word);
 void close_uart_output(void);
 uint16_t decode_uart_input_escapes(uint8_t *input, uint16_t len);
 const char *format_uart_byte(uint8_t byte, char *buffer);

@@ -1,4 +1,5 @@
 #include "../../include/uart.h"
+#include "../../include/dma.h"
 #include "../../include/interrupt.h"
 #include "../../include/parse/parse_args.h"
 #include "../../include/reti.h"
@@ -1049,4 +1050,18 @@ void update_uart(void) {
 
   update_uart_receive();
   update_uart_send();
+}
+
+bool uart_dma_read_word(uint32_t *word) {
+  if (input_len - input_idx < sizeof(uint32_t)) {
+    return false;
+  }
+
+  *word = 0;
+  for (size_t index = 0; index < sizeof(uint32_t); index++) {
+    uint8_t byte = uart_input[input_idx++];
+    uart[1] = byte;
+    *word = (*word << 8) | byte;
+  }
+  return true;
 }

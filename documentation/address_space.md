@@ -14,7 +14,11 @@ section.
   `8 uart_device_to_prio`,
   `9 timer_interrupt_interval` (`0 = timer interrupt disabled`),
   `10 stack_heap_boundary` (`0 = stack-overflow detection disabled`),
-  `11 cpu_exception_cause` (read-only)
+  `11 cpu_exception_cause` (read-only),
+  `12 dma_active`,
+  `13 dma_source`, `14 dma_destination`, `15 dma_word_count`,
+  `16 dma_status` (`0 = idle`, `1 = start/busy`, `2 = complete`, `3 = error`)
+  Registers `13..16` are mapped only while `dma_active` is `1`.
   Interrupt-controller meaning: `documentation/interrupt_controller_control.md`.
   CPU-exception meaning:
   `../../RETI-Emulator/documentation/cpu_exceptions.md`.

@@ -1,5 +1,6 @@
 #include "../include/assert.h"
 #include "../include/core_debug.h"
+#include "../include/dma.h"
 #include "../include/interpr.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
@@ -18,7 +19,8 @@ void test_periphery_timer_interrupt_interval_cell() {
   assert(SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL == 9);
   assert(STACK_HEAP_BOUNDARY_REGISTER == 10);
   assert(CPU_EXCEPTION_CAUSE_REGISTER == 11);
-  assert(NUM_PERIPHERY_ADDRESSES == 12);
+  assert(DMA_ACTIVE_REGISTER == 12);
+  assert(NUM_PERIPHERY_ADDRESSES == 17);
 
   peripherals_dir = "/tmp";
   interrupt_timer_interval = 7;

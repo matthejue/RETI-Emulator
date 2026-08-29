@@ -1,6 +1,7 @@
 #include "../include/reti.h"
 #include "../include/assemble.h"
 #include "../include/core_debug.h"
+#include "../include/dma.h"
 #include "../include/exception.h"
 #include "../include/interrupt.h"
 #include "../include/parse/parse_args.h"
@@ -40,6 +41,7 @@ void init_reti() {
   memset(regs, 0, sizeof(uint32_t) * NUM_REGISTERS);
   init_cpu_exceptions();
   init_uart();
+  init_dma();
 
   // TODO: Tobias: Die ganzen Speicher nicht mit 0 initialisiert
   if (!ensure_reti_emulator_directory(peripherals_dir)) {
@@ -136,6 +138,9 @@ void load_adjusted_eprom_prgrm(uint32_t stack_start) {
 
 uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
   if (is_uart) {
+    if (addr >= DMA_ACTIVE_REGISTER) {
+      return read_dma_register(addr);
+    }
     if (addr == SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) {
       return interrupt_timer_interval;
     }
@@ -159,6 +164,10 @@ uint32_t read_array(void *stor, uint16_t addr, bool is_uart) {
 
 void write_array(void *stor, uint16_t addr, uint32_t buffer, bool is_uart) {
   if (is_uart) {
+    if (addr >= DMA_ACTIVE_REGISTER) {
+      write_dma_register(addr, buffer);
+      return;
+    }
     if (addr == SYSTEM_INFO_TIMER_INTERRUPT_INTERVAL) {
       interrupt_timer_interval = buffer;
       timer_cnt = 0;

@@ -1,5 +1,6 @@
 #include "../../include/core_debug.h"
 #include "../../include/assemble.h"
+#include "../../include/dma.h"
 #include "../../include/input_output.h"
 #include "../../include/interrupt.h"
 #include "../../include/interrupt_controller.h"
@@ -89,6 +90,7 @@ typedef enum {
   PERIPHERY_UART_VIEW,
   PERIPHERY_INTERRUPTS_VIEW,
   PERIPHERY_EXCEPTIONS_VIEW,
+  PERIPHERY_DMA_VIEW,
   NUM_PERIPHERY_VIEWS,
 } Periphery_View;
 
@@ -448,7 +450,7 @@ static uint64_t max_idx_for_mem_type(MemType mem_type) {
   case EPROM:
     return EPROM_SIZE - 1;
   case UART:
-    return NUM_PERIPHERY_ADDRESSES - 1;
+    return dma_last_mapped_register();
   case SRAM_C:
   case SRAM_D:
   case SRAM_S:
@@ -769,7 +771,7 @@ static bool assign_value_to_watchobject_mem_cell(WatchBox *watchbox,
     write_storage((EPROM_CONST << 30) | idx, value);
     return true;
   case UART:
-    if (idx >= NUM_PERIPHERY_ADDRESSES) {
+    if (idx > dma_last_mapped_register()) {
       display_notification_box(
           "Assign Value",
           "Peripheral address is outside the mapped periphery area.");
@@ -1090,6 +1092,16 @@ static const char *uart_cell_label(uint64_t idx) {
     return "stack/heap boundary";
   case CPU_EXCEPTION_CAUSE_REGISTER:
     return "CPU exception cause";
+  case DMA_ACTIVE_REGISTER:
+    return "DMA active";
+  case DMA_SOURCE_REGISTER:
+    return "DMA source";
+  case DMA_DESTINATION_REGISTER:
+    return "DMA destination";
+  case DMA_WORD_COUNT_REGISTER:
+    return "DMA word count";
+  case DMA_STATUS_REGISTER:
+    return "DMA status";
   default:
     return "peripheral reserved";
   }
@@ -1718,9 +1730,15 @@ static void print_interrupts_view(void) {
 }
 
 static void print_exceptions_view(void) {
-  handle_heading(true, &uart_box, "Exceptions [a: UART]", "", 0);
+  handle_heading(true, &uart_box, "Exceptions [a: DMA]", "", 0);
   print_array_with_idcs_from_to(UART, STACK_HEAP_BOUNDARY_REGISTER,
                                 CPU_EXCEPTION_CAUSE_REGISTER, false);
+}
+
+static void print_dma_view(void) {
+  handle_heading(true, &uart_box, "DMA [a: UART]", "", 0);
+  print_array_with_idcs_from_to(UART, DMA_ACTIVE_REGISTER,
+                                dma_last_mapped_register(), false);
 }
 
 bool draw_tui(void) {
@@ -1789,6 +1807,8 @@ bool draw_tui(void) {
     print_interrupts_view();
   } else if (periphery_view == PERIPHERY_EXCEPTIONS_VIEW) {
     print_exceptions_view();
+  } else if (periphery_view == PERIPHERY_DMA_VIEW) {
+    print_dma_view();
   } else {
     handle_heading(true, &uart_box, "UART [a: Interrupts]", "", 0);
     print_array_with_idcs_from_to(UART, 0, 2, false);

@@ -39,5 +39,5 @@ cannot count its entries while parsing. If slot `3` is not declared this way,
 the emulator reports the exception as unhandled and stops.
 
 In the debugger, focus the UART box and press `a` to cycle through its `UART`,
-`Interrupts`, and `Exceptions` pages. The `Exceptions` page displays periphery
-registers `10` and `11`.
+`Interrupts`, `Exceptions`, and `DMA` pages. The `Exceptions` page displays
+periphery registers `10` and `11`.
