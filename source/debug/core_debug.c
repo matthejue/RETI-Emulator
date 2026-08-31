@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 uint8_t radius = 2;
@@ -1412,6 +1413,29 @@ static void restart_emulator(void) {
 }
 
 static bool continuous_execution_active = false;
+static const time_t RUNNING_TUI_REFRESH_INTERVAL_SECONDS = 1;
+static struct timespec last_running_tui_refresh;
+static bool running_tui_refresh_scheduled = false;
+
+static void schedule_running_tui_refresh(void) {
+  clock_gettime(CLOCK_MONOTONIC, &last_running_tui_refresh);
+  running_tui_refresh_scheduled = true;
+}
+
+static bool running_tui_refresh_is_due(void) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+
+  time_t elapsed_seconds = now.tv_sec - last_running_tui_refresh.tv_sec;
+  return elapsed_seconds > RUNNING_TUI_REFRESH_INTERVAL_SECONDS ||
+         (elapsed_seconds == RUNNING_TUI_REFRESH_INTERVAL_SECONDS &&
+          now.tv_nsec >= last_running_tui_refresh.tv_nsec);
+}
+
+static void refresh_running_tui(void) {
+  draw_tui();
+  schedule_running_tui_refresh();
+}
 
 static void quit_emulator(void) {
   reset_all_scroll_offsets();
@@ -1448,7 +1472,7 @@ static void start_continuous_execution(void) {
   continuous_execution_active = true;
   set_tui_program_running(true);
   nodelay(stdscr, TRUE);
-  draw_tui();
+  refresh_running_tui();
 }
 
 void stop_continuous_execution(void) {
@@ -1457,20 +1481,27 @@ void stop_continuous_execution(void) {
   }
 
   continuous_execution_active = false;
+  running_tui_refresh_scheduled = false;
   nodelay(stdscr, FALSE);
   set_tui_program_running(false);
 }
 
 void poll_running_debug_action(void) {
-  if (!debug_mode || !continuous_execution_active ||
-      uart_terminal_is_active()) {
+  if (!debug_mode || !continuous_execution_active) {
     return;
+  }
+  if (uart_terminal_is_active()) {
+    running_tui_refresh_scheduled = false;
+    return;
+  }
+  if (!running_tui_refresh_scheduled) {
+    schedule_running_tui_refresh();
   }
 
   int key = getch();
   if (key == KEY_RESIZE) {
     update_term_and_box_sizes();
-    draw_tui();
+    refresh_running_tui();
     return;
   }
   if (key == 'E') {
@@ -1483,10 +1514,15 @@ void poll_running_debug_action(void) {
     quit_emulator();
   }
   if (key == 'v' || key == 'V') {
+    running_tui_refresh_scheduled = false;
     if (!activate_uart_terminal(key == 'V')) {
       update_term_and_box_sizes();
-      draw_tui();
+      refresh_running_tui();
     }
+    return;
+  }
+  if (running_tui_refresh_is_due()) {
+    refresh_running_tui();
   }
 }
 
