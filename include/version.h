@@ -1,0 +1,1 @@
+#define RETI_EMULATOR_VERSION "v2.1.0"
