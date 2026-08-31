@@ -1,4 +1,5 @@
 #include "../../include/parse/parse_args.h"
+#include "../../include/version.h"
 #include "../../include/assemble.h"
 #include "../../include/interpr.h"
 #include "../../include/interrupt.h"
@@ -53,7 +54,7 @@ void print_help(char *bin_name) {
       "-K (keep tui open after final JUMP 0 until q) "
       "-O (start with a synthetic interrupt for OS execution) "
       "-M, --dma (enable direct memory access) "
-      "-I timer_interrupt_interval -h (help page) "
+      "-I timer_interrupt_interval -h (help page) -V, --version (print version) "
       "[prgrm_path]\n",
       bin_name);
 }
@@ -64,10 +65,11 @@ void parse_args(int argc, char *argv[]) {
       {"assemble", no_argument, NULL, 'a'},
       {"isr-count", required_argument, NULL, 'n'},
       {"dma", no_argument, NULL, 'M'},
+      {"version", no_argument, NULL, 'V'},
       {0, 0, 0, 0},
   };
 
-  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:n:w:hdvtmbEcauKOMI:",
+  while ((opt = getopt_long(argc, argv, "r:p:f:e:i:C:S:D:n:w:hdvtmbEcauKOMI:V",
                             long_options, NULL)) != -1) {
     char *endptr;
     int64_t tmp_val;
@@ -177,6 +179,9 @@ void parse_args(int argc, char *argv[]) {
       break;
     case 'h':
       print_help(argv[0]);
+      exit(EXIT_SUCCESS);
+    case 'V':
+      printf("ReTI-Emulator-%s\n", RETI_EMULATOR_VERSION);
       exit(EXIT_SUCCESS);
     case 'I':
       tmp_val = strtol(optarg, &endptr, 10);

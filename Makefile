@@ -20,6 +20,7 @@ CC       ?= cc
 CPPFLAGS := -I$(INCLUDE_DIR) -I$(VENDOR_DIR)/cJSON -MMD -MP $(CPPFLAGS)
 CFLAGS   := -Wall $(CFLAGS)
 LDLIBS   := -lm $(LDLIBS)
+VERSION_HEADER := $(INCLUDE_DIR)/version.h
 
 ifeq ($(RELEASE), 1)
 	CFLAGS += -O2 -DNDEBUG
@@ -100,19 +101,22 @@ $(BIN_DIR)/%_main: $(OBJ_DIR)/%_main.o $(OBJ_SRC) | $(BIN_DIR)
 $(BIN_DIR)/%_test: $(OBJ_TEST_DIR)/%_test.o $(OBJ_SRC) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(VERSION_HEADER) | $(OBJ_DIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: %.c $(VERSION_HEADER) | $(OBJ_DIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(OBJ_TEST_DIR)/%.o: $(TEST_DIR)/%.c | $(OBJ_TEST_DIR)
+$(OBJ_TEST_DIR)/%.o: $(TEST_DIR)/%.c $(VERSION_HEADER) | $(OBJ_TEST_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -UNDEBUG -c $< -o $@
 
 $(BIN_DIR) $(OBJ_DIR) $(OBJ_TEST_DIR):
 	mkdir -p $@
+
+$(VERSION_HEADER): config/emulator-release.txt
+	@printf '#define RETI_EMULATOR_VERSION "%s"\n' "$$(cat $<)" > $@
 
 sys-test: $(BIN_SRC)
 	./export_environment_vars_for_makefile.sh;\
