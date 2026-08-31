@@ -72,6 +72,7 @@ void set_sram_debug_sections(Program_Sections sections);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
 void poll_running_debug_action(void);
+void redraw_running_debug_tui(void);
 void stop_continuous_execution(void);
 void wait_for_tui_quit(void);
 void debug(void);

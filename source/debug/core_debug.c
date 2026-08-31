@@ -1437,6 +1437,11 @@ static void refresh_running_tui(void) {
   schedule_running_tui_refresh();
 }
 
+void redraw_running_debug_tui(void) {
+  update_term_and_box_sizes();
+  refresh_running_tui();
+}
+
 static void quit_emulator(void) {
   reset_all_scroll_offsets();
   cleanup_snapshot_debug();
@@ -1500,8 +1505,7 @@ void poll_running_debug_action(void) {
 
   int key = getch();
   if (key == KEY_RESIZE) {
-    update_term_and_box_sizes();
-    refresh_running_tui();
+    redraw_running_debug_tui();
     return;
   }
   if (key == 'E') {
@@ -1516,8 +1520,7 @@ void poll_running_debug_action(void) {
   if (key == 'v' || key == 'V') {
     running_tui_refresh_scheduled = false;
     if (!activate_uart_terminal(key == 'V')) {
-      update_term_and_box_sizes();
-      refresh_running_tui();
+      redraw_running_debug_tui();
     }
     return;
   }

@@ -502,8 +502,7 @@ void interpr_prgrm() {
       draw_tui();
       evaluate_keyboard_input();
     } else if (terminal_closed) {
-      update_term_and_box_sizes();
-      draw_tui();
+      redraw_running_debug_tui();
     }
     update_dma();
     if (dma_interrupt_check()) {
