@@ -85,7 +85,7 @@ flowchart LR
 | `J` / `K` | Beobachtete Adresse oder beobachteten Registerwert erhöhen / verringern |
 | `C` | Ansicht wieder auf das Watchobject zentrieren |
 | `a` | Watchobject einem Register oder einer Adresse zuweisen |
-| `A` | Ausgewählten Register- oder Speicherwert ändern |
+| `A` | Register-, Peripherie- oder Speicherwert im ausgewählten Fenster ändern; [Ablauf](#fenster-watchobjects-und-live-bearbeitung) |
 | `T` / `e` | Ausgewählte ISR auslösen / nächste manuell auslösbare ISR auswählen |
 | `S` / `R` | Snapshot speichern / wiederherstellen |
 | `d` | PicoC-Quellcodeansicht öffnen |
@@ -453,7 +453,13 @@ Damit lassen sich globale Variablen, lokale Variablen, Argumente, gespeicherte F
 
 Sogenannte **Watchobjects** zentrieren die EPROM-, Code-, Daten- und Stackfenster auf einer beobachteten Speicheradresse. Diese Adresse stammt entweder aus einem zugewiesenen Register oder wird direkt angegeben; die Fenstergröße bestimmt den sichtbaren Bereich darum. Mit `Tab` und `Shift-Tab` wird ein Fenster ausgewählt, `j` und `k` scrollen unabhängig vom Watchobject und `C` zentriert die Ansicht wieder darauf. `J` und `K` ändern die beobachtete Adresse beziehungsweise den Wert des zugewiesenen Registers. Mit `a` (`assign`) wird dem ausgewählten Fenster ein anderes Register oder eine direkte Adresse zugewiesen.
 
-Die beobachtete Zelle wird über die gesamte Fensterbreite hervorgehoben. Mit `A` kann der Wert im ausgewählten Register- oder Adressfenster geändert werden, ohne den Emulator neu zu starten. Gültig sind Werte von `-2147483648` bis `4294967295` sowie eindeutige Zeicheneingaben:
+Die beobachtete Zelle wird über die gesamte Fensterbreite hervorgehoben. Mit `A` kann ein Wert im ausgewählten Fenster geändert werden, ohne den Emulator neu zu starten:
+
+- Im Registerfenster wird zuerst mit `↑` / `↓` oder `j` / `k` ein Register ausgewählt und mit `Enter` bestätigt. Danach wird der neue Wert eingegeben und mit `Enter` übernommen.
+- Im Peripheriefenster wird zuerst der Index `0` bis `16` des [Memory-mapped Registers](#speicherabgebildete-peripherie) eingegeben und mit `Enter` bestätigt. Danach folgt die Werteingabe. Das funktioniert in jeder Peripherieansicht. Es gelten die normalen Schreibregeln: Register `11` ist schreibgeschützt; die DMA-Register `13` bis `16` sind erst nach Aktivierung über Register `12` verfügbar.
+- In einem Adressfenster wird der Wert der beobachteten Speicherzelle geändert.
+
+Auswahl, Werteingabe und Fehlermeldungen lassen sich jederzeit mit `q` oder `Esc` abbrechen, ohne den Wert zu ändern. Die Menüs zeigen dafür `(abort: 'q' or 'esc')` an. Gültig sind Werte von `-2147483648` bis `4294967295` sowie eindeutige Zeicheneingaben:
 
 | Eingabe | Geschriebener Wert |
 | --- | ---: |
@@ -463,7 +469,7 @@ Die beobachtete Zelle wird über die gesamte Fensterbreite hervorgehoben. Mit `A
 | `'\t'` | `9` |
 | `'\\'` | `92` |
 
-Ein einzelnes druckbares Nicht-Ziffer-Zeichen kann ebenfalls direkt eingegeben werden. Schreibzugriffe auf EPROM und SRAM bleiben auf gültige geladene Zellen beschränkt.
+Ein einzelnes druckbares Nicht-Ziffer-Zeichen kann ebenfalls direkt eingegeben werden; für das Zeichen `q` wird wegen der Abbruchtaste `'q'` verwendet. Schreibzugriffe auf EPROM und SRAM bleiben auf gültige geladene Zellen beschränkt.
 
 ### Wiederverwendbare Snapshots
 

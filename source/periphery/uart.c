@@ -967,13 +967,15 @@ static void normalize_uart_input(uint8_t *input, size_t *len) {
   }
 }
 
-static void ask_for_uart_input(void) {
+static bool ask_for_uart_input(void) {
   uint8_t input[UART_INPUT_BOX_LEN + 2];
   size_t len;
 
   if (debug_mode) {
-    display_input_box((char *)input, "UART input (empty = newline):",
-                      UART_INPUT_BOX_LEN);
+    if (!display_input_box((char *)input, "UART input (empty = newline):",
+                           UART_INPUT_BOX_LEN)) {
+      return false;
+    }
   } else {
     fflush(stdout);
     printf("\nUART input (empty = newline): ");
@@ -996,14 +998,7 @@ static void ask_for_uart_input(void) {
   normalize_uart_input(input, &len);
 
   set_uart_input_buffer(input, len);
-}
-
-static uint8_t next_receive_byte(void) {
-  if (input_idx >= input_len) {
-    ask_for_uart_input();
-  }
-
-  return uart_input[input_idx++];
+  return true;
 }
 
 static bool uart_receive_buffer_has_data(void) { return input_idx < input_len; }
@@ -1023,7 +1018,10 @@ static void update_uart_receive(void) {
     if (uart_terminal_is_active() && !uart_receive_buffer_has_data()) {
       return;
     }
-    receive_current_byte = next_receive_byte();
+    if (!uart_receive_buffer_has_data() && !ask_for_uart_input()) {
+      return;
+    }
+    receive_current_byte = uart_input[input_idx++];
     if (start_waiting(&receiving_waiting_time)) {
       receive_state = UART_WAITING;
     } else {

@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const char *abort_hint = "(abort: 'q' or 'esc')";
+
 bool display_notification_box_with_action(const char *title,
                                           const char *message, const char key,
                                           void (*action)(void),
@@ -21,40 +23,40 @@ bool display_notification_box_with_action(const char *title,
   const uint8_t LEN_PRESS_ENTER = strlen(press_enter_text);
   const uint8_t LEN_MESSAGE = strlen(message);
   uint8_t box_width = max(LEN_MESSAGE + 4, LEN_PRESS_ENTER + 4);
-  uint8_t box_height = 4;
+  box_width = max(box_width, strlen(abort_hint) + 4);
+  uint8_t box_height = 5;
   uint16_t startx = (term_width - box_width) / 2;
   uint16_t starty = (term_height - box_height) / 2;
 
   WINDOW *notification_box = newwin(box_height, box_width, starty, startx);
+  keypad(notification_box, TRUE);
   box(notification_box, 0, 0);
   mvwprintw(notification_box, 0, (box_width - LEN_ERROR - 2) / 2, " %s ",
             title);
   mvwprintw(notification_box, 1, (box_width - LEN_MESSAGE) / 2, "%s", message);
   mvwprintw(notification_box, 2, (box_width - LEN_PRESS_ENTER) / 2,
             "%s", press_enter_text);
+  mvwprintw(notification_box, 3, 2, "%s", abort_hint);
   wrefresh(notification_box);
 
   bool should_cont = true;
   int ch;
-  if (action == NULL && action2 == NULL) {
-    while ((ch = wgetch(notification_box)) != '\n' &&
-           ch != '\r') { // Wait for Enter key (newline or carriage return)
-    }
-  } else {
-    while (true) {
-      ch = wgetch(notification_box);
-      if (ch == '\n' || ch == '\r') {
-        if (action != NULL) {
-          action();
-        }
-        break;
-      } else if (ch == key) {
-        if (action2 != NULL) {
-          action2();
-        }
-        should_cont = false;
-        break;
+  while (true) {
+    ch = wgetch(notification_box);
+    if (ch == 'q' || ch == 27) {
+      should_cont = false;
+      break;
+    } else if (ch == '\n' || ch == '\r' || ch == KEY_ENTER) {
+      if (action != NULL) {
+        action();
       }
+      break;
+    } else if (ch == key) {
+      if (action2 != NULL) {
+        action2();
+      }
+      should_cont = false;
+      break;
     }
   }
 
@@ -64,32 +66,65 @@ bool display_notification_box_with_action(const char *title,
   return should_cont;
 }
 
-void display_notification_box(const char *title, const char *message) {
-  display_notification_box_with_action(title, message, '\0', NULL, NULL);
+bool display_notification_box(const char *title, const char *message) {
+  return display_notification_box_with_action(title, message, '\0', NULL, NULL);
 }
 
-void display_input_box(char *input, const char *message,
+bool display_input_box(char *input, const char *message,
                        uint8_t max_num_digits) {
   const uint8_t LEN_MESSAGE = strlen(message);
-  uint8_t box_width = LEN_MESSAGE + 4; // 2 spaces, 2 corncer chrs
-  uint8_t box_height = 3;
+  uint16_t box_width = max(LEN_MESSAGE, strlen(abort_hint)) + 4;
+  uint8_t box_height = 4;
   uint16_t startx = (term_width - box_width) / 2;
   uint16_t starty = (term_height - box_height) / 2;
 
-  keypad(stdscr, TRUE);
-
   WINDOW *input_box = newwin(box_height, box_width, starty, startx);
+  keypad(input_box, TRUE);
   box(input_box, 0, 0);
   mvwprintw(input_box, 0, (box_width - LEN_MESSAGE - 2) / 2, " %s ", message);
-  wrefresh(input_box);
+  mvwprintw(input_box, 2, 2, "%s", abort_hint);
 
-  echo();
-  mvwgetnstr(input_box, 1, 1, input, max_num_digits);
   noecho();
+  int previous_cursor = curs_set(1);
+  size_t len = 0;
+  input[0] = '\0';
+  bool accepted = false;
+  while (true) {
+    size_t offset = len > box_width - 3 ? len - (box_width - 3) : 0;
+    mvwprintw(input_box, 1, 1, "%*s", box_width - 2, "");
+    mvwprintw(input_box, 1, 1, "%s", input + offset);
+    wrefresh(input_box);
+
+    int ch = wgetch(input_box);
+    if (ch == 27 || (ch == 'q' && input[0] != '\'')) {
+      input[0] = '\0';
+      break;
+    }
+    if (ch == '\n' || ch == '\r' || ch == KEY_ENTER) {
+      accepted = true;
+      break;
+    }
+    if (ch == KEY_BACKSPACE || ch == KEY_DC || ch == 127 || ch == '\b') {
+      if (len > 0) {
+        input[--len] = '\0';
+      }
+    } else if (ch == 21) { // Clears the input with Ctrl+U
+      len = 0;
+      input[0] = '\0';
+    } else if (ch >= 0 && ch <= UCHAR_MAX &&
+               isprint((unsigned char)ch) && len < max_num_digits) {
+      input[len++] = ch;
+      input[len] = '\0';
+    }
+  }
+  if (previous_cursor != ERR) {
+    curs_set(previous_cursor);
+  }
 
   werase(input_box);
   wrefresh(input_box);
   delwin(input_box);
+  return accepted;
 }
 
 uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
@@ -100,13 +135,15 @@ uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
       menu_width = entry_len;
     }
   }
+  menu_width = max(menu_width, strlen(abort_hint));
   menu_width += 4;                        // Padding for borders and spacing
-  uint16_t menu_height = num_entries + 2; // Entries + borders
+  uint16_t menu_height = num_entries + 3; // Entries, abort hint and borders
   uint16_t startx = (term_width - menu_width) / 2;
   uint16_t starty = (term_height - menu_height) / 2;
 
   WINDOW *menu_win = newwin(menu_height, menu_width, starty, startx);
   box(menu_win, 0, 0);
+  mvwprintw(menu_win, num_entries + 1, 2, "%s", abort_hint);
   keypad(menu_win, TRUE);
 
   uint8_t choice = 0;
@@ -137,6 +174,7 @@ uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
       break;
     case '\n': // Enter key
     case '\r':
+    case KEY_ENTER:
       decision_made = true;
       break;
     case 27:
@@ -154,74 +192,70 @@ uint8_t display_popup_menu(const Menu_Entry entries[], uint8_t num_entries) {
   return entries[choice].object;
 }
 
-uint32_t get_user_input() {
+bool get_user_input(uint32_t *value) {
   char input[MAX_NUM_DIGITS_INTEGER + 2]; // null terminator + newline character
   while (true) {
-    display_input_box(
-        input, "Number between -2147483648 and 4294967295 or a character:",
-        MAX_NUM_DIGITS_INTEGER);
+    if (!display_input_box(
+            input, "Number between -2147483648 and 4294967295 or a character:",
+            MAX_NUM_DIGITS_INTEGER)) {
+      return false;
+    }
+    const char *error = NULL;
+    char trailing_characters[80];
 
     if (input[0] == '\'') {
       if (input[1] == '\0') {
-        return '\'';
+        *value = '\'';
+        return true;
       }
-      if (input[1] == '\\' && input[3] == '\'' && input[4] == '\0') {
+      if (strlen(input) == 4 && input[1] == '\\' && input[3] == '\'') {
         switch (input[2]) {
         case 'n':
-          return '\n';
+          *value = '\n';
+          return true;
         case 't':
-          return '\t';
+          *value = '\t';
+          return true;
         case '\\':
-          return '\\';
+          *value = '\\';
+          return true;
         case '\'':
-          return '\'';
+          *value = '\'';
+          return true;
         default:
-          display_notification_box("Error", "Invalid escape sequence");
-          continue;
+          error = "Invalid escape sequence";
         }
-      } else if (input[1] != '\0' && input[2] == '\'' && input[3] == '\0') {
-        return (uint8_t)input[1];
+      } else if (strlen(input) == 3 && input[2] == '\'') {
+        *value = (uint8_t)input[1];
+        return true;
       } else {
-        display_notification_box("Error", "Invalid quoted character");
-        continue;
+        error = "Invalid quoted character";
       }
     } else if (isdigit((unsigned char)input[0]) || input[0] == '-') {
       char *endptr;
       errno = 0;
-      if (input[0] == '-') {
-        long long tmp_num = strtoll((char *)input, &endptr, 10);
-        if (*endptr != '\0') {
-          const char *str = "Error: Further characters after number: ";
-          const char *str2 = proper_str_cat(str, endptr);
-          display_notification_box("Error", str2);
-        } else if (errno == ERANGE || tmp_num < INT32_MIN) {
-          display_notification_box("Error",
-                                   "Number out of range, must be between "
-                                   "-2147483648 and 4294967295");
-        } else {
-          return (uint32_t)(int32_t)tmp_num;
-        }
-        continue;
-      }
-
-      unsigned long long tmp_num = strtoull((char *)input, &endptr, 10);
+      long long tmp_num = strtoll(input, &endptr, 10);
       if (*endptr != '\0') {
-        const char *str = "Error: Further characters after number: ";
-        const char *str2 = proper_str_cat(str, endptr);
-        display_notification_box("Error", str2);
-      } else if (errno == ERANGE || tmp_num > UINT32_MAX) {
-        display_notification_box("Error",
-                                 "Number out of range, must be between "
-                                 "-2147483648 and 4294967295");
+        snprintf(trailing_characters, sizeof(trailing_characters),
+                 "Error: Further characters after number: %s", endptr);
+        error = trailing_characters;
+      } else if (errno == ERANGE || tmp_num < INT32_MIN || tmp_num > UINT32_MAX) {
+        error = "Number out of range, must be between "
+                "-2147483648 and 4294967295";
       } else {
-        return (uint32_t)tmp_num;
+        *value = (uint32_t)tmp_num;
+        return true;
       }
     } else if (strlen((char *)input) == 1 &&
                isprint((unsigned char)input[0]) &&
                !isdigit((unsigned char)input[0])) {
-      return (uint8_t)input[0];
+      *value = (uint8_t)input[0];
+      return true;
     } else {
-      display_notification_box("Error", "Invalid input");
+      error = "Invalid input";
+    }
+    if (!display_notification_box("Error", error)) {
+      return false;
     }
   }
 }

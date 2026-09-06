@@ -807,16 +807,41 @@ static void handle_value_assignment(void) {
       return;
     }
 
-    uint32_t value = get_user_input();
-    write_array(regs, reg, value, false);
-    reset_all_scroll_offsets();
+    uint32_t value;
+    if (get_user_input(&value)) {
+      write_array(regs, reg, value, false);
+      reset_all_scroll_offsets();
+    }
     draw_tui();
     return;
   }
   if (active_box_identifier == UART_BOX) {
-    display_notification_box(
-        "Assign Value",
-        "The UART box has no assignable watchobject.");
+    char input[MAX_NUM_DIGITS_INTEGER + 1];
+    uint32_t idx;
+    while (true) {
+      if (!display_input_box(input, "Memory-mapped register index (0-16):",
+                             MAX_NUM_DIGITS_INTEGER)) {
+        draw_tui();
+        return;
+      }
+      char *end;
+      unsigned long long parsed_idx = strtoull(input, &end, 10);
+      if (input[0] != '\0' && *end == '\0' &&
+          parsed_idx < NUM_PERIPHERY_ADDRESSES) {
+        idx = parsed_idx;
+        break;
+      }
+      if (!display_notification_box("Assign Value",
+                                    "Enter an index from 0 to 16.")) {
+        draw_tui();
+        return;
+      }
+    }
+
+    uint32_t value;
+    if (get_user_input(&value)) {
+      write_array(uart, idx, value, true);
+    }
     draw_tui();
     return;
   }
@@ -830,7 +855,11 @@ static void handle_value_assignment(void) {
     return;
   }
 
-  uint32_t value = get_user_input();
+  uint32_t value;
+  if (!get_user_input(&value)) {
+    draw_tui();
+    return;
+  }
   if (assign_value_to_watchobject_mem_cell(
           watchbox, mem_type_for_box_identifier(active_box_identifier), value)) {
     reset_all_scroll_offsets();
@@ -1375,8 +1404,11 @@ WatchBox *get_watchbox(BoxIdentifier box_identifier) {
 
 char *ask_watchobject_addr(void) {
   char *watchobject_addr = malloc(MAX_CHARS_WATCHOBJECT + 1);
-  display_input_box(watchobject_addr, "Enter an address:",
-                    MAX_CHARS_WATCHOBJECT);
+  if (!display_input_box(watchobject_addr, "Enter an address:",
+                         MAX_CHARS_WATCHOBJECT)) {
+    free(watchobject_addr);
+    return NULL;
+  }
   return watchobject_addr;
 }
 
@@ -1386,7 +1418,12 @@ void assign_watchobject_to_box(WatchBox *watchbox, Register watchobject) {
   int64_t previous_scroll_offset = watchbox->scroll_offset;
 
   if (watchobject == ADDRESS) {
-    watchbox->watchobject_addr = ask_watchobject_addr();
+    char *addr = ask_watchobject_addr();
+    if (addr == NULL) {
+      draw_tui();
+      return;
+    }
+    watchbox->watchobject_addr = addr;
   }
 
   watchbox->watchobject = watchobject;
