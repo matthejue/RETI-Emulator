@@ -89,7 +89,7 @@ flowchart LR
 | `T` / `e` | Ausgewählte ISR auslösen / nächste manuell auslösbare ISR auswählen |
 | `S` / `R` | Snapshot speichern / wiederherstellen |
 | `d` | PicoC-Quellcodeansicht öffnen |
-| `t` | Sichtbare SRAM-Werte zwischen Zahl, RETI-Instruktion und ASCII transkodieren |
+| `t` | Sichtbare SRAM-Werte zyklisch als vorzeichenbehaftete Zahl → vorzeichenlose Zahl → ASCII-Zeichen → RETI-Instruktion anzeigen; [Details](#debugging) |
 | `v` | UART-Terminalansicht öffnen; `Escape` kehrt zur Debug-TUI zurück |
 | `V` | Rohe UART-Terminalansicht öffnen; `Ctrl+]` kehrt zur Debug-TUI zurück |
 | `q` | Menü oder Emulator verlassen |
@@ -422,7 +422,9 @@ Mit `-K` bleibt das TUI nach dem abschließenden `JUMP 0` geöffnet. Register, S
 $ reti_emulator -d -K pico_os.reti
 ```
 
-Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(T)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `T` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden. Mit `t` (`t`ranscode) wechselt die Anzeige sichtbarer SRAM-Werte zwischen Zahl, RETI-Instruktion und ASCII-Zeichen, sofern der jeweilige Wert so dekodiert werden kann.
+Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(T)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `T` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden.
+
+Mit `t` (`t`ranscode) wechselt die Anzeige sichtbarer SRAM-Werte zyklisch in dieser Reihenfolge: vorzeichenbehaftete Zahlen → vorzeichenlose Zahlen → ASCII-Zeichen → RETI-Instruktionen. Vorzeichenlose Zahlen zeigen dasselbe 32-Bit-Wort als Wert von `0` bis `4294967295`, etwa für Adressen. ASCII wird nur für Werte von `0` bis `127` angezeigt, Instruktionen nur für gültige Maschinenbefehle; andernfalls bleibt die bisherige Zahlendarstellung erhalten. Erkannte Instruktionen in Code- und ISR-Bereichen bleiben in allen Modi Instruktionen. Die bisherige vorzeichenlose Zahlendarstellung vor dem Datensegment und die Option `-u` für Werte ab dem Datensegment bleiben erhalten.
 
 Auf der dritten Hilfeseite wechseln `v` (`v`iew terminal) und `V` (`V`iew raw terminal) aus der Ncurses-TUI in eine UART-Terminalansicht im selben aufrufenden Terminal. Beide Ansichten zeigen zuerst die gesamte seit dem Emulatorstart aufgezeichnete UART-Terminalausgabe und danach neue Ausgaben direkt an. Die normale Ansicht behält die Signalbehandlung des aufrufenden Terminals bei; `Escape` kehrt zur Debug-TUI zurück und wird nicht als UART-Eingabe übertragen. Die rohe Ansicht deaktiviert unter anderem die Terminalbehandlung für `Ctrl+C`, `Ctrl+\` und `Ctrl+Z`, überträgt diese Tastendrücke sowie `Escape` an die UART und kehrt mit `Ctrl+]` zur Debug-TUI zurück. Dadurch erreichen Pfeiltasten sowie die PicoOS-Shortcuts `Ctrl+C` und `Ctrl+Z` PicoOS nur in der rohen Ansicht vollständig. Wird eine Ansicht im angehaltenen Debugger geöffnet, bleibt die Programmausführung angehalten. Während einer mit `c` gestarteten Ausführung läuft das Programm in beiden Ansichten weiter und Tastendrücke lösen UART-Hardwareinterrupts aus. Nach dem Schließen wird die Debug-TUI vollständig neu gezeichnet.
 

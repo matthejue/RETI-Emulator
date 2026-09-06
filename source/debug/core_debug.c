@@ -76,8 +76,9 @@ static uint32_t sram_interrupt_service_routines_start = 0;
 static bool sram_has_interrupt_service_routines_start = false;
 typedef enum {
   SRAM_TRANSCODE_NUMERIC,
-  SRAM_TRANSCODE_INSTRUCTION,
+  SRAM_TRANSCODE_UNSIGNED,
   SRAM_TRANSCODE_ASCII,
+  SRAM_TRANSCODE_INSTRUCTION,
   NUM_SRAM_TRANSCODE_MODES,
 } SramTranscodeMode;
 static SramTranscodeMode sram_transcode_mode = SRAM_TRANSCODE_NUMERIC;
@@ -1312,7 +1313,9 @@ static void print_sram_range(MemType mem_type, uint64_t start, uint64_t end) {
     if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, true);
     }
-    print_mem_content_with_idx(i, mem_content, sram_idx_values_are_unsigned(i),
+    bool are_unsigned = sram_transcode_mode == SRAM_TRANSCODE_UNSIGNED ||
+                        sram_idx_values_are_unsigned(i);
+    print_mem_content_with_idx(i, mem_content, are_unsigned,
                                are_instrs, is_ascii, mem_type);
     if (is_code_instr) {
       print_comments_for_instruction(mem_type, i, false);
