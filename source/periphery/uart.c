@@ -8,7 +8,7 @@
 #include "../../include/special_opts.h"
 #include "../../include/terminal_view.h"
 #include "../../include/uart_terminal.h"
-#include <dirent.h>
+#include "../../include/guest_filesystem.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
@@ -18,21 +18,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <io.h>
-#include <sys/utime.h>
-#define host_getcwd _getcwd
-#define host_rmdir _rmdir
-#define host_unlink _unlink
-#define host_utime _utime
-#else
-#include <utime.h>
-#define host_getcwd getcwd
-#define host_rmdir rmdir
-#define host_unlink unlink
-#define host_utime utime
-#endif
 
 uint8_t *uart_input = NULL;
 size_t input_len = 0;
@@ -78,7 +63,8 @@ uint8_t *uart;
 typedef enum {
   UART_OUTPUT_STDOUT,
   UART_OUTPUT_STDERR,
-  UART_OUTPUT_FILE
+  UART_OUTPUT_FILE,
+  UART_OUTPUT_DISCARD
 } Uart_Output;
 
 static char uart_control[UART_CONTROL_MAX + 1];
@@ -127,6 +113,10 @@ const char *format_uart_byte(uint8_t byte, char *buffer) {
 
 void init_uart() {
   close_uart_output();
+  if (!init_guest_filesystem()) {
+    fprintf(stderr, "Error: Could not open the guest filesystem root\n");
+    exit(EXIT_FAILURE);
+  }
   uart = malloc(sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   memset(uart, 0, sizeof(uint8_t) * NUM_PERIPHERY_ADDRESSES);
   uart[2] = UART_SEND_READY | UART_RECEIVE_READY;
@@ -228,17 +218,11 @@ static char *trim_uart_path(char *path) {
   return path;
 }
 
-static bool load_file_into_uart_input(const char *path, size_t len) {
+static bool load_file_into_uart_input(FILE *file, const char *path, size_t len) {
   if (len / sizeof(uint32_t) >= UINT32_MAX) {
     fprintf(stderr, "Warning: UART input file %s contains too many words\n",
             path);
-    return false;
-  }
-
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    fprintf(stderr, "Warning: Couldn't load UART input file %s: %s\n", path,
-            strerror(errno));
+    fclose(file);
     return false;
   }
 
@@ -302,9 +286,11 @@ static void process_uart_read_range_command(char *command) {
     *--path_end = '\0';
   }
 
+  FILE *file = guest_fopen(path, "rb");
   struct stat st;
-  if (*path == '\0' || stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
+  if (file == NULL || fstat(fileno(file), &st) != 0 ||
       st.st_size < 0 || (uintmax_t)st.st_size >= UINT32_MAX) {
+    if (file != NULL) fclose(file);
     append_uart_read_range_error();
     return;
   }
@@ -312,11 +298,6 @@ static void process_uart_read_range_command(char *command) {
   uint32_t file_size = (uint32_t)st.st_size;
   size_t available = offset < file_size ? file_size - offset : 0;
   size_t requested = count < available ? count : available;
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    append_uart_read_range_error();
-    return;
-  }
   if (requested == 0) {
     fclose(file);
     append_uart_input_u32(0);
@@ -355,149 +336,54 @@ static void process_uart_file_size_command(char *command) {
     *--path_end = '\0';
   }
 
+  FILE *file = guest_fopen(path, "rb");
   struct stat st;
-  if (*path == '\0' || stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
+  if (file == NULL || fstat(fileno(file), &st) != 0 ||
       st.st_size < 0 || (uintmax_t)st.st_size >= UINT32_MAX) {
+    if (file != NULL) fclose(file);
     append_uart_input_u32(UINT32_MAX);
     return;
   }
 
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
   fclose(file);
   append_uart_input_u32((uint32_t)st.st_size);
 }
 
 static void process_uart_pwd_command(void) {
-  char path[UART_CONTROL_MAX + 1];
-
-  if (host_getcwd(path, sizeof(path)) == NULL) {
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  append_uart_input_string(path);
+  append_uart_input_string("/");
 }
 
 static void process_uart_is_directory_command(char *command) {
   char *path =
       trim_uart_path(command + strlen(UART_IS_DIRECTORY_COMMAND_PREFIX));
-  struct stat st;
-
-  append_uart_input_u32(*path != '\0' && stat(path, &st) == 0 &&
-                                S_ISDIR(st.st_mode)
-                            ? 0
-                            : UINT32_MAX);
-}
-
-static int make_directory(const char *path) {
-#ifdef _WIN32
-  return _mkdir(path);
-#else
-  return mkdir(path, 0777);
-#endif
+  append_uart_input_u32(guest_is_directory(path) ? 0 : UINT32_MAX);
 }
 
 static void process_uart_mkdir_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_MKDIR_COMMAND_PREFIX));
-  append_uart_input_u32(*path != '\0' && make_directory(path) == 0 ? 0
-                                                                   : UINT32_MAX);
-}
-
-static bool append_directory_output(char **output, size_t *length,
-                                    const char *text) {
-  size_t text_length = strlen(text);
-  if (SIZE_MAX - *length <= text_length) {
-    return false;
-  }
-  char *new_output = realloc(*output, *length + text_length + 1);
-  if (new_output == NULL) {
-    return false;
-  }
-  memcpy(new_output + *length, text, text_length + 1);
-  *output = new_output;
-  *length += text_length;
-  return true;
-}
-
-static int compare_directory_entries(const void *left, const void *right) {
-  const char *left_entry = *(const char *const *)left;
-  const char *right_entry = *(const char *const *)right;
-  return strcmp(left_entry + 2, right_entry + 2);
+  append_uart_input_u32(guest_mkdir(path) == 0 ? 0 : UINT32_MAX);
 }
 
 static void process_uart_ls_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_LS_COMMAND_PREFIX));
-  if (*path == '\0') {
+  char *output = guest_list_directory(path);
+  if (output == NULL) {
     append_uart_input_u32(UINT32_MAX);
     return;
   }
-
-  DIR *directory = opendir(path);
-  if (directory == NULL) {
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  char **entries = NULL;
-  size_t entry_count = 0;
-  bool success = true;
-  struct dirent *entry;
-  while ((entry = readdir(directory)) != NULL && success) {
-    size_t entry_length = strlen(entry->d_name) + 4;
-    char *formatted_entry = malloc(entry_length);
-    char **new_entries;
-
-    if (formatted_entry == NULL) {
-      success = false;
-      break;
-    }
-    snprintf(formatted_entry, entry_length, "%s%s\n",
-             entry->d_type == DT_DIR ? "d " : "- ", entry->d_name);
-    new_entries = realloc(entries, (entry_count + 1) * sizeof(*entries));
-    if (new_entries == NULL) {
-      free(formatted_entry);
-      success = false;
-      break;
-    }
-    entries = new_entries;
-    entries[entry_count] = formatted_entry;
-    entry_count++;
-  }
-  closedir(directory);
-
-  if (entry_count > 1) {
-    qsort(entries, entry_count, sizeof(*entries), compare_directory_entries);
-  }
-  char *output = NULL;
-  size_t output_length = 0;
-  for (size_t index = 0; index < entry_count; index++) {
-    if (success) {
-      success = append_directory_output(&output, &output_length, entries[index]);
-    }
-    free(entries[index]);
-  }
-  free(entries);
-  if (!success || output_length >= UINT32_MAX) {
-    free(output);
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  append_uart_input_u32((uint32_t)output_length);
-  append_uart_input_bytes((uint8_t *)output, output_length);
+  append_uart_input_string(output);
   free(output);
 }
 
 static void process_uart_unlink_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_UNLINK_COMMAND_PREFIX));
-  append_uart_input_u32(*path != '\0' && host_unlink(path) == 0 ? 0
+  append_uart_input_u32(*path != '\0' && guest_unlink(path) == 0 ? 0
                                                                 : UINT32_MAX);
 }
 
 static void process_uart_rmdir_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_RMDIR_COMMAND_PREFIX));
-  append_uart_input_u32(*path != '\0' && host_rmdir(path) == 0 ? 0
+  append_uart_input_u32(*path != '\0' && guest_rmdir(path) == 0 ? 0
                                                                : UINT32_MAX);
 }
 
@@ -512,21 +398,14 @@ static void process_uart_move_command(char *command) {
   *new_path = '\0';
   new_path++;
   append_uart_input_u32(*old_path != '\0' && *new_path != '\0' &&
-                                rename(old_path, new_path) == 0
+                                guest_move(old_path, new_path) == 0
                             ? 0
                             : UINT32_MAX);
 }
 
 static void process_uart_touch_command(char *command) {
   char *path = trim_uart_path(command + strlen(UART_TOUCH_COMMAND_PREFIX));
-  FILE *file = fopen(path, "ab");
-
-  if (file == NULL) {
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  fclose(file);
-  append_uart_input_u32(host_utime(path, NULL) == 0 ? 0 : UINT32_MAX);
+  append_uart_input_u32(guest_touch(path) == 0 ? 0 : UINT32_MAX);
 }
 
 static void process_uart_load_command(char *command) {
@@ -545,29 +424,15 @@ static void process_uart_load_command(char *command) {
     return;
   }
 
+  FILE *file = guest_fopen(path, "rb");
   struct stat st;
-  if (stat(path, &st) != 0) {
+  if (file == NULL || fstat(fileno(file), &st) != 0 ||
+      st.st_size < 0 || (uintmax_t)st.st_size > SIZE_MAX) {
+    if (file != NULL) fclose(file);
     append_uart_input_u32(UINT32_MAX);
     return;
   }
-  if (S_ISDIR(st.st_mode)) {
-    fprintf(stderr,
-            "Warning: UART load directory chooser is not implemented; send "
-            "<esc>load <file><esc>/ instead\n");
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  if (!S_ISREG(st.st_mode)) {
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-  if (st.st_size < 0 || (uintmax_t)st.st_size > SIZE_MAX) {
-    fprintf(stderr, "Warning: UART input file %s is too large to load\n", path);
-    append_uart_input_u32(UINT32_MAX);
-    return;
-  }
-
-  if (!load_file_into_uart_input(path, (size_t)(uintmax_t)st.st_size)) {
+  if (!load_file_into_uart_input(file, path, (size_t)st.st_size)) {
     append_uart_input_u32(UINT32_MAX);
   }
 }
@@ -580,8 +445,15 @@ static void activate_uart_output_file(FILE *file) {
   uart_output = UART_OUTPUT_FILE;
 }
 
+static void discard_uart_output(void) {
+  if (uart_output_file != NULL) fclose(uart_output_file);
+  uart_output_file = NULL;
+  uart_output = UART_OUTPUT_DISCARD;
+}
+
 static void select_uart_output_file(const char *path, const char *mode) {
-  FILE *file = fopen(path, mode);
+  discard_uart_output();
+  FILE *file = guest_fopen(path, mode);
   if (file == NULL) {
     fprintf(stderr, "Warning: Couldn't open UART output file %s: %s\n", path,
             strerror(errno));
@@ -591,9 +463,10 @@ static void select_uart_output_file(const char *path, const char *mode) {
 }
 
 static void select_uart_output_file_at(const char *path, long offset) {
-  FILE *file = fopen(path, "r+b");
+  discard_uart_output();
+  FILE *file = guest_fopen(path, "r+b");
   if (file == NULL && errno == ENOENT) {
-    file = fopen(path, "w+b");
+    file = guest_fopen(path, "w+b");
   }
   if (file == NULL) {
     fprintf(stderr, "Warning: Couldn't open UART output file %s: %s\n", path,
@@ -757,6 +630,8 @@ static void write_uart_stdout(uint8_t byte) {
 
 static void write_uart_output(uint8_t byte) {
   switch (uart_output) {
+  case UART_OUTPUT_DISCARD:
+    break;
   case UART_OUTPUT_STDOUT:
     write_uart_stdout(byte);
     break;

@@ -535,20 +535,46 @@ sequenceDiagram
 ```
 
 Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`.
-PicoOS ermittelt das Startverzeichnis mit `pwd`, speichert ein absolutes
-Arbeitsverzeichnis pro Prozess und sendet danach normalerweise absolute Pfade.
+Das Startverzeichnis des Emulators ist die Dateisystemwurzel `/` für alle
+UART-Dateianfragen. PicoOS startet den Emulator im Laufzeitverzeichnis mit
+`kernel`, `boot`, `system`, `user`, `config` und `device`. Das Host-Verzeichnis
+`/tmp` wird nicht eingebunden. Es gibt keinen künstlichen `tmp`-Eintrag in
+Verzeichnislisten. Ein Gastpfad `/tmp` bezeichnet ausschließlich ein echtes
+Unterverzeichnis `tmp` im Laufzeitverzeichnis, falls es angelegt wurde.
+
+Relative und absolute Gastpfade beginnen an dieser Wurzel. `..` bleibt an `/`
+stehen. Alle Dateidienste verwenden
+[`guest_filesystem.c`](source/guest_filesystem.c): Sie folgen keinen symbolischen
+Links oder Windows-Junctions und öffnen keine mehrfach hart verlinkten oder
+speziellen Hostdateien. Die Gastwurzel kann über ihre Gastpfade nicht
+entfernt oder umbenannt werden. Unter Linux verhindert `openat2` außerdem das
+Durchqueren weiterer Mounts; ältere Kernel und andere POSIX-Systeme verwenden
+verzeichnisrelative `openat`-Aufrufe mit `O_NOFOLLOW`.
+
+Die bestehenden UART-Tests in
+[`terminal_view_test.c`](unit_test/terminal_view_test.c),
+[`test_mode_test.c`](unit_test/test_mode_test.c) und
+[`uart_load_failure_test.c`](unit_test/uart_load_failure_test.c) verwenden noch
+Hostpfade unter `/tmp` als Gastpfade. Diese Testpfade müssen angepasst werden.
+[`guest_filesystem_test.c`](unit_test/guest_filesystem_test.c) prüft dagegen,
+dass kein künstlicher `tmp`-Eintrag erscheint und ein echtes Gastverzeichnis
+`tmp` keine Hostdateien unter `/tmp` verändert.
+
+Explizite Emulatorargumente für Programme, Debug-Metadaten und Peripheriedateien
+bleiben Hostpfade. Die Dateisystemgrenze gilt für Anfragen des RETI-Programms,
+auch wenn es UART-Kommandos direkt ohne PicoOS sendet.
 
 | Aktion | Antwort oder Wirkung |
 | --- | --- |
 | `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms; `UINT32_MAX` bei einem fehlenden oder nicht lesbaren Pfad, einer nicht regulären Datei oder einer nicht darstellbaren Wortanzahl |
 | `read-range <offset> <count> <path>` | Tatsächliche 32-Bit-Byteanzahl, danach höchstens `count` Bytes ab `offset` |
 | `file-size <path>` | 32-Bit-Dateigröße; geeignet für `file_exists()` und `SEEK_END` |
-| `pwd` | Ruft `getcwd()` auf und liefert 32-Bit-Byteanzahl plus absoluten Pfad |
-| `is-directory <path>` | Prüft mit `stat()`, ob der absolute Pfad ein Verzeichnis bezeichnet, und liefert `0` oder `UINT32_MAX` |
-| `mkdir <path>` | Ruft `mkdir()` auf und liefert `0` oder `UINT32_MAX` |
+| `pwd` | Liefert die Byteanzahl `1` und `/` |
+| `is-directory <path>` | Prüft innerhalb der Gastwurzel, ob der Pfad ein Verzeichnis bezeichnet, und liefert `0` oder `UINT32_MAX` |
+| `mkdir <path>` | Erstellt ein Verzeichnis innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
 | `ls` / `ls <path>` | Liefert eine Textliste mit 32-Bit-Byteanzahl; jede Zeile enthält `d ` oder `- ` und den Namen, auch für versteckte Einträge |
-| `unlink <path>` | Ruft `unlink()` auf und liefert `0` oder `UINT32_MAX` |
-| `rmdir <path>` | Ruft `rmdir()` auf und liefert `0` oder `UINT32_MAX` |
+| `unlink <path>` | Entfernt einen Dateieintrag innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
+| `rmdir <path>` | Entfernt ein leeres Verzeichnis innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
 | `move <old path>\n<new path>` | Verschiebt oder benennt eine Datei oder ein Verzeichnis um und liefert `0` oder `UINT32_MAX` |
 | `touch <path>` | Erstellt eine Datei oder aktualisiert ihre Zeitstempel und liefert `0` oder `UINT32_MAX` |
 | `write <path>` | Erstellt oder leert eine Datei und leitet folgende UART-Ausgaben dorthin um |
@@ -557,14 +583,12 @@ Arbeitsverzeichnis pro Prozess und sendet danach normalerweise absolute Pfade.
 
 Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler. Eine
 vorhandene leere Datei liefert bei `load` dagegen die Wortanzahl `0`.
-`pwd` und `ls` melden Stringantworten mit einer 32-Bit-Byteanzahl. PicoOS nutzt
-`pwd` nur, um beim Start das Arbeitsverzeichnis des Emulators zu erfahren.
+`pwd` und `ls` melden Stringantworten mit einer 32-Bit-Byteanzahl. PicoOS initialisiert sein erstes Arbeitsverzeichnis direkt mit `/`.
 Spätere Verzeichniswechsel ändern ausschließlich das im jeweiligen PicoOS-PCB
 gespeicherte Verzeichnis; `is-directory` prüft das neue Ziel, ohne das
-Arbeitsverzeichnis des Emulators zu ändern. `ls` verwendet die natürliche
-Reihenfolge von `readdir()` und liefert keine Größen oder weiteren Metadaten.
+Arbeitsverzeichnis des Emulators zu ändern. `ls` sortiert die Einträge nach Namen und liefert keine Größen oder weiteren Metadaten.
 Es gibt keinen allgemeinen Host-Befehl: jede unterstützte Aktion ruft direkt
-die passende C-Dateisystemfunktion auf.
+die passende Funktion für den begrenzten Gastdateibaum auf.
 
 PicoOS setzt normale Dateischreibvorgänge mit `write-at` an der im Deskriptor
 gespeicherten Position um. Für `O_APPEND` fragt es unmittelbar davor mit
@@ -572,12 +596,14 @@ gespeicherten Position um. Für `O_APPEND` fragt es unmittelbar davor mit
 mehrere PicoOS-Prozesse oder Hostprogramme werden nicht unterstützt, weil sich
 die Größe zwischen beiden Anfragen ändern kann.
 
-Unter Windows verwenden die Dienste bei Bedarf `_getcwd`, `_mkdir`, `_unlink`
-und `_rmdir`. `move` und `touch` verwenden ebenfalls direkte
-Dateisystemfunktionen. Die unterstützte
-MSYS2-Umgebung stellt außerdem die für
-`ls` benötigte `dirent`-Kompatibilität bereit. Native Windows-Builds ohne diese
-Kompatibilität unterstützen diese Host-Dateisystemdienste nicht.
+Unter Windows verwendet [`guest_filesystem_windows.inc`](source/guest_filesystem_windows.inc)
+relative Verzeichnishandles und `NtCreateFile` mit `OBJ_DONT_REPARSE`.
+Verzeichnislisten, Zeitstempel, Umbenennen und Entfernen verwenden ebenfalls
+Handles. Die Dienste benötigen dadurch keine `dirent`-Kompatibilität.
+
+Fehlgeschlagene `write`- oder `write-at`-Anfragen verwerfen nachfolgende
+Nutzdaten bis zur nächsten Ausgabeauswahl. Sie schreiben dadurch nicht
+versehentlich in die zuvor ausgewählte Datei.
 
 ### UART-Terminal im Debugger
 

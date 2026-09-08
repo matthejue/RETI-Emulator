@@ -8,6 +8,7 @@
 #include "../include/parse/parse_sections.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
+#include "../include/guest_filesystem.h"
 #include "../include/utils.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -277,6 +278,8 @@ void write_storage(uint32_t addr, uint32_t buffer) {
 }
 
 void fin_reti() {
+  close_uart_output();
+  close_guest_filesystem();
   fclose(sram);
   // fclose(hdd);
 }
