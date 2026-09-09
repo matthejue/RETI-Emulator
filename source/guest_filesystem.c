@@ -85,8 +85,20 @@ static bool add_directory_entry(DirectoryList *list, const char *name,
 #include <dirent.h>
 #include <time.h>
 #ifdef __linux__
-#include <linux/openat2.h>
 #include <sys/syscall.h>
+#if __has_include(<linux/openat2.h>)
+#include <linux/openat2.h>
+#else
+// Supplies the Linux syscall ABI when musl lacks the kernel header
+struct open_how {
+  uint64_t flags;
+  uint64_t mode;
+  uint64_t resolve;
+};
+#define RESOLVE_NO_XDEV 0x01
+#define RESOLVE_NO_SYMLINKS 0x04
+#define RESOLVE_BENEATH 0x08
+#endif
 #endif
 
 static int root_fd = -1;
