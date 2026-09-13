@@ -504,6 +504,9 @@ void interpr_prgrm() {
     } else if (terminal_closed) {
       redraw_running_debug_tui();
     }
+    if (waiting_hardware_interrupt_check()) {
+      continue;
+    }
     update_dma();
     if (dma_interrupt_check()) {
       continue;

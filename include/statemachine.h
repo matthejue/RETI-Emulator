@@ -61,6 +61,7 @@ extern uint8_t hardware_isr_stack[];
 extern uint8_t isr_heap[];
 
 void activate_source_debug(void);
+bool waiting_hardware_interrupt_check(void);
 void sync_source_debug_state(void);
 void update_state(Event event);
 #endif // STATEMACHINE_H

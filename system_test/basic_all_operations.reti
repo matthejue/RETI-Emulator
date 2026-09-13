@@ -10,7 +10,7 @@ OPLUSI ACC 3
 ORI ACC 64
 ANDI ACC 127
 MOVE ACC IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Compute Register
@@ -27,7 +27,7 @@ LOADI IN2 3
 AND ACC IN2
 ADDI ACC 64
 MOVE ACC IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Compute Memory
@@ -44,7 +44,7 @@ OR ACC 0
 AND ACC 0
 ADDI ACC 65
 MOVE ACC IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Load, Store, Storein, Loadin, Move, and Nop
@@ -58,7 +58,7 @@ LOADI ACC 0
 LOADIN BAF ACC 2
 NOP
 MOVE ACC IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP> for taken and not-taken conditions
@@ -71,7 +71,7 @@ JUMP> 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP== for taken and not-taken conditions
@@ -84,7 +84,7 @@ JUMP== 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP>= for taken and not-taken conditions
@@ -97,7 +97,7 @@ JUMP>= 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP< for taken and not-taken conditions
@@ -110,7 +110,7 @@ JUMP< 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP!= for taken and not-taken conditions
@@ -123,7 +123,7 @@ JUMP!= 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # Tests JUMP<= for taken and not-taken conditions
@@ -136,6 +136,6 @@ JUMP<= 2
 JUMP 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 JUMP 0

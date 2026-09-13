@@ -1,6 +1,6 @@
 # input:)
 # output:*
-LOADI ACC 1
+LOADI ACC 38
 INT 0
 MOVE IN2 ACC
 
@@ -9,7 +9,7 @@ ADDI ACC 1; ; # don't care about readable code
 
 ADDI ACC 1; SUBI ACC 1
 
-MOVE ACC IN1; LOADI ACC 0
+MOVE ACC IN1; LOADI ACC 29
 INT 0
 
      JUMP 0

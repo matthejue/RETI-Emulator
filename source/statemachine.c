@@ -193,9 +193,10 @@ bool decide_prio_higher_stack(uint8_t isr) {
       isr_to_prio[hardware_isr_stack[hardware_isr_stack_top]];
 
   bool success = prio_current_isr > prio_isr_stack;
-  if (!success) {
-    display_notification_box("Notice", "Newly arrived hardware interrupt has lower priority "
-                                      "than current hardware interrupt");
+  if (!success && visibility_condition) {
+    display_notification_box(
+        "Notice", "Newly arrived hardware interrupt has lower priority "
+                  "than current hardware interrupt");
   }
 
   return success;
@@ -224,6 +225,15 @@ void handle_next_hi() {
   uint8_t isr = pop_highest_prio(isr_heap, isr_to_prio);
   in.arg8 = isr;
   update_state(HARDWARE_INTERRUPT);
+}
+
+bool waiting_hardware_interrupt_check(void) {
+  if (!decide_prio_higher_heap()) {
+    return false;
+  }
+
+  handle_next_hi();
+  return true;
 }
 
 void error_no_si_inside_interrupt(void) {
@@ -317,9 +327,6 @@ void update_state(Event event) {
     check_not_stepped_into_isr_completed();
     uart_interrupt_completed(completed_isr);
     check_hardware_int_completed();
-    if (decide_prio_higher_heap()) {
-      handle_next_hi();
-    }
     break;
   default:
     fprintf(stderr, "Error: Unknown event type %d\n", event);

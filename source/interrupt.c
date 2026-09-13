@@ -57,6 +57,8 @@ bool timer_interrupt_check() {
   timer_cnt++;
   bool success = false;
   if (timer_cnt >= timer_interval) {
+    // Keeps one timer signal pending until its interrupt handler completes
+    interrupt_timer_active = false;
     in.arg8 = device_to_isr[INTERRUPT_TIMER];
     update_state(HARDWARE_INTERRUPT);
     success = out.retbool1;

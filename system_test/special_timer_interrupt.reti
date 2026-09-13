@@ -7,26 +7,26 @@ LOADI ACC 1
 STORE ACC 3
 STORE ACC 6
 
-# Receives one byte through syscall 1
-LOADI ACC 1
+# Receives one byte through syscall 38
+LOADI ACC 38
 INT 0
 MOVE IN2 BAF
 
-# Sends it repeatedly through syscall 0 while timer interrupts preempt execution
+# Sends it repeatedly through syscall 29 while timer interrupts preempt execution
 MOVE BAF IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 MOVE BAF IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 MOVE BAF IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 MOVE BAF IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 MOVE BAF IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 NOP

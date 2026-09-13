@@ -61,6 +61,92 @@ void test_os_mode_tracks_synthetic_interrupt_context() {
   os_mode = previous_os_mode;
 }
 
+void test_waiting_hardware_interrupt_starts_after_return() {
+  bool previous_os_mode = os_mode;
+
+  os_mode = false;
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  set_interrupt_device_isr(INTERRUPT_TIMER, 1);
+  uart[INTERRUPT_CONTROLLER_PRIO_BASE + INTERRUPT_TIMER] = 1;
+  set_interrupt_device_isr(CUSTOM, 2);
+  uart[INTERRUPT_CONTROLLER_PRIO_BASE + CUSTOM] = 1;
+  sync_interrupt_controller_from_memory();
+  write_file(sram, 1, 20);
+  write_file(sram, 2, 30);
+  write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
+  write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
+
+  in.arg8 = 1;
+  update_state(HARDWARE_INTERRUPT);
+  in.arg8 = 2;
+  update_state(HARDWARE_INTERRUPT);
+
+  assert(heap_size == 1);
+  assert(stacked_isrs_cnt == 1);
+  assert(hardware_isr_stack_top == 0);
+  assert(hardware_isr_stack[0] == 1);
+
+  update_state(RETURN_FROM_INTERRUPT);
+
+  assert(heap_size == 1);
+  assert(stacked_isrs_cnt == 0);
+  assert(hardware_isr_stack_top == -1);
+  assert(is_hardware_int_stack_top == -1);
+
+  assert(waiting_hardware_interrupt_check());
+  assert(heap_size == 0);
+  assert(stacked_isrs_cnt == 1);
+  assert(hardware_isr_stack_top == 0);
+  assert(hardware_isr_stack[0] == 2);
+
+  update_state(RETURN_FROM_INTERRUPT);
+
+  assert(stacked_isrs_cnt == 0);
+  assert(hardware_isr_stack_top == -1);
+  assert(is_hardware_int_stack_top == -1);
+  assert(!waiting_hardware_interrupt_check());
+
+  fin_reti();
+  os_mode = previous_os_mode;
+}
+
+void test_waiting_timer_interrupt_is_not_queued_repeatedly() {
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  set_interrupt_device_isr(INTERRUPT_TIMER, 1);
+  uart[INTERRUPT_CONTROLLER_PRIO_BASE + INTERRUPT_TIMER] = 1;
+  set_interrupt_device_isr(CUSTOM, 2);
+  uart[INTERRUPT_CONTROLLER_PRIO_BASE + CUSTOM] = 1;
+  sync_interrupt_controller_from_memory();
+  write_file(sram, 1, 20);
+  write_file(sram, 2, 30);
+  write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
+  write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
+
+  in.arg8 = 2;
+  update_state(HARDWARE_INTERRUPT);
+  interrupt_timer_interval = 1;
+  timer_cnt = 0;
+
+  assert(!timer_interrupt_check());
+  assert(!interrupt_timer_active);
+  assert(heap_size == 1);
+  assert(!timer_interrupt_check());
+  assert(heap_size == 1);
+
+  update_state(RETURN_FROM_INTERRUPT);
+  assert(waiting_hardware_interrupt_check());
+  update_state(RETURN_FROM_INTERRUPT);
+  assert(interrupt_timer_active);
+
+  fin_reti();
+  timer_cnt = 0;
+  interrupt_timer_interval = 0;
+}
+
 void test_periphery_timer_interrupt_interval_cell() {
   assert(INTERRUPT_CONTROLLER_ISR_BASE == 3);
   assert(INTERRUPT_CONTROLLER_PRIO_BASE == 6);
@@ -191,6 +277,8 @@ void test_enter_again_restores_debug_visibility() {
 
 int main() {
   test_os_mode_tracks_synthetic_interrupt_context();
+  test_waiting_hardware_interrupt_starts_after_return();
+  test_waiting_timer_interrupt_is_not_queued_repeatedly();
   test_periphery_timer_interrupt_interval_cell();
   test_eprom_writes_have_no_effect();
   test_interpr_prgrm();

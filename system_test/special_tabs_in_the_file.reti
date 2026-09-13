@@ -1,15 +1,15 @@
 # input:\tA
 # output:\tB
-LOADI ACC 1		# Receives the tab
+LOADI ACC 38		# Receives the tab
 INT 0
 MOVE IN2 IN1		# Sends the tab
-LOADI ACC 0
+LOADI ACC 29
 INT 0
-LOADI ACC 1		# Receives A
+LOADI ACC 38		# Receives A
 INT 0
 MOVE IN2 ACC
 ADDI ACC 1		# Produces B
 MOVE ACC IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 JUMP 0

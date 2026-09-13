@@ -1,6 +1,6 @@
 # output:ABC
-# Syscall 6 returns the test heap start address
-LOADI ACC 6
+# Syscall 16 returns the test heap start address
+LOADI ACC 16
 INT 0
 MOVE IN2 ACC
 LOADI IN1 -2097120
@@ -10,11 +10,11 @@ LOADI IN2 65
 JUMP== 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
-# Syscall 7 returns the test stack start address
-LOADI ACC 7
+# Syscall 17 returns the test stack start address
+LOADI ACC 17
 INT 0
 MOVE IN2 ACC
 SUBI ACC 16000
@@ -22,7 +22,7 @@ LOADI IN2 66
 JUMP== 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 
 # An unsupported selector returns zero
@@ -33,6 +33,6 @@ LOADI IN2 67
 JUMP== 2
 LOADI IN2 88
 MOVE IN2 IN1
-LOADI ACC 0
+LOADI ACC 29
 INT 0
 JUMP 0
