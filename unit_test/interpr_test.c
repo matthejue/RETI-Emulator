@@ -9,9 +9,57 @@
 #include "../include/parse/parse_sections.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
+#include "../include/uart.h"
 #include "../include/utils.h"
 #include <stdlib.h>
 #include <string.h>
+
+void test_os_mode_tracks_synthetic_interrupt_context() {
+  bool previous_os_mode = os_mode;
+
+  os_mode = true;
+  peripherals_dir = "/tmp";
+  init_reti();
+
+  assert(stacked_isrs_cnt == 1);
+  assert(hardware_isr_stack_top == -1);
+  assert(is_hardware_int_stack_top == 0);
+  assert(!is_hardware_int_stack[0]);
+
+  write_array(regs, SP, (SRAM_CONST << 30) | 100, false);
+  write_storage((SRAM_CONST << 30) | 101, (SRAM_CONST << 30) | 50);
+  update_state(RETURN_FROM_INTERRUPT);
+
+  assert(stacked_isrs_cnt == 0);
+  assert(hardware_isr_stack_top == -1);
+  assert(is_hardware_int_stack_top == -1);
+
+  set_interrupt_device_isr(INTERRUPT_TIMER, 1);
+  uart[INTERRUPT_CONTROLLER_PRIO_BASE + INTERRUPT_TIMER] = 1;
+  sync_interrupt_controller_from_memory();
+  write_file(sram, 1, 20);
+  write_array(regs, PC, (SRAM_CONST << 30) | 50, false);
+  interrupt_timer_interval = 1;
+  timer_cnt = 0;
+
+  assert(timer_interrupt_check());
+  assert(!interrupt_timer_active);
+  assert(stacked_isrs_cnt == 1);
+  assert(is_hardware_int_stack_top == 0);
+  assert(is_hardware_int_stack[0]);
+
+  update_state(RETURN_FROM_INTERRUPT);
+
+  assert(interrupt_timer_active);
+  assert(stacked_isrs_cnt == 0);
+  assert(hardware_isr_stack_top == -1);
+  assert(is_hardware_int_stack_top == -1);
+
+  fin_reti();
+  timer_cnt = 0;
+  interrupt_timer_interval = 0;
+  os_mode = previous_os_mode;
+}
 
 void test_periphery_timer_interrupt_interval_cell() {
   assert(INTERRUPT_CONTROLLER_ISR_BASE == 3);
@@ -142,6 +190,7 @@ void test_enter_again_restores_debug_visibility() {
 }
 
 int main() {
+  test_os_mode_tracks_synthetic_interrupt_context();
   test_periphery_timer_interrupt_interval_cell();
   test_eprom_writes_have_no_effect();
   test_interpr_prgrm();
