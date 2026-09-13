@@ -96,6 +96,9 @@ because a missing file must not leave the OS waiting indefinitely for a length.
 - `<esc>write stdout<esc>/` routes subsequent output back to standard output and
   thus to the terminal view when debug mode is active.
 - `<esc>write stderr<esc>/` routes subsequent output to standard error.
+- `<esc>literal-output <count><esc>/` writes the next `count` bytes verbatim to
+  the selected destination. Control-frame parsing is suspended for those bytes,
+  so binary data containing `<esc>` cannot start or end a control command.
 
 PicoOS normally resolves relative operands from the calling process's PCB and
 sends absolute paths. The initial `pwd` response lets PID 1 discover the

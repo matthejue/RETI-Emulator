@@ -57,6 +57,7 @@ uint8_t *uart;
 #define UART_TOUCH_COMMAND_PREFIX "touch "
 #define UART_WRITE_COMMAND_PREFIX "write "
 #define UART_WRITE_AT_COMMAND_PREFIX "write-at "
+#define UART_LITERAL_OUTPUT_COMMAND_PREFIX "literal-output "
 #define UART_CONTROL_ESCAPE 27
 #define UART_CONTROL_MAX 4096
 
@@ -74,6 +75,7 @@ static bool uart_control_end_candidate = false;
 static bool uart_control_overflow = false;
 static Uart_Output uart_output = UART_OUTPUT_STDOUT;
 static FILE *uart_output_file = NULL;
+static size_t uart_literal_output_remaining = 0;
 
 static bool is_visible_terminal_ascii(uint8_t byte) {
   return byte >= 32 && byte <= 126;
@@ -519,6 +521,18 @@ static void process_uart_write_at_command(char *command) {
   }
 }
 
+static void process_uart_literal_output_command(char *command) {
+  char *cursor = command + strlen(UART_LITERAL_OUTPUT_COMMAND_PREFIX);
+  char *number_end;
+  errno = 0;
+  unsigned long count = strtoul(cursor, &number_end, 10);
+  if (errno != 0 || number_end == cursor || *number_end != '\0' ||
+      count > SIZE_MAX) {
+    return;
+  }
+  uart_literal_output_remaining = (size_t)count;
+}
+
 static void process_uart_control(void) {
   uart_control[uart_control_len] = '\0';
   if (strncmp(uart_control, UART_LOAD_COMMAND_PREFIX,
@@ -562,6 +576,9 @@ static void process_uart_control(void) {
   } else if (strncmp(uart_control, UART_WRITE_COMMAND_PREFIX,
                      strlen(UART_WRITE_COMMAND_PREFIX)) == 0) {
     process_uart_write_command(uart_control);
+  } else if (strncmp(uart_control, UART_LITERAL_OUTPUT_COMMAND_PREFIX,
+                     strlen(UART_LITERAL_OUTPUT_COMMAND_PREFIX)) == 0) {
+    process_uart_literal_output_command(uart_control);
   }
 }
 
@@ -661,6 +678,7 @@ void close_uart_output(void) {
   uart_control_end_candidate = false;
   uart_control_overflow = false;
   uart_control_len = 0;
+  uart_literal_output_remaining = 0;
 }
 
 static bool uart_send_requested(void) {
@@ -725,7 +743,10 @@ static bool uart_send_completes_input_control(void) {
 
 static void complete_send(void) {
   uint8_t sent_byte = uart[0];
-  if (!handle_uart_control_byte(sent_byte)) {
+  if (uart_literal_output_remaining > 0) {
+    write_uart_output(sent_byte);
+    uart_literal_output_remaining--;
+  } else if (!handle_uart_control_byte(sent_byte)) {
     write_uart_output(sent_byte);
   }
   remember_sent_byte(sent_byte);
