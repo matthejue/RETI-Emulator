@@ -412,7 +412,6 @@ bool start_source_debugger(void) {
     return false;
   }
 
-  activate_source_debug();
   write_source_debug_state();
 
   char *helper_path = build_debug_helper_path("source_debug");
@@ -470,6 +469,13 @@ void stop_source_debugger(void) {
   kill(source_debugger_pid, SIGTERM);
   waitpid(source_debugger_pid, NULL, 0);
   source_debugger_pid = -1;
+}
+
+void refresh_source_debugger(void) {
+  reap_source_debugger_if_exited();
+  if (source_debugger_pid > 0) {
+    write_source_debug_state();
+  }
 }
 
 void source_debug_update_current_stackframe_function(void) {

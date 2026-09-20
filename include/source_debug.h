@@ -8,6 +8,7 @@ extern const char *current_stackframe_function;
 
 bool start_source_debugger(void);
 void write_source_debug_state(void);
+void refresh_source_debugger(void);
 void stop_source_debugger(void);
 void source_debug_update_current_stackframe_function(void);
 const char *source_debug_variable_label_for_sram_idx(uint64_t idx);

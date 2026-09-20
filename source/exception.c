@@ -1,6 +1,7 @@
 #include "../include/exception.h"
 #include "../include/assemble.h"
 #include "../include/parse/parse_args.h"
+#include "../include/picoos_overview.h"
 #include "../include/special_opts.h"
 #include "../include/statemachine.h"
 #include <stdlib.h>
@@ -44,6 +45,7 @@ void trigger_cpu_exception(Cpu_Exception_Cause cause) {
   }
 
   in.arg8 = CPU_EXCEPTION_ISR;
+  picoos_overview_log_cpu_exception(in.arg8, cause);
   update_state(CPU_EXCEPTION);
 }
 

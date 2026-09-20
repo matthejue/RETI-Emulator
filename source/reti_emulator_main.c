@@ -5,6 +5,7 @@
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_instrs.h"
 #include "../include/parse/parse_sections.h"
+#include "../include/picoos_overview.h"
 #include "../include/reti.h"
 #include "../include/special_opts.h"
 #include "../include/terminal_view.h"
@@ -161,12 +162,14 @@ int main(int argc, char *argv[]) {
 
   Program_Sections sections = load_sram_program(NULL);
   set_sram_debug_sections(sections);
+  set_picoos_overview_sections(sections);
 
   if (strcmp(eprom_prgrm_path, "") != 0) {
     if (!has_sram_prgrm) {
       Program_Sections eprom_sram_sections =
           parse_sections_for_reti_path(eprom_prgrm_path);
       set_sram_debug_sections(eprom_sram_sections);
+      set_picoos_overview_sections(eprom_sram_sections);
     }
     error_context.filename = eprom_prgrm_path;
     parse_and_load_program(get_prgrm_content(eprom_prgrm_path),

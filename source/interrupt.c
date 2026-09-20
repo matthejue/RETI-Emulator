@@ -4,6 +4,7 @@
 #include "../include/interrupt_controller.h"
 #include "../include/log.h"
 #include "../include/parse/parse_args.h"
+#include "../include/picoos_overview.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
@@ -60,6 +61,7 @@ bool timer_interrupt_check() {
     // Keeps one timer signal pending until its interrupt handler completes
     interrupt_timer_active = false;
     in.arg8 = device_to_isr[INTERRUPT_TIMER];
+    picoos_overview_log_hardware_interrupt("Timer", in.arg8, timer_interval);
     update_state(HARDWARE_INTERRUPT);
     success = out.retbool1;
     timer_cnt = 0;
@@ -84,6 +86,7 @@ bool custom_interrupt_trigger() {
     return false;
   }
   in.arg8 = custom_action_isr;
+  picoos_overview_log_hardware_interrupt("Custom", in.arg8, 0);
   update_state(HARDWARE_INTERRUPT);
   bool should_cont = out.retbool2;
   return should_cont;
@@ -101,6 +104,7 @@ bool uart_interrupt_trigger(uint8_t byte) {
   uart_interrupt_pending = true;
   pending_uart_isr = uart_isr;
   in.arg8 = uart_isr;
+  picoos_overview_log_hardware_interrupt("UART", in.arg8, byte);
   update_state(HARDWARE_INTERRUPT);
   return true;
 }

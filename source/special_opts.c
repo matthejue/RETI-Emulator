@@ -2,6 +2,7 @@
 #include "../include/core_debug.h"
 #include "../include/error.h"
 #include "../include/parse/parse_args.h"
+#include "../include/picoos_overview.h"
 #include "../include/parse/parse_instrs.h"
 #include "../include/reti.h"
 #include "../include/source_debug.h"
@@ -139,6 +140,7 @@ void close_out_and_err_file() {
 void finalize() {
   close_uart_terminal();
   stop_source_debugger();
+  stop_picoos_overview();
   close_terminal_output();
   close_uart_output();
   fin_reti();

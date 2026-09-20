@@ -8,7 +8,7 @@ from pathlib import Path
 from tkinter import scrolledtext
 
 
-POLL_INTERVAL_MS = 1000
+POLL_INTERVAL_MS = 100
 STATE_STRUCT = struct.Struct("<II")
 MEM_TYPE_SHIFT = 30
 EPROM_MEM_TYPE = 0b00
@@ -17,6 +17,7 @@ EPROM_MEM_TYPE = 0b00
 class SourceDebugApp:
     def __init__(self, root, debuginfo_path, state_path):
         self.root = root
+        self.root.configure(background="white")
         self.debuginfo_path = debuginfo_path
         self.state_path = state_path
         self.current_state = None
@@ -29,7 +30,8 @@ class SourceDebugApp:
 
         self.ranges = self.load_debuginfo()
         self.header = tk.Label(
-            root, textvariable=self.status_var, anchor="w", justify="left"
+            root, textvariable=self.status_var, anchor="w", justify="left",
+            background="white", foreground="#202020"
         )
         self.header.pack(fill="x", padx=8, pady=(8, 4))
 
@@ -38,10 +40,13 @@ class SourceDebugApp:
             wrap="none",
             font=("Courier", 11),
             state="disabled",
+            background="white",
+            foreground="#202020",
+            insertbackground="#202020",
         )
         self.text.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.text.tag_configure(
-            "current_line", background="white", foreground="black"
+            "current_line", background="#fff3b0", foreground="black"
         )
 
         if self.ranges:

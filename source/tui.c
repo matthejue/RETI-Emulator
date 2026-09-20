@@ -86,10 +86,10 @@ static void update_info_box_text(void) {
   if (current_info_box_page == 2) {
     snprintf(info_box_third_page, sizeof(info_box_third_page),
              tui_snapshot_available
-                 ? "(S)napshot, (R)estore, (d)ebug source, "
+                 ? "(S)napshot, (R)estore, (d)ebug source, (O)verview, "
                    "(v)iew terminal, (V)iew raw terminal, "
                    "(t)ranscode, (o)ther actions"
-                 : "(S)napshot, (d)ebug source, "
+                 : "(S)napshot, (d)ebug source, (O)verview, "
                    "(v)iew terminal, (V)iew raw terminal, "
                    "(t)ranscode, (o)ther actions");
     info_box.title = info_box_third_page;

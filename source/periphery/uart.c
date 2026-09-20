@@ -2,6 +2,7 @@
 #include "../../include/dma.h"
 #include "../../include/interrupt.h"
 #include "../../include/parse/parse_args.h"
+#include "../../include/picoos_overview.h"
 #include "../../include/reti.h"
 #include "../../include/interrupt_controller.h"
 #include "../../include/input_output.h"
@@ -535,6 +536,7 @@ static void process_uart_literal_output_command(char *command) {
 
 static void process_uart_control(void) {
   uart_control[uart_control_len] = '\0';
+  picoos_overview_log_host_request(uart_control);
   if (strncmp(uart_control, UART_LOAD_COMMAND_PREFIX,
               strlen(UART_LOAD_COMMAND_PREFIX)) == 0) {
     process_uart_load_command(uart_control);

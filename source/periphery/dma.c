@@ -2,6 +2,7 @@
 #include "../../include/interrupt.h"
 #include "../../include/interrupt_controller.h"
 #include "../../include/parse/parse_args.h"
+#include "../../include/picoos_overview.h"
 #include "../../include/reti.h"
 #include "../../include/statemachine.h"
 #include "../../include/uart.h"
@@ -147,6 +148,7 @@ bool dma_interrupt_check(void) {
 
   dma_interrupt_pending = false;
   in.arg8 = dma_isr;
+  picoos_overview_log_hardware_interrupt("DMA", in.arg8, dma_status);
   update_state(HARDWARE_INTERRUPT);
   return out.retbool1;
 }

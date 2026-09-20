@@ -7,6 +7,7 @@
 #include "../../include/log.h"
 #include "../../include/parse/parse_args.h"
 #include "../../include/parse/parse_instrs.h"
+#include "../../include/picoos_overview.h"
 #include "../../include/reti.h"
 #include "../../include/snapshot_debug.h"
 #include "../../include/source_debug.h"
@@ -1453,28 +1454,34 @@ static void restart_emulator(void) {
 }
 
 static bool continuous_execution_active = false;
-static const time_t RUNNING_TUI_REFRESH_INTERVAL_SECONDS = 1;
-static struct timespec last_running_tui_refresh;
-static bool running_tui_refresh_scheduled = false;
+static const time_t RUNNING_DEBUG_REFRESH_INTERVAL_SECONDS = 1;
+static struct timespec last_running_debug_refresh;
+static bool running_debug_refresh_scheduled = false;
 
-static void schedule_running_tui_refresh(void) {
-  clock_gettime(CLOCK_MONOTONIC, &last_running_tui_refresh);
-  running_tui_refresh_scheduled = true;
+static void refresh_external_debug_views(void) {
+  source_debug_update_current_stackframe_function();
+  refresh_source_debugger();
+  refresh_picoos_overview();
 }
 
-static bool running_tui_refresh_is_due(void) {
+static void schedule_running_debug_refresh(void) {
+  clock_gettime(CLOCK_MONOTONIC, &last_running_debug_refresh);
+  running_debug_refresh_scheduled = true;
+}
+
+static bool running_debug_refresh_is_due(void) {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
-  time_t elapsed_seconds = now.tv_sec - last_running_tui_refresh.tv_sec;
-  return elapsed_seconds > RUNNING_TUI_REFRESH_INTERVAL_SECONDS ||
-         (elapsed_seconds == RUNNING_TUI_REFRESH_INTERVAL_SECONDS &&
-          now.tv_nsec >= last_running_tui_refresh.tv_nsec);
+  time_t elapsed_seconds = now.tv_sec - last_running_debug_refresh.tv_sec;
+  return elapsed_seconds > RUNNING_DEBUG_REFRESH_INTERVAL_SECONDS ||
+         (elapsed_seconds == RUNNING_DEBUG_REFRESH_INTERVAL_SECONDS &&
+          now.tv_nsec >= last_running_debug_refresh.tv_nsec);
 }
 
 static void refresh_running_tui(void) {
   draw_tui();
-  schedule_running_tui_refresh();
+  schedule_running_debug_refresh();
 }
 
 void redraw_running_debug_tui(void) {
@@ -1526,7 +1533,7 @@ void stop_continuous_execution(void) {
   }
 
   continuous_execution_active = false;
-  running_tui_refresh_scheduled = false;
+  running_debug_refresh_scheduled = false;
   nodelay(stdscr, FALSE);
   set_tui_program_running(false);
 }
@@ -1535,12 +1542,15 @@ void poll_running_debug_action(void) {
   if (!debug_mode || !continuous_execution_active) {
     return;
   }
-  if (uart_terminal_is_active()) {
-    running_tui_refresh_scheduled = false;
-    return;
+  if (!running_debug_refresh_scheduled) {
+    schedule_running_debug_refresh();
   }
-  if (!running_tui_refresh_scheduled) {
-    schedule_running_tui_refresh();
+  if (uart_terminal_is_active()) {
+    if (running_debug_refresh_is_due()) {
+      refresh_external_debug_views();
+      schedule_running_debug_refresh();
+    }
+    return;
   }
 
   int key = getch();
@@ -1558,13 +1568,13 @@ void poll_running_debug_action(void) {
     quit_emulator();
   }
   if (key == 'v' || key == 'V') {
-    running_tui_refresh_scheduled = false;
+    running_debug_refresh_scheduled = false;
     if (!activate_uart_terminal(key == 'V')) {
       redraw_running_debug_tui();
     }
     return;
   }
-  if (running_tui_refresh_is_due()) {
+  if (running_debug_refresh_is_due()) {
     refresh_running_tui();
   }
 }
@@ -1656,6 +1666,18 @@ void evaluate_keyboard_input(void) {
       if (!start_source_debugger()) {
         display_notification_box("Source Debug Error",
                                  "Failed to start source debugger");
+      }
+      draw_tui();
+      continue;
+    } else if (key == 'O') {
+      reset_all_scroll_offsets();
+      if (!picoos_overview_is_available()) {
+        display_notification_box(
+            "PicoOS Overview",
+            "PicoOS Overview unavailable because PicoOS is not loaded");
+      } else if (!start_picoos_overview()) {
+        display_notification_box("PicoOS Overview Error",
+                                 "Failed to start PicoOS Overview");
       }
       draw_tui();
       continue;
@@ -1761,6 +1783,18 @@ void wait_for_tui_quit(void) {
       }
       draw_tui();
       continue;
+    case 'O':
+      reset_all_scroll_offsets();
+      if (!picoos_overview_is_available()) {
+        display_notification_box(
+            "PicoOS Overview",
+            "PicoOS Overview unavailable because PicoOS is not loaded");
+      } else if (!start_picoos_overview()) {
+        display_notification_box("PicoOS Overview Error",
+                                 "Failed to start PicoOS Overview");
+      }
+      draw_tui();
+      continue;
     case 'v':
     case 'V':
       if (!activate_uart_terminal(key == 'V')) {
@@ -1821,7 +1855,7 @@ static void print_dma_view(void) {
 }
 
 bool draw_tui(void) {
-  source_debug_update_current_stackframe_function();
+  refresh_external_debug_views();
   update_active_box_marker();
 
   uint64_t eprom_watchobject_int =

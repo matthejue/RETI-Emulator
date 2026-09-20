@@ -6,6 +6,7 @@
 #include "../include/interpr.h"
 #include "../include/interrupt.h"
 #include "../include/interrupt_controller.h"
+#include "../include/picoos_overview.h"
 #include "../include/reti.h"
 #include "../include/source_debug.h"
 #include "../include/stddef.h"
@@ -24,7 +25,6 @@ uint8_t isr_heap[HEAP_SIZE];
 bool breakpoint_encountered = true;
 bool isr_finished = true;
 bool isr_step_into = true;
-static bool source_debug_active = false;
 
 uint8_t finished_isr_here;
 uint8_t not_stepped_into_isr_here;
@@ -262,13 +262,8 @@ void check_draw_tui() {
   }
 }
 
-void activate_source_debug(void) { source_debug_active = true; }
-
 void sync_source_debug_state(void) {
   source_debug_update_current_stackframe_function();
-  if (source_debug_active) {
-    write_source_debug_state();
-  }
 }
 
 void update_state(Event event) {
@@ -293,6 +288,7 @@ void update_state(Event event) {
       check_draw_tui();
       remember_was_hardware_int();
       stacked_isrs_cnt++;
+      picoos_overview_enter_hardware_interrupt(in.arg8);
     } else { // if (out.retbool1 != check_prio_isr(in.arg8)) {
       check_heap_size_before_insert_into_heap(in.arg8);
     }
@@ -327,6 +323,7 @@ void update_state(Event event) {
     check_not_stepped_into_isr_completed();
     uart_interrupt_completed(completed_isr);
     check_hardware_int_completed();
+    picoos_overview_interrupt_returned();
     break;
   default:
     fprintf(stderr, "Error: Unknown event type %d\n", event);

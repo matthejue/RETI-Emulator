@@ -6,6 +6,7 @@
 #include "../include/interrupt.h"
 #include "../include/parse/parse_args.h"
 #include "../include/parse/parse_sections.h"
+#include "../include/picoos_overview.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
 #include "../include/guest_filesystem.h"
@@ -47,6 +48,7 @@ void init_reti() {
   init_cpu_exceptions();
   init_uart();
   init_dma();
+  reset_picoos_overview(os_mode);
 
   // TODO: Tobias: Die ganzen Speicher nicht mit 0 initialisiert
   if (!ensure_reti_emulator_directory(peripherals_dir)) {

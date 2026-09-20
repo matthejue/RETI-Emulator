@@ -93,6 +93,7 @@ jobs:
           mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main binary/release/reti-emulator/reti_emulator
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
+          cp source/debug/picoos_overview.py binary/release/reti-emulator/source/debug/picoos_overview.py
           cp README.md binary/release/reti-emulator/README.md
           tar -C binary/release -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator
 
@@ -110,6 +111,7 @@ jobs:
           mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main.exe binary/release/reti-emulator/reti_emulator.exe
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
+          cp source/debug/picoos_overview.py binary/release/reti-emulator/source/debug/picoos_overview.py
           cp README.md binary/release/reti-emulator/README.md
           for dll in $(ldd binary/reti_emulator_main.exe | awk '/\/usr\/bin\/msys-.*\.dll/ { for (i = 1; i <= NF; i++) if ($i ~ /^\/usr\/bin\/msys-.*\.dll$/) print $i }' | sort -u); do
             cp "$dll" binary/release/reti-emulator/
@@ -139,6 +141,7 @@ jobs:
           mkdir -p binary/release/reti-emulator/source/debug
           cp binary/reti_emulator_main binary/release/reti-emulator/reti_emulator
           cp source/debug/source_debug.py binary/release/reti-emulator/source/debug/source_debug.py
+          cp source/debug/picoos_overview.py binary/release/reti-emulator/source/debug/picoos_overview.py
           cp README.md binary/release/reti-emulator/README.md
           codesign --force --deep --sign - binary/release/reti-emulator/reti_emulator
           tar -C binary/release -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator
@@ -236,6 +239,7 @@ jobs:
           cp .github/release/android/reti_emulator "$package/reti_emulator"
           cp .github/release/android/README.md "$package/README.md"
           cp source/debug/source_debug.py "$package/source/debug/source_debug.py"
+          cp source/debug/picoos_overview.py "$package/source/debug/picoos_overview.py"
           cp README.md "$package/PROJECT_README.md"
           chmod 755 "$package/reti_emulator" "$package/binary/reti_emulator_main"
           tar -C "binary/android-${{ matrix.arch }}" -czf "$GITHUB_WORKSPACE/binary/${{ matrix.archive }}" reti-emulator

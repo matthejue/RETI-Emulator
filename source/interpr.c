@@ -10,6 +10,7 @@
 #include "../include/interrupt_controller.h"
 #include "../include/log.h"
 #include "../include/parse/parse_args.h"
+#include "../include/picoos_overview.h"
 #include "../include/reti.h"
 #include "../include/statemachine.h"
 #include "../include/uart.h"
@@ -420,6 +421,8 @@ void interpr_instr(Instruction *assembly_instr) {
     break;
   case INT:
     in.arg8 = assembly_instr->opd1;
+    picoos_overview_log_software_interrupt(
+        in.arg8, read_array(regs, ACC, false), read_array(regs, IN1, false));
     update_state(SOFTWARE_INTERRUPT);
     goto no_pc_increase;
   case RTI:
