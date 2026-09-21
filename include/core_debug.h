@@ -69,6 +69,8 @@ void print_array_with_idcs_from_to(MemType mem_type, uint64_t start,
 void print_file_with_idcs(MemType mem_type, uint64_t start, uint64_t end,
                           bool are_unsigned, bool are_instrs);
 void set_sram_debug_sections(Program_Sections sections);
+bool active_debug_box_is_sram(void);
+bool open_sram_range_in_active_box(uint32_t start, uint32_t end);
 bool draw_tui(void);
 void evaluate_keyboard_input(void);
 void poll_running_debug_action(void);

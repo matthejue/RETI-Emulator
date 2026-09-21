@@ -360,6 +360,12 @@ static void update_active_box_marker(void) {
   set_tui_active_box(get_box_for_box_identifier(active_box_identifier));
 }
 
+bool active_debug_box_is_sram(void) {
+  return active_box_identifier == SRAM_C_BOX ||
+         active_box_identifier == SRAM_D_BOX ||
+         active_box_identifier == SRAM_S_BOX;
+}
+
 static void switch_active_window(int8_t direction) {
   for (uint8_t i = 0; i < NUM_FOCUS_BOXES; i++) {
     if (focus_order[i] == active_box_identifier) {
@@ -443,8 +449,80 @@ static uint32_t count_comments_for_instruction(MemType mem_type, uint64_t idx,
   return count;
 }
 
+static bool sram_idx_should_display_as_instruction(uint64_t idx,
+                                                   uint32_t mem_content);
+static bool sram_idx_values_are_unsigned(uint64_t idx);
+
+static size_t sram_value_length(uint64_t idx, uint32_t mem_content) {
+  bool is_code_instr = sram_idx_should_display_as_instruction(idx, mem_content);
+  bool are_instrs =
+      is_code_instr ||
+      (sram_transcode_mode == SRAM_TRANSCODE_INSTRUCTION &&
+       machine_word_is_valid_instruction(mem_content));
+  if (are_instrs && machine_word_is_valid_instruction(mem_content)) {
+    Instruction *instruction = machine_to_assembly(mem_content);
+    char *value = assembly_to_str(instruction);
+    size_t length = strlen(value);
+    free(value);
+    free(instruction);
+    return length;
+  }
+
+  if (!is_code_instr && sram_transcode_mode == SRAM_TRANSCODE_ASCII &&
+      mem_content <= 127) {
+    char *value = ascii_value_to_str(mem_content);
+    size_t length = strlen(value);
+    free(value);
+    return length;
+  }
+
+  if (binary_mode) {
+    return 32;
+  }
+  if (sram_transcode_mode == SRAM_TRANSCODE_UNSIGNED ||
+      sram_idx_values_are_unsigned(idx)) {
+    return snprintf(NULL, 0, "%u", mem_content);
+  }
+  return snprintf(NULL, 0, "%d", (int32_t)mem_content);
+}
+
+static size_t register_pointer_label_length(uint64_t idx) {
+  size_t length = 0;
+  for (int i = 0; i < NUM_REGISTERS; i++) {
+    uint32_t address = read_array(regs, i, false);
+    uint8_t memory_type = address >> 30;
+    if ((memory_type == SRAM_CONST || memory_type == 0b11) &&
+        (address & 0x7FFFFFFF) == idx) {
+      length += 1 + strlen(register_code_to_name[i]);
+    }
+  }
+  return length == 0 ? 0 : length + strlen("<-");
+}
+
+static uint32_t sram_value_rows(uint64_t idx, MemType mem_type) {
+  Box *box = get_box_for_mem_type(mem_type);
+  int inner_width = max(0, box->width - 2);
+  if (inner_width == 0) {
+    return 1;
+  }
+
+  uint32_t mem_content = read_file(sram, idx);
+  size_t line_length = num_digits_for_num(sram_size - 1) + strlen(": ") +
+                       sram_value_length(idx, mem_content) +
+                       register_pointer_label_length(idx);
+  const char *variable_label = source_debug_variable_label_for_sram_idx(idx);
+  if (variable_label != NULL) {
+    line_length += 1 + strlen(variable_label);
+  }
+  return max(1, (line_length + inner_width - 1) / inner_width);
+}
+
 static uint32_t rendered_rows_for_idx(MemType mem_type, uint64_t idx) {
-  return 1 + count_comments_for_instruction(mem_type, idx, true) +
+  uint32_t value_rows =
+      mem_type == SRAM_C || mem_type == SRAM_D || mem_type == SRAM_S
+          ? sram_value_rows(idx, mem_type)
+          : 1;
+  return value_rows + count_comments_for_instruction(mem_type, idx, true) +
          count_comments_for_instruction(mem_type, idx, false);
 }
 
@@ -701,6 +779,25 @@ static char *address_idx_to_string(uint64_t idx) {
   char *addr = malloc(len_addr);
   snprintf(addr, len_addr, "%llu", (unsigned long long)idx);
   return addr;
+}
+
+bool open_sram_range_in_active_box(uint32_t start, uint32_t end) {
+  if (!active_debug_box_is_sram() || start > end || end >= sram_size) {
+    return false;
+  }
+
+  WatchBox *watchbox = get_watchbox(active_box_identifier);
+  char *address = address_idx_to_string(start);
+  if (watchbox == NULL || address == NULL) {
+    free(address);
+    return false;
+  }
+
+  free(watchbox->watchobject_addr);
+  watchbox->watchobject = ADDRESS;
+  watchbox->watchobject_addr = address;
+  watchbox->scroll_offset = 0;
+  return true;
 }
 
 static void change_active_watchobject(int8_t direction) {
@@ -1519,12 +1616,36 @@ static int read_tui_key(void) {
   return key;
 }
 
+static int read_paused_tui_key(void) {
+  if (!picoos_overview_is_open()) {
+    return read_tui_key();
+  }
+
+  wtimeout(stdscr, 100);
+  int key = read_tui_key();
+  wtimeout(stdscr, -1);
+  return key;
+}
+
+static void handle_picoos_overview_navigation(bool navigation_enabled) {
+  uint32_t start;
+  uint32_t end;
+  if (!picoos_overview_take_navigation_request(&start, &end)) {
+    return;
+  }
+  if (navigation_enabled && breakpoint_encountered &&
+      open_sram_range_in_active_box(start, end)) {
+    draw_tui();
+  }
+}
+
 static void start_continuous_execution(void) {
   update_state(CONTINUE);
   continuous_execution_active = true;
   set_tui_program_running(true);
   nodelay(stdscr, TRUE);
   refresh_running_tui();
+  handle_picoos_overview_navigation(false);
 }
 
 void stop_continuous_execution(void) {
@@ -1536,6 +1657,7 @@ void stop_continuous_execution(void) {
   running_debug_refresh_scheduled = false;
   nodelay(stdscr, FALSE);
   set_tui_program_running(false);
+  handle_picoos_overview_navigation(false);
 }
 
 void poll_running_debug_action(void) {
@@ -1581,7 +1703,8 @@ void poll_running_debug_action(void) {
 
 void evaluate_keyboard_input(void) {
   while (true) {
-    int key = read_tui_key();
+    int key = read_paused_tui_key();
+    handle_picoos_overview_navigation(true);
     if (key == ERR) {
       continue;
     }
@@ -1724,7 +1847,8 @@ void wait_for_tui_quit(void) {
     update_term_and_box_sizes();
     draw_tui();
 
-    int key = read_tui_key();
+    int key = read_paused_tui_key();
+    handle_picoos_overview_navigation(true);
     if (key == ERR) {
       continue;
     }

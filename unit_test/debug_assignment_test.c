@@ -174,6 +174,46 @@ static void test_shared_value_input_editing(void) {
   }
 }
 
+static void test_overview_navigation_changes_only_selected_sram_box(void) {
+  select_box(SRAM_C_BOX);
+  assert(open_sram_range_in_active_box(40, 60));
+  assert(sram_c_watchbox.watchobject == ADDRESS);
+  assert(strcmp(sram_c_watchbox.watchobject_addr, "40") == 0);
+  assert(sram_c_watchbox.scroll_offset == 0);
+  assert(sram_d_watchbox.watchobject == DS);
+  assert(sram_s_watchbox.watchobject == SP);
+
+  binary_mode = true;
+  assert(draw_tui());
+  int target_row = -1;
+  for (int row = 1; row < sram_c_box.height - 1; row++) {
+    char rendered[64];
+    assert(mvwinnstr(sram_c_box.win, row, 1, rendered,
+                     sizeof(rendered) - 1) != ERR);
+    rendered[sizeof(rendered) - 1] = '\0';
+    if (strncmp(rendered, "00040:", strlen("00040:")) == 0) {
+      target_row = row;
+      break;
+    }
+  }
+  assert(target_row >= 0);
+  assert(abs(target_row - sram_c_box.height / 2) <= 2);
+  binary_mode = false;
+
+  select_box(SRAM_D_BOX);
+  assert(open_sram_range_in_active_box(70, 80));
+  assert(sram_d_watchbox.watchobject == ADDRESS);
+  assert(strcmp(sram_d_watchbox.watchobject_addr, "70") == 0);
+  assert(strcmp(sram_c_watchbox.watchobject_addr, "40") == 0);
+  assert(sram_s_watchbox.watchobject == SP);
+
+  select_box(REGS_BOX);
+  assert(!open_sram_range_in_active_box(90, 100));
+  assert(strcmp(sram_c_watchbox.watchobject_addr, "40") == 0);
+  assert(strcmp(sram_d_watchbox.watchobject_addr, "70") == 0);
+  assert(sram_s_watchbox.watchobject == SP);
+}
+
 static void test_menus_show_abort_hint(FILE *output) {
   const Menu_Entry entries[] = {{"PC", PC}, {"ACC", ACC}};
   const char *hint = "(abort: 'q' or 'esc')";
@@ -256,6 +296,7 @@ int main(void) {
   test_invalid_input_can_retry_or_abort();
   test_abort_leaves_registers_and_memory_unchanged();
   test_shared_value_input_editing();
+  test_overview_navigation_changes_only_selected_sram_box();
   test_menus_show_abort_hint(output);
   test_uart_input_abort_does_not_deliver_a_byte();
 

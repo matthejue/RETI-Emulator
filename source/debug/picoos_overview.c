@@ -1,5 +1,6 @@
 #include "../../include/picoos_overview.h"
 #include "../../include/assemble.h"
+#include "../../include/core_debug.h"
 #include "../../include/exception.h"
 #include "../../include/interrupt_controller.h"
 #include "../../include/parse/parse_args.h"
@@ -49,6 +50,7 @@ typedef struct {
 } PicoOSOverviewHandler;
 
 static pid_t overview_pid = -1;
+static char *overview_navigation_path = NULL;
 static Program_Sections overview_sections;
 static bool overview_sections_set = false;
 static uint64_t overview_generation = 0;
@@ -138,6 +140,27 @@ static void reap_overview_if_exited(void) {
   if (waitpid(overview_pid, NULL, WNOHANG) == overview_pid) {
     overview_pid = -1;
   }
+}
+
+static void remove_navigation_files(void) {
+  if (overview_navigation_path == NULL) {
+    return;
+  }
+
+  size_t path_len = strlen(overview_navigation_path);
+  char *temporary_path = malloc(path_len + strlen(".tmp") + 1);
+  char *processing_path = malloc(path_len + strlen(".processing") + 1);
+  if (temporary_path != NULL) {
+    sprintf(temporary_path, "%s.tmp", overview_navigation_path);
+    unlink(temporary_path);
+  }
+  if (processing_path != NULL) {
+    sprintf(processing_path, "%s.processing", overview_navigation_path);
+    unlink(processing_path);
+  }
+  unlink(overview_navigation_path);
+  free(temporary_path);
+  free(processing_path);
 }
 
 static PicoOSOverviewEvent *append_event(const char *kind, const char *source) {
@@ -468,7 +491,10 @@ static bool write_overview_state(void) {
   cJSON_AddNumberToObject(root, "format_version", 1);
   cJSON_AddNumberToObject(root, "generation", (double)++overview_generation);
   cJSON_AddNumberToObject(root, "sram_size", sram_size);
-  cJSON_AddBoolToObject(root, "paused", breakpoint_encountered);
+  cJSON_AddBoolToObject(root, "paused",
+                       breakpoint_encountered && isr_finished && isr_step_into);
+  cJSON_AddBoolToObject(root, "active_sram_box",
+                       active_debug_box_is_sram());
   cJSON_AddItemToObject(root, "registers", registers_json());
   cJSON_AddItemToObject(root, "sections", sections_json());
   cJSON_AddItemToObject(root, "interrupts", interrupts_json());
@@ -518,8 +544,11 @@ bool start_picoos_overview(void) {
   char *state_path = build_reti_emulator_file_path(
       peripherals_dir, "picoos_overview_state.json");
   char *sram_path = build_reti_emulator_file_path(peripherals_dir, "sram.bin");
+  char *navigation_path = build_reti_emulator_file_path(
+      peripherals_dir, "picoos_overview_navigation.txt");
   if (script_path == NULL || debug_path == NULL || layout_path == NULL ||
-      override_path == NULL || state_path == NULL || sram_path == NULL) {
+      override_path == NULL || state_path == NULL || sram_path == NULL ||
+      navigation_path == NULL) {
     free(helper_path);
     free(script_path);
     free(debug_path);
@@ -527,8 +556,14 @@ bool start_picoos_overview(void) {
     free(override_path);
     free(state_path);
     free(sram_path);
+    free(navigation_path);
     return false;
   }
+
+  remove_navigation_files();
+  free(overview_navigation_path);
+  overview_navigation_path = navigation_path;
+  remove_navigation_files();
 
   pid_t child_pid = fork();
   if (child_pid == 0) {
@@ -539,10 +574,11 @@ bool start_picoos_overview(void) {
 #endif
     if (helper_path != NULL && access(helper_path, X_OK) == 0) {
       execl(helper_path, helper_path, debug_path, layout_path, override_path,
-            state_path, sram_path, NULL);
+            state_path, sram_path, overview_navigation_path, NULL);
     }
     execlp("python3", "python3", script_path, debug_path, layout_path,
-           override_path, state_path, sram_path, NULL);
+           override_path, state_path, sram_path, overview_navigation_path,
+           NULL);
     fprintf(stderr, "PicoOS Overview unavailable: install Python 3 with "
                     "tkinter\n");
     _exit(EXIT_FAILURE);
@@ -556,9 +592,58 @@ bool start_picoos_overview(void) {
   free(state_path);
   free(sram_path);
   if (child_pid < 0) {
+    remove_navigation_files();
+    free(overview_navigation_path);
+    overview_navigation_path = NULL;
     return false;
   }
   overview_pid = child_pid;
+  return true;
+}
+
+bool picoos_overview_is_open(void) {
+  reap_overview_if_exited();
+  return overview_pid > 0;
+}
+
+bool picoos_overview_take_navigation_request(uint32_t *start, uint32_t *end) {
+  reap_overview_if_exited();
+  if (overview_pid <= 0 || overview_navigation_path == NULL) {
+    return false;
+  }
+
+  size_t processing_len =
+      strlen(overview_navigation_path) + strlen(".processing") + 1;
+  char *processing_path = malloc(processing_len);
+  if (processing_path == NULL) {
+    return false;
+  }
+  snprintf(processing_path, processing_len, "%s.processing",
+           overview_navigation_path);
+  unlink(processing_path);
+  if (rename(overview_navigation_path, processing_path) != 0) {
+    free(processing_path);
+    return false;
+  }
+
+  char *request = read_text_file(processing_path);
+  unlink(processing_path);
+  free(processing_path);
+  if (request == NULL) {
+    return false;
+  }
+
+  unsigned long long parsed_start;
+  unsigned long long parsed_end;
+  bool valid = sscanf(request, "%llu %llu", &parsed_start, &parsed_end) == 2 &&
+               parsed_start <= parsed_end && parsed_end < sram_size;
+  free(request);
+  if (!valid) {
+    return false;
+  }
+
+  *start = (uint32_t)parsed_start;
+  *end = (uint32_t)parsed_end;
   return true;
 }
 
@@ -571,10 +656,12 @@ void refresh_picoos_overview(void) {
 
 void stop_picoos_overview(void) {
   reap_overview_if_exited();
-  if (overview_pid <= 0) {
-    return;
+  if (overview_pid > 0) {
+    kill(overview_pid, SIGTERM);
+    waitpid(overview_pid, NULL, 0);
+    overview_pid = -1;
   }
-  kill(overview_pid, SIGTERM);
-  waitpid(overview_pid, NULL, 0);
-  overview_pid = -1;
+  remove_navigation_files();
+  free(overview_navigation_path);
+  overview_navigation_path = NULL;
 }

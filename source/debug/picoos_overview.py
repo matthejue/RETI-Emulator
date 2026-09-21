@@ -5,7 +5,7 @@ import struct
 import sys
 import tkinter as tk
 from pathlib import Path
-from tkinter import scrolledtext, ttk
+from tkinter import messagebox, scrolledtext, ttk
 
 
 POLL_INTERVAL_MS = 100
@@ -134,15 +134,17 @@ def add_tree(parent, columns, widths):
 
 class PicoOSOverviewApp:
     def __init__(self, root, debuginfo_path, layout_path, override_path,
-                 state_path, sram_path):
+                 state_path, sram_path, navigation_path):
         self.root = root
         self.layout = PicoOSLayout(debuginfo_path, layout_path, override_path)
         self.state_path = state_path
         self.memory = SRAM(sram_path)
+        self.navigation_path = navigation_path
         self.current_generation = None
         self.state = None
         self.processes = []
         self.shared_entries = []
+        self.navigation_targets = {}
         self.status = tk.StringVar(value="Waiting for the emulator…")
 
         ttk.Label(root, textvariable=self.status, anchor="w").pack(
@@ -186,6 +188,19 @@ class PicoOSOverviewApp:
             (120, 70, 190, 180, 300),
         )
         notebook.add(interrupt_frame, text="Interrupts")
+
+        self.navigation_trees = (
+            self.memory_tree,
+            self.process_tree,
+            self.shared_tree,
+            self.global_tree,
+            self.interrupt_tree,
+        )
+        self.navigation_targets = {
+            tree: {} for tree in self.navigation_trees
+        }
+        for tree in self.navigation_trees:
+            tree.bind("<Double-1>", self.open_memory_target)
 
         activity_frame = ttk.LabelFrame(main, text="Kernel activity history")
         self.activity = scrolledtext.ScrolledText(
@@ -315,6 +330,11 @@ class PicoOSOverviewApp:
 
         registers = self.state["registers"]
         mode = "paused" if self.state.get("paused") else "running"
+        navigation = (
+            "double-click memory entries to open them in the selected SRAM box"
+            if self.state.get("paused") and self.state.get("active_sram_box")
+            else "SRAM navigation unavailable"
+        )
         override_note = (
             f" | overrides: {self.layout.override_path}"
             if self.layout.overrides else
@@ -323,12 +343,76 @@ class PicoOSOverviewApp:
         self.status.set(
             f"PicoOS {mode} | PC={format_address(registers['PC'])} | "
             f"{len(self.processes)} processes | "
-            f"{len(self.shared_entries)} shared-memory objects{override_note}"
+            f"{len(self.shared_entries)} shared-memory objects | "
+            f"{navigation}{override_note}"
         )
 
-    @staticmethod
-    def clear_tree(tree):
+    def clear_tree(self, tree):
+        self.navigation_targets[tree].clear()
         tree.delete(*tree.get_children())
+
+    def add_navigation_target(self, tree, item, start, end=None):
+        start = SRAM.index(start)
+        end = start if end is None else SRAM.index(end)
+        if 0 <= start <= end < self.state["sram_size"]:
+            self.navigation_targets[tree][item] = (start, end)
+
+    def add_sized_navigation_target(self, tree, item, address, size):
+        start = SRAM.index(address)
+        size = max(1, int(size))
+        end = min(start + size - 1, self.state["sram_size"] - 1)
+        self.add_navigation_target(tree, item, start, end)
+
+    def open_memory_target(self, event):
+        tree = event.widget
+        item = tree.identify_row(event.y)
+        target = self.navigation_targets.get(tree, {}).get(item)
+        if target is None:
+            return
+
+        self.request_memory_target(target)
+
+    def request_memory_target(self, target):
+        state = self.state
+        try:
+            state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+
+        paused = state is not None and state.get("paused", False)
+        sram_selected = (
+            state is not None and state.get("active_sram_box", False)
+        )
+        if not paused or not sram_selected:
+            missing = []
+            if not paused:
+                missing.append("halt execution in stepping/debug mode")
+            if not sram_selected:
+                missing.append(
+                    "select one of the three SRAM boxes with Tab or Shift+Tab"
+                )
+            messagebox.showerror(
+                "Cannot open SRAM address",
+                "To open this memory entry, " + " and ".join(missing) + ".",
+                parent=self.root,
+            )
+            return
+
+        start, end = target
+        temporary_path = self.navigation_path.with_name(
+            self.navigation_path.name + ".tmp"
+        )
+        try:
+            temporary_path.write_text(
+                f"{start} {end}\n", encoding="utf-8"
+            )
+            temporary_path.replace(self.navigation_path)
+        except OSError as exc:
+            messagebox.showerror(
+                "Cannot open SRAM address",
+                f"Failed to send the SRAM address to the emulator: {exc}",
+                parent=self.root,
+            )
 
     def render_processes(self):
         self.clear_tree(self.process_tree)
@@ -351,7 +435,7 @@ class PicoOSOverviewApp:
                 "NULL" if process["shared_memory_attachments"] == NULL
                 else format_address(process["shared_memory_attachments"])
             )
-            self.process_tree.insert(
+            item = self.process_tree.insert(
                 "", "end",
                 values=(
                     pid,
@@ -365,6 +449,10 @@ class PicoOSOverviewApp:
                     f"cwd={process['cwd'] or '/'}; fds={descriptors}; "
                     f"shm={attachments}; exit={self.memory.signed(process['exit_status'])}",
                 ),
+            )
+            self.add_sized_navigation_target(
+                self.process_tree, item, process["base_address"],
+                self.memory.signed(process["size"]),
             )
 
     def shared_region_sizes(self):
@@ -385,7 +473,7 @@ class PicoOSOverviewApp:
         for entry in self.shared_entries:
             next_value = "NULL" if entry["next"] == NULL else format_address(entry["next"])
             size = sizes.get(entry["base_index"], 0)
-            self.shared_tree.insert(
+            item = self.shared_tree.insert(
                 "", "end",
                 values=(
                     self.memory.signed(entry["id"]),
@@ -397,6 +485,9 @@ class PicoOSOverviewApp:
                     ", ".join(entry["owners"]) or "—",
                     f"entry {entry['_index']} → {next_value}",
                 ),
+            )
+            self.add_sized_navigation_target(
+                self.shared_tree, item, entry["address"], size
             )
 
     def render_globals(self):
@@ -449,8 +540,11 @@ class PicoOSOverviewApp:
                     display += ", …"
             else:
                 display = f"{self.memory.signed(value)} (0x{value:08x})"
-            self.global_tree.insert(
+            item = self.global_tree.insert(
                 "", "end", values=(name, format_address(address), type_name, display)
+            )
+            self.add_sized_navigation_target(
+                self.global_tree, item, address, symbol.get("size", 1)
             )
 
     def render_interrupts(self):
@@ -461,18 +555,23 @@ class PicoOSOverviewApp:
             actual = self.memory.word(number)
             expected = labels.get(name)
             details = "matches build artifact" if SRAM.index(actual) == expected else f"expected SRAM {expected}"
-            self.interrupt_tree.insert(
+            item = self.interrupt_tree.insert(
                 "", "end",
                 values=("vector", number, name, format_address(actual), details),
             )
+            self.add_navigation_target(self.interrupt_tree, item, actual)
 
         for device in self.state["interrupts"].get("devices", []):
             number = device["isr"]
             handler = vector_names[number] if number < len(vector_names) else "disabled"
-            self.interrupt_tree.insert(
+            item = self.interrupt_tree.insert(
                 "", "end",
                 values=("device", number, handler, device["name"], f"priority {device['priority']}"),
             )
+            if number < len(vector_names):
+                self.add_navigation_target(
+                    self.interrupt_tree, item, self.memory.word(number)
+                )
 
         for depth, handler in enumerate(self.state["interrupts"].get("active", [])):
             number = handler["isr"]
@@ -484,18 +583,23 @@ class PicoOSOverviewApp:
             if handler["source"] == "syscall":
                 syscall = self.layout.data["syscalls"].get(str(handler["syscall_number"]), {})
                 detail = syscall.get("name", f"syscall {handler['syscall_number']}")
-            self.interrupt_tree.insert(
+            item = self.interrupt_tree.insert(
                 "", "end",
                 values=("active", depth, name, handler["source"], detail),
             )
+            if number < len(vector_names):
+                self.add_navigation_target(
+                    self.interrupt_tree, item, self.memory.word(number)
+                )
 
     def insert_memory_region(self, start, end, kind, details):
         if end < start:
             return
-        self.memory_tree.insert(
+        item = self.memory_tree.insert(
             "", "end",
             values=(start, end, format_kib(end - start + 1), kind, details),
         )
+        self.add_navigation_target(self.memory_tree, item, start, end)
 
     def describe_heap_block(self, block, kernel):
         if block["free"]:
@@ -641,11 +745,11 @@ class PicoOSOverviewApp:
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         raise SystemExit(
             "usage: picoos_overview.py <kernel.debuginfo> "
             "<kernel.overview> <kernel.overview.override.json> "
-            "<state.json> <sram.bin>"
+            "<state.json> <sram.bin> <navigation.txt>"
         )
 
     paths = [Path(argument).resolve() for argument in sys.argv[1:]]

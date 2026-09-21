@@ -9,6 +9,8 @@ void set_picoos_overview_sections(Program_Sections sections);
 void reset_picoos_overview(bool synthetic_startup);
 bool picoos_overview_is_available(void);
 bool start_picoos_overview(void);
+bool picoos_overview_is_open(void);
+bool picoos_overview_take_navigation_request(uint32_t *start, uint32_t *end);
 void refresh_picoos_overview(void);
 void stop_picoos_overview(void);
 
