@@ -630,14 +630,55 @@ Eine kurze Kontext-Zusammenfassung steht in [documentation/uart_protocol.md](doc
 
 # TSL Extension
 
-Die atomare `TSL`-Instruction (`test and set lock`) hat die Syntax `TSL S D i`. `S` enthält die Basisadresse, `i` ist der Offset und `D` das Zielregister:
+Die atomare `TSL`-Instruktion (`test and set lock`) hat die Syntax `TSL S D i`.
+`S` enthält die Basisadresse, `i` ist ein vorzeichenbehafteter 22-Bit-Offset in
+32-Bit-Speicherzellen und `D` das Zielregister. Der
+[`Interpreter`](source/interpr.c#L398) berechnet zuerst die Adresse `S + i`,
+liest den alten Speicherwert, schreibt ihn nach `D` und setzt danach die
+Speicherzelle an der zuvor berechneten Adresse auf `1`. Zwischen diesen
+Teilschritten wird kein Interrupt ausgeführt.
+
+Ein Offset ungleich null macht den Unterschied zwischen Basis und Ziel sichtbar:
 
 ```reti
-# Vorher: M[DS + 0] = 0
-TSL DS ACC 0
-# Nachher: ACC = 0 und M[DS + 0] = 1
+# Vorher: M[DS + 2] = 0
+TSL DS ACC 2
+# Nachher: ACC = 0 und M[DS + 2] = 1
 ```
 
-War der Lock bereits gesetzt, erhält `ACC` stattdessen `1`. Laden und Setzen erfolgen atomar, sodass zwischen beiden Operationen kein konkurrierender Zugriff möglich ist.
+| SRAM-Zelle | Bedeutung | Änderung durch `TSL DS ACC 2` |
+| --- | --- | --- |
+| `DS + 0` | Basisadresse | Keine |
+| `DS + 1` | Nächste Zelle | Keine |
+| `DS + 2` | Ziel nach zwei Wortschritten | Alter Wert nach `ACC`, dann Speicherwert `1` |
+
+`D` erhält immer den tatsächlichen alten Wert, nicht nur einen booleschen
+Lock-Zustand. Bei einem alten Wert `7` erhält `ACC` also `7`, während die Zelle
+auf `1` gesetzt wird. Bei einem alten Wert `1` bleibt die Zelle `1`. Auch wenn
+`S` und `D` dasselbe Register sind, wird die zuvor berechnete Adresse verwendet.
+Als Zielregister unterliegt `SP` der normalen Stackgrenzenprüfung. Schlägt die
+Registeränderung fehl, wird eine Stackoverflow-Ausnahme ausgelöst und die
+Speicherzelle nicht gesetzt. Bei `D = PC` entfällt die normale Inkrementierung
+des Befehlszählers, sodass der alte Speicherwert die nächste Programmadresse
+bestimmt.
+
+Die [`Opcode-Definition`](include/assemble.h) und der
+[`Assembler`](source/assemble.c#L141) ordnen `TSL` der Kategorie **Store, Move**
+zu. Mit Bitnummerierung ab `0` besteht die Instruktion aus diesen Feldern:
+
+![Instruktionsfelder für TSL DS ACC 2](documentation/images/tsl-instruction-format.svg)
+
+Das vollständige Maschinenwort ist `0xAEC00002`. Das Feld `i` enthält hier
+den vorzeichenbehafteten 22-Bit-Offset `+2`.
+
+`S` ist bei `TSL` das Adressregister und `D` das Ergebnisregister. In derselben
+Kategorie verwenden die anderen Modi diese Felder wie folgt:
+
+| Typ | Modus `M` | Syntax | Wirkung |
+| --- | --- | --- | --- |
+| `10` | `00` | `STORE S i` | Register `S` an die direkte, durch `DS` vervollständigte Adresse schreiben |
+| `10` | `01` | `STOREIN D S i` | Register `S` an Adresse `D + i` schreiben |
+| `10` | `10` | `TSL S D i` | `M[S + i]` nach `D` lesen, dann diese Zelle auf `1` setzen |
+| `10` | `11` | `MOVE S D` | Register `S` nach `D` kopieren |
 
 Eine nach Commit-Zeitpunkt geordnete Übersicht der PicoOS-relevanten Erweiterungen steht in [documentation/new_features_for_pico_os.md](documentation/new_features_for_pico_os.md).

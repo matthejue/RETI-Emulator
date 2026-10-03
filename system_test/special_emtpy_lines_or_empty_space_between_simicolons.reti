@@ -9,7 +9,7 @@ ADDI ACC 1; ; # don't care about readable code
 
 ADDI ACC 1; SUBI ACC 1
 
-MOVE ACC IN1; LOADI ACC 29
+MOVE ACC IN1; LOADI ACC 28
 INT 0
 
      JUMP 0

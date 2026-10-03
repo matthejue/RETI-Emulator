@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="240" viewBox="0 0 1120 240" role="img" aria-labelledby="title desc">
+<title id="title">TSL DS ACC 2 instruction encoding</title><desc id="desc">Bits 31 to 30 are type 10, bits 29 to 28 mode 10, bits 27 to 25 source register DS 111, bits 24 to 22 destination register ACC 011, and bits 21 to 0 the signed immediate 2. The complete instruction is hexadecimal AEC00002.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker></defs>
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#172536">
+<text x="51" y="37" font-size="16" text-anchor="start" font-weight="normal" fill="#172536">31</text>
+<text x="109" y="37" font-size="16" text-anchor="end" font-weight="normal" fill="#172536">30</text>
+<rect x="48" y="52" width="64" height="88" rx="9" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+<text x="80.0" y="88.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">typ</text>
+<text x="80.0" y="118.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">10</text>
+<text x="80.0" y="171" font-size="13" text-anchor="middle" font-weight="normal" fill="#172536">Store /</text>
+<text x="80.0" y="188" font-size="13" text-anchor="middle" font-weight="normal" fill="#172536">Move</text>
+<text x="115" y="37" font-size="16" text-anchor="start" font-weight="normal" fill="#172536">29</text>
+<text x="173" y="37" font-size="16" text-anchor="end" font-weight="normal" fill="#172536">28</text>
+<rect x="112" y="52" width="64" height="88" rx="9" fill="#fff2b2" stroke="#475569" stroke-width="2"/>
+<text x="144.0" y="88.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">M</text>
+<text x="144.0" y="118.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">10</text>
+<text x="144.0" y="178" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">TSL</text>
+<text x="179" y="37" font-size="16" text-anchor="start" font-weight="normal" fill="#172536">27</text>
+<text x="269" y="37" font-size="16" text-anchor="end" font-weight="normal" fill="#172536">25</text>
+<rect x="176" y="52" width="96" height="88" rx="9" fill="#eaf4ff" stroke="#475569" stroke-width="2"/>
+<text x="224.0" y="88.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">S</text>
+<text x="224.0" y="118.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">111</text>
+<text x="224.0" y="178" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">DS</text>
+<text x="275" y="37" font-size="16" text-anchor="start" font-weight="normal" fill="#172536">24</text>
+<text x="365" y="37" font-size="16" text-anchor="end" font-weight="normal" fill="#172536">22</text>
+<rect x="272" y="52" width="96" height="88" rx="9" fill="#edf9ed" stroke="#475569" stroke-width="2"/>
+<text x="320.0" y="88.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">D</text>
+<text x="320.0" y="118.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">011</text>
+<text x="320.0" y="178" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">ACC</text>
+<text x="371" y="37" font-size="16" text-anchor="start" font-weight="normal" fill="#172536">21</text>
+<text x="1069" y="37" font-size="16" text-anchor="end" font-weight="normal" fill="#172536">0</text>
+<rect x="368" y="52" width="704" height="88" rx="9" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+<text x="720.0" y="88.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">i</text>
+<text x="720.0" y="118.0" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">0000000000000000000010</text>
+<text x="720.0" y="178" font-size="18" text-anchor="middle" font-weight="normal" fill="#172536">Signed offset +2</text>
+<text x="560" y="227" font-size="24" text-anchor="middle" font-weight="bold" fill="#172536">TSL DS ACC 2  →  0xAEC00002</text>
+</g></svg>
