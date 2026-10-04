@@ -1,23 +1,24 @@
-[![asciicast](https://asciinema.org/a/693086.svg)](https://asciinema.org/a/693086)
-
 # Was ist der RETI-Emulator?
 
-Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**, **RETI-Debugger** und **Visualizer** für die Speicherinhalte der Peripheriegeräte der RETI während der Ausführung
+Der RETI-Emulator führt RETI-Programme aus und zeigt dabei Register, Speicher
+und Peripherie an. Er unterstützt sowohl RETI-Übungen als auch das in PicoC
+geschriebene Betriebssystem [`PicoOS`](../Pico-OS/README.md).
 
-- **Interpreter:** Ein Interpreter führt Anweisungen einer Programmiersprache direkt aus, ohne sie vorher in Maschinencode zu übersetzen. Die Ausführung erfolgt zeilenweise oder schrittweise.
-  - *Beispiel:* Python-Interpreter.
-- **Assembler:** Ein Assembler übersetzt Code in Assemblersprache in ausführbaren Maschinencode, der von einer dafür spezfischen CPU verstanden wird.
-  - *Beispiel:* Übersetzung von MOV AX, BX in Maschinencode für eine spezifische Architektur.
-- **Emulator:** Ein Emulator ahmt die Funktionalität eines Systems (z.B. Hardware oder Software) nach, sodass Programme für das originale System unverändert darauf laufen können.
-  - *Beispiele:* QEMU, der die Funktionalität verschiedener CPU-Architekturen nachahmt oder SNES-Emulatoren, welche alte Konsolenspiele auf einem PC ausführen.
-- **Debugger:** Ein Debugger ist ein Tool, das die Ausführung eines Programms erlaubt, mit dem Ziel Fehler (Bugs) zu finden, zu analysieren und zu beheben. Es bietet Funktionen wie Breakpoints, Schritt-für-Schritt-Ausführung und Inspektion von Variablen, Registerwerten und Speicherbereichen. Das Programm kann in verschiedenen Formen spezifiziert sein, einschließlich Quellcode, Bytecode oder ausführbarem Maschinencode.
-  - *Beispiel:* GDB (GNU Debugger) für C/C++-Programme.
-- **Visualizer:** Ein Visualizer stellt Daten, Abläufe oder Systeme visuell dar, um deren Struktur, Verhalten oder Ergebnisse leichter verständlich zu machen.
-  - *Beispiel:* Ein Graph-Visualizer, der Knoten und Verbindungen eines Netzwerks grafisch darstellt.
-- **Simulator:** Ein Simulator modelliert ein System oder dessen Verhalten auf höherer Abstraktionsebene, um Analysen, Tests oder Training durchzuführen, ohne jede Funktionalität notwendigerweise exakt nachzubilden.
-  - *Beispiel:* Flugsimulator für Pilotentraining.
+Die Aufzeichnung zeigt die Debug-TUI während der Ausführung eines RETI-Programms:
 
-Der RETI-Emulators hat einmal das Ziel, dass darauf eines Tages ein minimales Betriebssystem läuft, dass in PicoC geschrieben ist. Ein weiteres Ziel des RETI-Emulators ist es im Übungsbetrieb die Studenten beim Schreiben von RETI Programmen zu unterstützen, daher zeigt der RETI-Emulator auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und Features, welche die Verwendung für Studenten angenehmer gestalten.
+[![asciicast](https://asciinema.org/a/693086.svg)](https://asciinema.org/a/693086)
+
+Dabei kommen mehrere Werkzeuge zusammen. Die Begriffe unterscheiden sich so:
+
+- **Interpreter:** Führt einzelne Anweisungen aus, etwa der Python-Interpreter. Hier führt er die geladenen RETI-Maschinenbefehle aus.
+- **Assembler:** Übersetzt RETI-Assembly in 32-Bit-Maschinenwörter.
+- **Emulator:** Bildet CPU und Peripherie nach, damit deren Programme auf dem Host laufen können. Andere Beispiele sind QEMU und Konsolenemulatoren.
+- **Debugger:** Hilft bei der Fehlersuche durch Breakpoints, Einzelschritte und Speicheransichten, ähnlich wie GDB.
+- **Visualizer:** Macht den aktuellen Zustand von Registern, Speicher und Peripherie sichtbar.
+- **Simulator:** Modelliert das Verhalten eines Systems, beispielsweise für Tests oder Training.
+
+Das Diagramm zeigt, wie Assembly und Maschinenwörter in die Ausführung gelangen
+und welche Teile der Emulator dabei nachbildet:
 
 ```mermaid
 flowchart LR
@@ -32,39 +33,45 @@ flowchart LR
 
 # Übersicht
 
+Die Kommandozeilenoptionen legen fest, was geladen und angezeigt wird.
+Während der Ausführung wird der Debugger über die TUI bedient.
+Die Tests liegen in [`unit_test`](unit_test) mit **19 C-Testdateien** und
+[`system_test`](system_test) mit **32 RETI-Testprogrammen**.
+
 ## Kommandozeilenoptionen
 
-- `-r ram_size`: Setzt die Anzahl adressierbarer 32-Bit-Wörter im SRAM (Stadardwert: `2^16=65536`)
-- `-d`: Zeigt das Ncurses Debug TUI an
-- `-K`: Hält die Debug-TUI nach dem abschließenden `JUMP 0` geöffnet, bis sie mit `q` beendet wird
-- `-f file_dir`: Gibt an, wo das Verzeichnis `.reti_emulaor` erzeugt werden soll
-- `-e eprom_prgrm_path`: Parst und lädt Eprom-Startprogramm aus Datei, die über Dateipfad gefunden werden kann
-- `-i isrs_prgrm_path`: Parst und lädt Interrupt-Service Routinen aus Datei, die über Dateipfad gefunden werden kann
-- `-C interrupt_controller_config_path`: Initialisiert die Zuordnung und Priorität der Hardware-Interrupts aus einer Konfigurationsdatei
-- `-n isr_count`, `--isr-count isr_count`: Setzt die Anzahl der Einträge in der Interrupt-Vektor-Tabelle explizit auf einen Wert zwischen `0` und `255`
-- `-S sections_path`: Verwendet die angegebene `.sections`-Datei anstelle von `<program>.sections`
-- `-D debuginfo_path`: Verwendet die angegebene `.debuginfo`-Datei anstelle von `<program>.debuginfo`
-- `-w max_waiting_instrs`: Setzt raximale Wartezeit der UART für das Senden und Empfangen von Daten (Anzahle Befehle)
-- `-t`: Aktiviert Testmode für Systemtests
-- `-m`: Liest Eingaben aus Kommentar `# input: ...` raus
-- `-c`: Zeigt Quellkommentare im Debugmode an
-- `-v`: Zeigt zusäztliche Informationen an (Welche Kommandozeilenoptionen aktiviert sind)
-- `-b`: Aktiviert die Darstellung von Dezimalzahlen in Binärdarstellung
-- `-E`: Aktiviere Erweiterte Funktionalitäten (Hilfslinien um unnötige Leerzeichen sichtbar zu machen)
-- `-a`, `--assemble`: Assembliert die `.reti`-Datei in eine gleichnamige `.bin`-Datei und schreibt zuerst `codesegment_start`, `datasegment_start`, `heap_start`, `heap_size` und `stack_start` aus der gleichnamigen `.sections`-Datei, danach die Maschinenwörter binär kodiert wie in `sram.bin`
-- `-u`: Wertet Werte im Datensegment in Zweierkomplementdarstellung oder Betrag-Vorzeichendarstellug aus
-- `-I timer_interrupt_interval`: Das Zeitinterval (Anzahl ausgeführte Befehle) zwischen Timer Interrupts; `0` deaktiviert den Timer Interrupt
-- `-O`: Startet mit einer synthetischen aktiven ISR für Betriebssysteme, deren erster Prozess per `RTI` gestartet wird
-- `-M`, `--dma`: Aktiviert den DMA-Controller beim Start
-- `-h`: Zeigt Verwendungshinweise an
+Die Optionen werden vor dem Programmpfad angegeben. Ihre Verarbeitung steht in
+[`parse_args()`](source/parse/parse_args.c#L62).
 
-<!-- - `-p page_size`: Setzt Seitengröße (Standardwert: `2^12=4096`) -->
-<!-- - `-r radius`: Setzt Radius an Speicherzellen, die in der Legacy Debug TUI um einen observierten Addresspointer herum angezeigt werden sollen -->
-<!-- - `-l`: Zeigt das Legacy Debug Interface anstelle -->
+- `-r ram_size`: Anzahl adressierbarer 32-Bit-Wörter im SRAM, standardmäßig `65536`
+- `-d`: Öffnet die Ncurses-Debug-TUI
+- `-K`: Hält die Debug-TUI nach dem abschließenden `JUMP 0` geöffnet, bis sie mit `q` beendet wird
+- `-f file_dir`: Erstellt das Arbeitsverzeichnis `.reti_emulaor` unter diesem Pfad
+- `-e eprom_prgrm_path`: Lädt ein eigenes EPROM-Startprogramm
+- `-i isrs_prgrm_path`: Lädt Interrupt-Service-Routinen aus einer eigenen Datei
+- `-C interrupt_controller_config_path`: Lädt die Zuordnung und Prioritäten der Hardware-Interrupts
+- `-n isr_count`, `--isr-count isr_count`: Setzt die Anzahl der ISR-Tabelleneinträge auf `0` bis `255`
+- `-S sections_path`: Verwendet diese `.sections`-Datei statt `<program>.sections`
+- `-D debuginfo_path`: Verwendet diese `.debuginfo`-Datei statt `<program>.debuginfo`
+- `-w max_waiting_instrs`: Maximale UART-Wartezeit in ausgeführten Befehlen, standardmäßig `10`
+- `-t`: Schreibt Systemtest-Ausgaben nach `<program>.output` und Fehler nach `<program>.error`
+- `-m`: Liest UART-Eingaben aus dem Kommentar `# input: ...`
+- `-c`: Zeigt Quellkommentare im Debugger an
+- `-v`: Gibt die eingestellten Optionen aus
+- `-b`: Zeigt Zahlen binär an
+- `-E`: Aktiviert zusätzliche Hilfslinien im Debugger
+- `-a`, `--assemble`: Schreibt `<program>.bin` mit Loader-Header und Maschinenwörtern. Das Format steht in [`Abschnittsdateien für Compiler-Ausgaben`](#abschnittsdateien-für-compiler-ausgaben)
+- `-u`: Zeigt Werte im Datensegment als vorzeichenlose Zahlen an
+- `-I timer_interrupt_interval`: Timer-Intervall in ausgeführten Befehlen, standardmäßig `0` für einen deaktivierten Timer
+- `-O`: Ermöglicht den Start des ersten Prozesses per `RTI`
+- `-M`, `--dma`: Aktiviert den DMA-Controller beim Start
+- `-h`: Zeigt die Verwendungshinweise
+- `-V`, `--version`: Gibt die Version aus
 
 ## TUI-Aktionen
 
-Die Infobox verteilt die Aktionen auf drei Seiten. Mit `o` wird zyklisch zur nächsten Seite gewechselt.
+Die Textoberfläche (TUI) zeigt die verfügbaren Tasten in einer Infobox.
+Mit `o` wird zwischen deren drei Hilfeseiten gewechselt:
 
 ```mermaid
 flowchart LR
@@ -72,6 +79,9 @@ flowchart LR
     windows -->|o| tools[Snapshots, Quellcode und UART]
     tools -->|o| execution
 ```
+
+Die wichtigsten Aktionen sind in der folgenden Tabelle zusammengefasst.
+Groß- und Kleinschreibung unterscheiden sich.
 
 | Taste | Aktion |
 | --- | --- |
@@ -85,18 +95,26 @@ flowchart LR
 | `J` / `K` | Beobachtete Adresse oder beobachteten Registerwert erhöhen / verringern |
 | `C` | Ansicht wieder auf das Watchobject zentrieren |
 | `a` | Watchobject einem Register oder einer Adresse zuweisen |
-| `A` | Register-, Peripherie- oder Speicherwert im ausgewählten Fenster ändern; [Ablauf](#fenster-watchobjects-und-live-bearbeitung) |
+| `A` | Wert im ausgewählten Fenster ändern, siehe [`Fenster, Watchobjects und Live-Bearbeitung`](#fenster-watchobjects-und-live-bearbeitung) |
 | `T` / `e` | Ausgewählte ISR auslösen / nächste manuell auslösbare ISR auswählen |
 | `S` / `R` | Snapshot speichern / wiederherstellen |
 | `d` | PicoC-Quellcodeansicht öffnen |
-| `t` | Sichtbare SRAM-Werte zyklisch als vorzeichenbehaftete Zahl → vorzeichenlose Zahl → ASCII-Zeichen → RETI-Instruktion anzeigen; [Details](#debugging) |
-| `v` | UART-Terminalansicht öffnen; `Escape` kehrt zur Debug-TUI zurück |
-| `V` | Rohe UART-Terminalansicht öffnen; `Ctrl+]` kehrt zur Debug-TUI zurück |
+| `O` | PicoOS-Übersicht für Prozesse, Speicher und Kernelaktivität öffnen |
+| `t` | SRAM-Anzeige zwischen Zahlen, ASCII und RETI-Instruktionen wechseln, siehe [`Debugging`](#debugging) |
+| `v` | UART-Terminalansicht öffnen, Rückkehr mit `Escape` |
+| `V` | Rohe UART-Terminalansicht öffnen, Rückkehr mit `Ctrl+]` |
 | `q` | Menü oder Emulator verlassen |
 
 # Installation und Updates
 
-## Installation auf Linux Systemen, auf denen Kompilierung nicht möglich ist über eine statische Binary
+Unter Linux gibt es zwei Installationsarten: eine fertige Binary für den
+eigenen Benutzer oder einen selbst kompilierten Emulator für alle Benutzer.
+Die folgenden Befehle verwenden den [`Makefile`](Makefile) des Repositorys.
+
+## Lokale Installation unter Linux
+
+Die lokale Installation lädt eine fertige statische Binary nach `~/.local/bin`.
+Dafür werden Git, Make und Wget benötigt, aber kein C-Compiler:
 
 ```bash
 $ git clone -b main https://github.com/matthejue/RETI-Emulator.git ~/RETI-Emulator --depth 1
@@ -104,7 +122,11 @@ $ cd ~/RETI-Emulator
 $ make install-linux-local
 ```
 
-## Installation auf Linux Systemen, auf denen Kompilierung möglich ist durch eben Kompilierung
+## Globale Installation unter Linux
+
+Die globale Installation kompiliert den Emulator und verlinkt ihn unter
+`/usr/local/bin`. Dafür werden ein C-Compiler, die Ncurses-Entwicklungsdateien
+und für die Installation `sudo` benötigt:
 
 ```bash
 $ git clone -b main https://github.com/matthejue/RETI-Emulator.git ~/RETI-Emulator --depth 1
@@ -112,40 +134,52 @@ $ cd ~/RETI-Emulator
 $ make install-linux-global
 ```
 
-## Deinstallation auf Linux Systemen, wenn vorher lokal installiert wurde
+## Lokale Installation entfernen
+
+Zum Entfernen der lokalen Binary wird im geklonten Repository ausgeführt:
 
 ```bash
 $ cd ~/RETI-Emulator
 $ make uninstall-linux-local
 ```
 
-## Deinstallation auf Linux Systemen, wenn vorher global installiert wurde
+## Globale Installation entfernen
+
+Der folgende Befehl entfernt den globalen Link aus `/usr/local/bin`:
 
 ```bash
 $ cd ~/RETI-Emulator
 $ make uninstall-linux-global
 ```
 
-## Updaten auf Linux Systemen, wenn vorher lokal installiert wurde
+## Lokale Installation aktualisieren
+
+Das Update aktualisiert das Repository und lädt die aktuelle Release-Binary:
 
 ```bash
 $ cd ~/RETI-Emulator
 $ make update-linux-local
 ```
 
-## Updaten auf Linux Systemen, wenn vorher global installiert wurde
+## Globale Installation aktualisieren
+
+Das globale Update aktualisiert das Repository und kompiliert den Emulator neu:
 
 ```bash
 $ cd ~/RETI-Emulator
 $ make update-linux-global
 ```
 
-> Bitte lokale und globale Installationen nicht mischen, beim Wechsel zur jeweils anderen Installationsart vorher eine Deinstallation für die zuvor verwendete Installationsart durchführen.
+> Beim Wechsel der Installationsart zuerst die bisherige Installation entfernen,
+> damit nicht zwei verschiedene Versionen über den Suchpfad erreichbar sind.
 
 
 # Verwendung
 
-Der RETI-Emulator ist dazu in der Lage, die RETI-Befehle eines in einer `.reti`-Datei angebenen RETI-Programms zu interpretieren. D.h. er kann das RETI-Programm **ausführen**, indem er die RETI-Befehle aus einer Datei `prgrm.reti` herausliest und in den simulierten SRAM schreibt und mithilfe eines autogenerierten EPROM-Startprogramms, dass zu Beginn ausgeführt wird an den Start dieses Programmes springt. Zum Ausführen eines Programmes muss der RETI-Emulator mit dem Pfad zum RETI-Programm als Argument aufgerufen werden, z.B.:
+Der Emulator assembliert eine `.reti`-Datei und lädt ihre Maschinenwörter in den
+simulierten SRAM. Ein automatisch erzeugtes EPROM-Startprogramm setzt die
+Startregister und springt zum Programm. Eine eigene Datei `prgrm.reti` wird so
+gestartet:
 
 ```bash
 $ reti_emulator ./prgrm.reti
@@ -157,36 +191,43 @@ Ohne `-d` erscheinen abgeschlossene UART-Sendungen als rohe Bytes auf `stdout` u
 $ reti_emulator ./prgrm.reti > ausgabe.txt
 ```
 
-Das RETI-Programm `prgrm.reti`, das im Folgenden als Beispiel verwendet wird, sieht dabei wie folgt aus:
+Dieses Beispiel multipliziert `3` mit `7`. Mit `-d` hält der Debugger bei
+`INT 3`, sodass sich das Ergebnis `21` in [`ACC`](include/assemble.h#L22) ansehen lässt:
 
 ```reti
-# input: 16909060 3
 INT 3 # just a breakpoint, use c in debug mode -d to directly jump here
-INT 2
+LOADI ACC 3
 MOVE ACC IN1
-INT 2
+LOADI ACC 7
 MULT ACC IN1
 INT 3
-INT 0
 JUMP 0
 ```
 
-> Nicht vergessen `JUMP 0` ans Ende des Programmes zu setzen, sonst wird einfach weiter ausgeführt was danach im SRAM steht bzw. als was für Instructions der Speicherinhalt auf den der `PC` in dem Moment zeigt interpretiert wird.
+> `JUMP 0` beendet die Ausführung. Ohne diesen Abschluss führt der Emulator
+> auch die nachfolgenden SRAM-Wörter als Befehle aus.
 
-RETI-Emulator speichert alle Memory-Inhalte des SRAM in einer Datei `.reti_emulaor/sram.bin` ab. Die aus der Datei `prgrm.reti` geparsten Assembly-Befehle werden realitätsgetreu als 32-Bit (4 Byte) Maschinenbefehle in dieser Datei abgespeichert, weil dies am speichereffizientesten ist und die RETI möglichst realistisch simuliert werden soll.
+Der SRAM liegt in `.reti_emulaor/sram.bin`, mit vier Bytes pro Speicherwort.
+Die Datei wächst bei Schreibzugriffen und kann als Sparse File unbeschriebene
+Bereiche platzsparend abbilden. `ls -lh` zeigt ihre logische Größe, `du -h` den
+tatsächlich belegten Speicherplatz. `-r 65536` begrenzt den adressierbaren SRAM
+auf 256 KiB, reserviert aber nicht sofort eine Datei dieser Größe.
 
-> Die Datei `.reti_emulaor/sram.bin` ist zwar in der Ausgabe von `$ ls -lh ./.reti_emulaor/sram.bin` 256KB groß (mit dem default Wert von `-r 65536`, also $2^{16}$), aber in Wirklichkeit verbraucht die Datei bei einem kleinen RETI-Programm nur wenige KibiBytes, weil Sparse Files verwendet werden. Das sieht man z.B. mit `$ du -h ./.reti_emulaor/sram.bin`.
-
-> *Tipp:* Mittels `-f /tmp` (files) wird `.reti_emulaor` unter `/tmp` erstellt. Das Verzeichnis `/tmp` ist häufig als **tmpfs**-Partition, welche im Arbeitsspeicher gemounted ist umgesetzt. Dadurch existiert der Inhalt des Verzeichnisses nach dem Herunterfahren nicht mehr und das Verzeichnis, in dem der RETI-Emulator ausgeführt wird, wird nicht mit unnützen Dateien vollgemüllt.
+> Mit `-f /tmp` entstehen die Arbeitsdateien unter `/tmp` statt im aktuellen
+> Verzeichnis. Liegt `/tmp` auf einem tmpfs, werden sie im Arbeitsspeicher gehalten.
 
 ## Direkte Speicherwerte in `.reti`-Dateien
 
-Neben RETI-Instruktionen können in einer `.reti`-Datei auch direkte Speicherwerte stehen. Solche Werte werden nicht assembliert, sondern unverändert als 32-Bit-Wort in die nächste SRAM-Zelle geschrieben.
+Eine `.reti`-Datei kann neben Instruktionen auch Daten enthalten. Zahlen und
+einzelne ASCII-Zeichen in einfachen Anführungszeichen werden direkt als
+32-Bit-Wörter gespeichert.
 
-Unterstützt werden dezimale Zahlen und einzelne ASCII-Zeichen in einfachen Anführungszeichen:
+Im Beispiel überspringt `JUMP 5` die vier Datenwörter, damit sie nicht als
+Befehle ausgeführt werden:
 
 ```reti
 LOADI ACC 1
+JUMP 5
 42
 -1
 'e'
@@ -194,13 +235,19 @@ LOADI ACC 1
 JUMP 0
 ```
 
-In diesem Beispiel werden `42`, `-1`, der ASCII-Wert von `e` (`101`) und der ASCII-Wert von `!` (`33`) direkt in aufeinanderfolgende Speicherzellen geschrieben. Das ist besonders nützlich für Datensegmente, Strings oder vom Compiler erzeugte Speicherinhalte, die nicht als RETI-Instruktionen interpretiert werden sollen.
+Die Datenwörter enthalten `42`, `-1` sowie die ASCII-Werte `101` und `33`.
+So lassen sich etwa Strings und Compiler-Daten im SRAM ablegen.
 
 ## Abschnittsdateien für Compiler-Ausgaben
 
-Wenn zu einer Datei `program.reti` eine Datei `program.sections` existiert, liest der Emulator diese JSON-Datei ein und verwendet sie, um die `.reti`-Datei in Interrupt-Service-Routinen, Codesegment und Datensegment aufzuteilen. Mit `-S sections_path` kann stattdessen eine Abschnittsdatei mit anderem Pfad angegeben werden.
+Eine `.sections`-Datei beschreibt die Aufteilung einer Compiler-Ausgabe in
+Interrupt-Service-Routinen, Code und Daten. Zu `program.reti` wird automatisch
+`program.sections` gesucht. Mit `-S sections_path` lässt sich ein anderer Pfad
+angeben. Intern speichert [`Program_Sections`](include/parse/parse_sections.h#L22)
+die Grenzen.
 
-Beispiel für `program.sections`:
+Das folgende Beispiel legt den Programmcode ab Wort `40` und die Daten ab
+Wort `180` ab:
 
 ```json
 {
@@ -213,47 +260,60 @@ Beispiel für `program.sections`:
 }
 ```
 
-Die Adressen sind nullbasiert und beziehen sich auf die geparsten Speicherwörter bzw. Instruktionen der `.reti`-Datei:
+Die Adressen zählen geparste 32-Bit-Wörter ab `0`, keine Textzeilen. Daraus
+ergibt sich für dieses Beispiel die folgende Aufteilung:
 
 | SRAM-relativer Bereich | Inhalt |
 | --- | --- |
-| `0..3` | Rohe Einträge der Interrupt-Vektor-Tabelle |
+| `0..3` | Startadressen der Interrupt-Service-Routinen |
 | `4..39` | Interrupt-Service-Routinen |
 | `40..179` | Codesegment |
 | `180..end` | Rohe Wörter des Datensegments |
 
-Das Codesegment wird wie normale RETI-Instruktionen angezeigt. Das Datensegment wird als rohe Speicherwerte angezeigt, also werden die Inhalte dort nicht in RETI-Instruktionen zurückübersetzt. Direkte Zahlen und ASCII-Zeichen wie `'e'` sind dafür gedacht, in diesem Bereich Daten abzulegen.
+Der Debugger zeigt Code als Instruktionen und Daten zunächst als Zahlen an.
+[`interrupt_service_routines_start`](include/parse/parse_sections.h#L16) trennt die Adresstabelle vom ISR-Code.
+Zur Laufzeit bestimmen [`CS`](include/assemble.h#L25) und [`DS`](include/assemble.h#L26) die angezeigten Code- und Datenbereiche,
+auch nach einem Prozesswechsel. Ungültige Maschinenwörter bleiben in der
+Anzeige als Zahlen sichtbar.
 
-`interrupt_service_routines_start` dient dem Debugger als Grenze zwischen Vektortabelle und ISR-Code. Zur Laufzeit folgen die angezeigten Code- und Datenbereiche den Segmentregistern `CS` und `DS`, sodass nach einem Prozesswechsel auch ein dynamisch geladenes Programmlayout korrekt dargestellt wird. Ungültige Wörter in einem Codebereich bleiben numerisch sichtbar, statt den Emulator zu beenden.
-
-Für den Assemble-Modus muss die Datei zusätzlich `heap_start`, `heap_size` und `stack_start` enthalten. `heap_size: -1` fordert den Standardwert des ladenden Systems an; ein anderer Wert legt die Heapgröße in SRAM-Wörtern fest. Der Binärkopf enthält diese fünf Werte in der Reihenfolge `codesegment_start`, `datasegment_start`, `heap_start`, `heap_size`, `stack_start`.
+Für `--assemble` sind zusätzlich [`heap_start`](include/parse/parse_sections.h#L14), [`heap_size`](include/parse/parse_sections.h#L15) und [`stack_start`](include/parse/parse_sections.h#L17)
+erforderlich. `heap_size: -1` lässt das ladende System die Heapgröße bestimmen.
+Andere Werte geben die Größe in SRAM-Wörtern an. Die Binärdatei wird so erzeugt:
 
 ```bash
 $ reti_emulator --assemble program.reti
 ```
 
-Der Befehl schreibt `program.bin` und beendet den Emulator. Die Binärdatei beginnt mit folgendem Loader-Header:
+Der Befehl schreibt `program.bin` und beendet den Emulator. Vor den
+Maschinenwörtern steht der Loader-Header mit diesen fünf Werten:
 
 | 32-Bit-Wort | Inhalt |
 | ---: | --- |
-| `0` | `codesegment_start` |
-| `1` | `datasegment_start` |
-| `2` | `heap_start` |
-| `3` | `heap_size` |
-| `4` | `stack_start` |
+| `0` | [`codesegment_start`](include/parse/parse_sections.h#L12) |
+| `1` | [`datasegment_start`](include/parse/parse_sections.h#L13) |
+| `2` | [`heap_start`](include/parse/parse_sections.h#L14) |
+| `3` | [`heap_size`](include/parse/parse_sections.h#L15) |
+| `4` | [`stack_start`](include/parse/parse_sections.h#L17) |
 | `5` und folgende | Assemblierte SRAM-Wörter |
 
-Wenn eine gleichnamige `program.sections`-Datei `stack_start` enthält, beeinflusst dieser Wert auch das automatisch erzeugte EPROM-Startprogramm. `stack_start: -1` behält das bisherige Verhalten bei und setzt den Stackpointer an das Ende des SRAM. Jeder andere `stack_start`-Wert setzt den Stackpointer auf `stack_start` plus SRAM-Adresskonstante.
+Beim normalen Start setzt das automatisch erzeugte EPROM-Programm [`SP`](include/assemble.h#L23) auf
+[`stack_start`](include/parse/parse_sections.h#L17) mit der SRAM-Adresskonstante. Der Wert `-1` setzt [`SP`](include/assemble.h#L23) stattdessen
+auf die letzte adressierbare SRAM-Zelle.
 
-Wenn nur ein EPROM-Startprogramm mittels `-e eprom.reti` geladen wird, liest der Debugger optional `eprom.sections` aus demselben Verzeichnis. Diese Datei beschreibt dann das SRAM-Layout, das das EPROM-Startprogramm lädt. Ohne diese Datei zeigt der Debugger SRAM-Inhalte nur als Dezimalwerte bzw. mit `-b` als Binärwerte an. Eine positionale SRAM-Datei ist bei diesem realistischen Bootloader-Ablauf nicht erforderlich:
+Ein eigenes EPROM-Startprogramm kann den SRAM auch selbst laden, wie beim
+Bootloader von PicoOS. Dafür genügt der EPROM-Pfad:
 
 ```bash
 $ reti_emulator -e eprom.reti
 ```
 
+Optional beschreibt `eprom.sections` das später geladene SRAM-Layout für den
+Debugger. Ohne Abschnittsdatei beginnt die SRAM-Anzeige mit Zahlen.
+Das Diagramm zeigt die Rolle dieser Datei beim Booten:
+
 ```mermaid
 flowchart LR
-    eprom[EPROM-Bootloader] --> vectors[Interrupt-Vektortabelle]
+    eprom[EPROM-Bootloader] --> vectors[ISR-Adresstabelle]
     eprom --> code[Code in SRAM]
     eprom --> data[Daten in SRAM]
     sections[eprom.sections] -. beschreibt das geladene Layout .-> vectors
@@ -261,7 +321,8 @@ flowchart LR
     sections -.-> data
 ```
 
-Mit `-S` und `-D` dürfen Abschnitts- und Debuginformationen unabhängig vom Programmnamen und in anderen Build-Verzeichnissen liegen:
+Mit `-S` und `-D` können Layout und Debuginformationen auch in anderen
+Build-Verzeichnissen liegen:
 
 ```bash
 $ reti_emulator -S build/layout/kernel.sections \
@@ -269,36 +330,47 @@ $ reti_emulator -S build/layout/kernel.sections \
                 build/asm/pico_os.reti
 ```
 
-### Interrupt Service Routinen spezifizieren
+### Interrupt-Service-Routinen laden und zuordnen
 
-Mithilfe der Kommandozeilenoption `-i` (isr code) ist der RETI-Emulator in der Lage die RETI-Befehle für **Interrupt-Service-Routinen** aus einer Datei `interrupt_service_routines.reti` herauszulesen und an den Anfang des simulierten SRAM, vor das geladene Programm aus `program.reti` zu schreiben. Mithilfe von `INT i` kann wie in der Vorlesung erklärt an den Anfang jeder dieser Interrupt-Service-Routinen `i` gesprungen werden. Mittels `RTI` kann am Ende einer Interrupt-Service-Routine wieder an die nächste Stelle im ursprünglichen Programm zurückgesprungen werden, an der dieses mittels `INT i` unterbrochen wurde.
+Mit `-i isrs.reti` werden Interrupt-Service-Routinen (ISRs) vor dem Programm
+in den SRAM geladen. `INT i` ruft die zugehörige Routine auf, `RTI` kehrt zum
+folgenden Befehl zurück. `INT 3` ist als Debugger-Breakpoint reserviert.
 
-Falls eine `.sections`-Datei existiert, gibt es zwei Fälle:
+Bei Compiler-Ausgaben mit `.sections` gibt es zwei Möglichkeiten:
 
-- Mit `-i`: Die Interrupt-Service-Routinen werden aus der über `-i` angegebenen Datei geladen. Der ISR-Abschnitt am Anfang der `.reti`-Datei wird übersprungen.
-- Ohne `-i`: Der ISR-Abschnitt am Anfang der `.reti`-Datei wird als Interrupt-Vektor-Tabelle und Interrupt-Service-Routinen geladen.
+- Mit `-i` ersetzt die eigene ISR-Datei den Abschnitt vor [`codesegment_start`](include/parse/parse_sections.h#L12).
+- Ohne `-i` werden die Adresstabelle und ISRs aus diesem Abschnitt geladen.
 
-Damit kann eine Compiler-Ausgabe entweder vollständig eigenständig sein oder mit einer explizit angegebenen ISR-Datei kombiniert werden.
+Die ISR-Adresstabelle steht am Anfang des SRAM. Ein Eintrag enthält die
+Startadresse seiner Routine. Beim Aufruf ergänzt der Emulator die
+SRAM-Adressbits, sofern sie nicht schon enthalten sind. `INT 0` verwendet den
+ersten Eintrag, `INT 1` den zweiten. ISR-Nummern reichen von `0` bis `254`,
+`255` bedeutet intern „keine ISR zugeordnet“.
 
-Die Interrupt-Vektor-Tabelle besteht aus rohen Zahlenwerten am Anfang des ISR-Bereichs. Jeder Eintrag enthält die Startadresse der zugehörigen ISR relativ zum Anfang des SRAM-Bereichs; beim Sprung in die ISR ergänzt der Emulator automatisch die SRAM-Konstante. `INT 0` verwendet also den ersten Zahlenwert, `INT 1` den zweiten usw. Gültige ISR-Nummern sind `0` bis `254`; der Wert `255` ist intern für "keine ISR zugewiesen" reserviert.
-
-Normalerweise ermittelt der Emulator die Anzahl der Vektoreinträge beim Parsen der `.reti`-Datei. Lädt stattdessen ein EPROM-Startprogramm die Vektortabelle erst zur Laufzeit in den SRAM, kann der Emulator diese Einträge nicht beim Parsen zählen. In diesem Fall kann die Anzahl mit `-n isr_count` beziehungsweise `--isr-count isr_count` explizit angegeben werden. Die explizite Angabe überschreibt die automatisch ermittelte Anzahl, nachdem alle Programmdateien geladen wurden. Ein Betriebssystem mit vier Vektoreinträgen wird beispielsweise so gestartet:
+Der Parser zählt die Tabelleneinträge beim Laden. Lädt erst der Bootloader die
+Tabelle, muss die Anzahl mit `-n` angegeben werden. Diese Option überschreibt
+den ermittelten Wert. Für vier Einträge lautet der Aufruf:
 
 ```bash
 $ reti_emulator -n 4 -e startprogram.reti
 ```
 
-CPU-Ausnahmen für Division durch null, Stacküberlauf und ungültige Instruktionen verwenden fest den Vektoreintrag `3`. Die Ausnahmebehandlung ist deshalb nur verfügbar, wenn die Interrupt-Vektortabelle mindestens vier Einträge besitzt. Ist die ermittelte oder mit `-n` angegebene Anzahl kleiner als `4`, meldet der Emulator eine auftretende CPU-Ausnahme als unbehandelt und beendet die Ausführung, anstatt zu einer nicht vorhandenen Exception-Routine zu springen.
+Synchrone CPU-Ausnahmen verwenden ISR-Eintrag `3` und benötigen daher mindestens
+vier Einträge. Andernfalls beendet eine Ausnahme die Ausführung mit einer
+Fehlermeldung. Mehr dazu steht in [`Synchrone CPU-Ausnahmen`](#synchrone-cpu-ausnahmen).
 
 ### Speicherabgebildete Peripherie
 
-UART, Interrupt-Controller, Timer und Ausnahmezustand teilen sich den Peripherie-Speicherbereich:
+UART, Interrupt-Controller, Timer, CPU-Ausnahmen und DMA sind über Speicherzugriffe
+erreichbar. Die Zellennummern in der Tabelle sind Offsets zur Peripherieadresse
+`2^30`. Die Zuordnung steht in [`interrupt_controller.h`](include/interrupt_controller.h)
+und [`dma.h`](include/dma.h):
 
 | Zelle | Bedeutung |
 | ---: | --- |
 | `0` | UART-Senderegister R0 |
 | `1` | UART-Empfangsregister R1 |
-| `2` | UART-Statusregister R2; `b0` sendebereit, `b1` empfangsbereit |
+| `2` | UART-Statusregister R2 mit `b0` sendebereit und `b1` empfangsbereit |
 | `3` | Signalleitung `INTTIMER` → ISR-Nummer |
 | `4` | Signalleitung `CUSTOM` → ISR-Nummer |
 | `5` | Signalleitung `UART` → ISR-Nummer |
@@ -308,24 +380,32 @@ UART, Interrupt-Controller, Timer und Ausnahmezustand teilen sich den Peripherie
 | `9` | Timer-Interrupt-Intervall |
 | `10` | Inklusive Stack/Heap-Grenze des aktuellen Kontexts |
 | `11` | Ursache der letzten synchronen CPU-Ausnahme |
-| `12` | DMA aktiv; `0` deaktiviert, `1` aktiviert |
+| `12` | DMA aktiv (`0` deaktiviert, `1` aktiviert) |
 | `13` | DMA-Quelladresse |
 | `14` | DMA-Zieladresse |
 | `15` | Anzahl zu übertragender 32-Bit-Wörter |
-| `16` | DMA-Status/Steuerung; `0` bereit, `1` starten/beschäftigt, `2` fertig, `3` Fehler |
+| `16` | DMA-Status/Steuerung (`0` bereit, `1` starten/beschäftigt, `2` fertig, `3` Fehler) |
 
-In den ISR-Zellen bedeutet `255`, dass der Signalleitung keine ISR zugeordnet ist. Die Priorität ist ein 8-Bit-Wert; größere Werte haben höhere Priorität und dürfen Handler mit niedrigerer Priorität unterbrechen.
+In den ISR-Zellen bedeutet `255` „keine Zuordnung“. Prioritäten reichen von
+`0` bis `255`. Größere Werte
+erlauben einem Hardware-Interrupt, eine Routine mit niedrigerer Priorität zu
+unterbrechen. Intern halten [`device_to_isr`](source/periphery/interrupt_controller.c#L10)
+und [`device_to_prio`](source/periphery/interrupt_controller.c#L11) diese Zuordnung.
 
-Ohne `-M` ist nur Zelle `12` vorhanden. Ein Programm kann DMA später durch
-Schreiben von `1` nach Zelle `12` aktivieren; danach werden auch die Zellen
-`13..16` eingeblendet. Für einen UART-zu-SRAM-Transfer enthält Zelle `13` die
-absolute Adresse des UART-Empfangsregisters (`2^30 + 1`). Nach dem Schreiben
-von `1` nach Zelle `16` kopiert DMA pro Emulatorzyklus ein Wort in den SRAM und
-löst nach Abschluss die Hardware-Signalleitung `CUSTOM` aus.
+Von den DMA-Zellen ist ohne `-M` zunächst nur Zelle `12` erreichbar. Eine `1`
+aktiviert DMA und macht die Zellen `13..16` verfügbar. Die Quelle muss das
+UART-Empfangsregister (`2^30 + 1`) sein, das Ziel eine SRAM-Adresse. Nach dem
+Start über Zelle `16` kopiert DMA pro Emulatorzyklus ein 32-Bit-Wort.
+Abschluss und Fehler lösen die Signalleitung `CUSTOM` aus.
 
-Die Peripherie-Zelle `9` enthält das Timer-Interrupt-Intervall. Der Standardwert ist `0`, wodurch der Timer Interrupt deaktiviert ist. `-I <wert>` schreibt diesen Wert beim Start in die Zelle; jeder Wert größer `0` aktiviert den Timer Interrupt mit diesem Intervall. Ein Betriebssystem kann die Zelle ebenfalls beschreiben, um den Timer Interrupt zur Laufzeit zu aktivieren, zu deaktivieren oder das Intervall zu ändern. Die Interrupt-Ansicht des Debuggers zeigt zusätzlich den laufenden Timerzähler.
+Der Timer wird mit `-I` oder durch Schreiben in Zelle `9` eingestellt.
+`0` deaktiviert ihn, ein positiver Wert legt das Intervall in ausgeführten
+Befehlen fest. Der Debugger zeigt auch den laufenden Timerzähler an.
 
-Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt werden. Die Datei enthält eine Zeile pro ISR-Index im Format `<priority> <device>`, zum Beispiel `2 INTTIMER`, `1 CUSTOM` oder `3 UART`; `-` bedeutet keine Zuordnung.
+Eine eigene Datei `interrupts.conf` kann mit `-C` die Zuordnung beim Start
+festlegen. Jede Zeile gehört zu einem ISR-Index und enthält `<priority> <device>`.
+Dieses Beispiel lässt ISR `0` unzugeordnet und weist Timer und UART den
+ISRs `1` und `2` mit den Prioritäten `1` und `3` zu:
 
 ```conf
 -
@@ -333,7 +413,7 @@ Optional kann der Interrupt-Controller beim Start mit `-C config_file` vorbelegt
 3 UART
 ```
 
-Dieses Beispiel lässt ISR `0` unbenutzt, ordnet ISR `1` dem Timer mit Priorität `1` und ISR `2` der UART mit Priorität `3` zu:
+Die Konfiguration wird zusammen mit dem Programm geladen:
 
 ```bash
 $ reti_emulator -C interrupts.conf program.reti
@@ -341,7 +421,9 @@ $ reti_emulator -C interrupts.conf program.reti
 
 ### Synchrone CPU-Ausnahmen
 
-CPU-Ausnahmen verändern Register und Speicher nicht teilweise. Sie springen unabhängig von den Hardware-Prioritäten immer über Vektoreintrag `3`; der Handler liest die Ursache aus Peripherie-Zelle `11`:
+Bei einer CPU-Ausnahme hinterlässt der fehlerhafte Befehl keine teilweise
+geschriebenen Ergebnisse. Die Ausnahmebehandlung ruft unabhängig von
+Hardware-Prioritäten ISR `3` auf. Ihre Ursache steht in Zelle `11`:
 
 | Wert in Zelle `11` | Ursache |
 | ---: | --- |
@@ -349,11 +431,19 @@ CPU-Ausnahmen verändern Register und Speicher nicht teilweise. Sie springen una
 | `2` | Stacküberlauf |
 | `3` | Ungültige Instruktion |
 
-Zelle `10` schützt den Stack gegen den Heap. Bei `10 = 5000` ist eine Änderung von `SP = 5001` auf `5000` erlaubt; der nächste Schritt auf `4999` löst einen Stacküberlauf aus. Der Wert `0` deaktiviert diesen Schutz. PicoOS muss die Zelle bei einem Wechsel zwischen Kernel und Prozessen mit unterschiedlichen Heapgrenzen aktualisieren.
+Zelle `10` enthält die unterste erlaubte Stackadresse. Bei einer Grenze von
+`5000` darf [`SP`](include/assemble.h#L23) von `5001` auf `5000` sinken, aber nicht auf `4999`.
+`0` deaktiviert diesen Schutz. PicoOS aktualisiert die Grenze beim Wechsel
+zwischen Kernel und Prozess mit [`activate_kernel_stack_boundary()`](../Pico-OS/kernel/exception.picoc#L11)
+und [`activate_current_process_stack_boundary()`](../Pico-OS/kernel/exception.picoc#L22).
+
+Die ISR entscheidet, wie es weitergeht. PicoOS beendet den betroffenen Prozess
+oder hält bei einer Kernel-Panic an. Eine eigene ISR kann mit `RTI` den
+fehlerhaften Befehl erneut versuchen, wie im Diagramm dargestellt:
 
 ```mermaid
 flowchart LR
-    fault[CPU-Ausnahme] --> vector[Vektoreintrag 3]
+    fault[CPU-Ausnahme] --> vector[ISR-Eintrag 3]
     vector --> handler[Handler liest Zelle 11]
     handler --> terminate[Prozess beenden]
     handler --> panic[Kernel-Panic]
@@ -362,11 +452,15 @@ flowchart LR
 
 ### Ersten Prozess per `RTI` starten
 
-`-O` modelliert den Kernel beim Start als synthetisch aktiven Interrupt-Kontext. Dadurch darf das erste `RTI` einen vorbereiteten Prozess-Stack aktivieren, obwohl zuvor kein echter Interrupt in den Kernel gesprungen ist:
+PicoOS startet Prozesse über denselben Rückkehrweg wie nach einem Interrupt.
+`-O` erzeugt deshalb beim Emulatorstart einen synthetischen ISR-Kontext, damit
+schon das erste `RTI` den vorbereiteten Prozess-Stack verwenden kann:
 
 ```bash
 $ reti_emulator -O pico_os.reti
 ```
+
+Der Kernel bereitet den Stack vor und startet damit den ersten Prozess:
 
 ```mermaid
 flowchart LR
@@ -374,10 +468,13 @@ flowchart LR
     stack -->|RTI| process[Erster Prozess läuft]
 ```
 
-Eine Datei mit Interrupt Service Routinen, zum Beispiel `isrs.reti`, kann so aufgebaut sein:
+Die folgende Skizze zeigt den Aufbau einer eigenen `isrs.reti`: zuerst die
+Startadressen, danach die Routinen. `...` steht für ausgelassenen ISR-Code,
+die Adressen müssen zu den tatsächlichen Wortpositionen passen. Die Skizze
+ist daher keine direkt ausführbare Datei:
 
 ```reti
-# Interrupt-Vektor-Tabelle
+# Startadressen der Interrupt-Service-Routinen
 5
 19
 33
@@ -400,7 +497,7 @@ RTI
 RTI
 
 # == CUSTOM ==
-# Interrupt Service Routine für den durch 't' im TUI ausgelösten Interrupt
+# Interrupt Service Routine für den durch 'T' im TUI ausgelösten Interrupt
 ...
 RTI
 
@@ -410,29 +507,49 @@ RTI
 RTI
 ```
 
-Die Datei `isrs.reti` beginnt also mit den rohen Adress-Einträgen der Interrupt-Vektor-Tabelle. Danach folgen die eigentlichen Interrupt Service Routinen im selben File. Jede ISR sollte üblicherweise mit `RTI` enden.
+Jede Routine kehrt üblicherweise mit `RTI` zurück.
 
 ## Debugging
 
-Mittels der Kommandozeilenoption `-d` (debug mode) ist der RETI-Emulator in der Lage das Programm zu **debuggen**, d.h. er zeigt die Speicher- und Registerinhalte nach Ausführung eines jeden Befehls an. Zwischen diesen kann der Benutzer sich mittels `n` (`n`ext) und dann `Enter` forwärts bewegen. Wird `INT 3` in das RETI-Programm geschrieben stellt dies einen Breakpoint dar, wobei zum jeweils nächsten mittels `c` (`c`ontinue) und dann `Enter` gesprungen werden kann. Während dieser kontinuierlichen Ausführung ersetzt die Infobox `(c)ontinue` durch `(E)nter again, (v)iew terminal, (V)iew raw terminal, (q)uit`. `E` unterbricht die Ausführung an der aktuellen Programmadresse und ermöglicht wieder alle schrittweisen Debug-Aktionen. `q` beendet die laufende Ausführung und anschließend den Emulator. In der untersten Zeile des Text-User-Interfaces (TUI) stehen die Aktionen, die Sie in diesem Debug-Modus ausführen können.
+Mit `-d` zeigt der Debugger Register und Speicher nach jedem Befehl.
+`n` führt den nächsten Befehl aus, `c` läuft bis zum nächsten Breakpoint
+`INT 3`. Währenddessen hält `E` die Ausführung an der aktuellen Adresse an,
+`q` beendet den Emulator. Die verfügbaren Tasten stehen in der Infobox.
 
-Mit `-K` bleibt das TUI nach dem abschließenden `JUMP 0` geöffnet. Register, Speicher, Peripherie, Quellansicht und UART-Ausgabe können dann weiter untersucht werden; `r` startet dieselbe Befehlszeile erneut.
+Mit `-K` bleibt die TUI auch nach `JUMP 0` geöffnet, um den Endzustand zu
+untersuchen. Der folgende Aufruf kombiniert beide Optionen:
 
 ```bash
 $ reti_emulator -d -K pico_os.reti
 ```
 
-Die Infobox besitzt mehrere Hilfeseiten, zwischen denen mit `o` gewechselt werden kann. Auf der zweiten Hilfeseite zeigt der Eintrag `(T)rigger isr <num>` immer die ISR-Nummer an, die aktuell durch Drücken von `T` ausgelöst wird. Mit `e` (`e`xchange isr) kann zwischen allen über `-i` geladenen ISR-Nummern zyklisch gewechselt werden.
+`r` startet das Programm mit denselben Argumenten neu. Die Hilfeseiten und
+weiteren Tasten sind unter [`TUI-Aktionen`](#tui-aktionen) zusammengefasst.
+`T` löst die dort angezeigte ISR aus. Mit `e` wird zwischen den vorhandenen
+ISRs gewechselt, unabhängig davon, ob sie aus `-i` oder einer Compiler-Ausgabe
+stammen.
 
-Mit `t` (`t`ranscode) wechselt die Anzeige sichtbarer SRAM-Werte zyklisch in dieser Reihenfolge: vorzeichenbehaftete Zahlen → vorzeichenlose Zahlen → ASCII-Zeichen → RETI-Instruktionen. Vorzeichenlose Zahlen zeigen dasselbe 32-Bit-Wort als Wert von `0` bis `4294967295`, etwa für Adressen. ASCII wird nur für Werte von `0` bis `127` angezeigt, Instruktionen nur für gültige Maschinenbefehle; andernfalls bleibt die bisherige Zahlendarstellung erhalten. Erkannte Instruktionen in Code- und ISR-Bereichen bleiben in allen Modi Instruktionen. Die bisherige vorzeichenlose Zahlendarstellung vor dem Datensegment und die Option `-u` für Werte ab dem Datensegment bleiben erhalten.
+`t` wechselt die SRAM-Anzeige von der normalen Zahlendarstellung zu
+vorzeichenlosen Zahlen, ASCII und RETI-Instruktionen. Vorzeichenlose Zahlen
+sind etwa für Adressen nützlich. ASCII erscheint für Werte von `0` bis `127`,
+Instruktionen für gültige Maschinenwörter. Sonst bleibt die Zahlendarstellung
+erhalten. Erkannter Code wird weiterhin als Instruktion angezeigt.
+`-u` wählt vorzeichenlose Zahlen als normale Darstellung im Datensegment.
 
-Auf der dritten Hilfeseite wechseln `v` (`v`iew terminal) und `V` (`V`iew raw terminal) aus der Ncurses-TUI in eine UART-Terminalansicht im selben aufrufenden Terminal. Beide Ansichten zeigen zuerst die gesamte seit dem Emulatorstart aufgezeichnete UART-Terminalausgabe und danach neue Ausgaben direkt an. Die normale Ansicht behält die Signalbehandlung des aufrufenden Terminals bei; `Escape` kehrt zur Debug-TUI zurück und wird nicht als UART-Eingabe übertragen. Die rohe Ansicht deaktiviert unter anderem die Terminalbehandlung für `Ctrl+C`, `Ctrl+\` und `Ctrl+Z`, überträgt diese Tastendrücke sowie `Escape` an die UART und kehrt mit `Ctrl+]` zur Debug-TUI zurück. Dadurch erreichen Pfeiltasten sowie die PicoOS-Shortcuts `Ctrl+C` und `Ctrl+Z` PicoOS nur in der rohen Ansicht vollständig. Wird eine Ansicht im angehaltenen Debugger geöffnet, bleibt die Programmausführung angehalten. Während einer mit `c` gestarteten Ausführung läuft das Programm in beiden Ansichten weiter und Tastendrücke lösen UART-Hardwareinterrupts aus. Nach dem Schließen wird die Debug-TUI vollständig neu gezeichnet.
+`v` und `V` öffnen das [`UART-Terminal im Debugger`](#uart-terminal-im-debugger).
+Mit `-c` erscheinen zusätzlich die Kommentare der `.reti`-Datei neben den
+zugehörigen Instruktionen.
 
-Mit `-c` werden zusätzlich Quellkommentare im Debugmode angezeigt. Dazu werden Kommentare beim Parsen in einer internen Struktur mit Ziel-Speicherbereich, referenziertem Instruktionsindex und Anzeigeposition gespeichert. Beim Anzeigen einer Instruktion wird geprüft, welche gespeicherten Kommentare diesem Instruktionsindex im aktuellen Speicherbereich zugeordnet sind, und diese werden dann vor oder nach der Instruktion ausgegeben.
+> Mit `-b` lässt sich etwa beim Shiften die Änderung einzelner Bits verfolgen.
+> Ein `INT 3` am Programmanfang hält nach `c` direkt hinter dem EPROM-Startprogramm.
 
 ### PicoC-Quellcode und Symbolinformationen
 
-Mit `d` verbindet der Debugger die aktuelle RETI-Programmadresse mit den Compilerinformationen aus `<program>.debuginfo` oder der über `-D` angegebenen Datei. Existiert eine passende `.pre`-Datei, zeigt die Quellansicht den vorverarbeiteten PicoC-Code an.
+Mit `d` zeigt der Debugger die PicoC-Zeile zur aktuellen RETI-Programmadresse.
+Dafür benötigt er `<program>.debuginfo` oder die mit `-D` angegebene Datei.
+Wenn vorhanden, wird die zugehörige `.pre`-Datei mit vorverarbeitetem Code
+angezeigt, sonst die Quelldatei. Die Ansicht verwendet Python 3 mit Tkinter.
+Das Beispiel zeigt die Zuordnung über die relative Adresse `PC - CS`:
 
 ```mermaid
 flowchart LR
@@ -440,7 +557,9 @@ flowchart LR
     relative --> source[Zeile 87 in scheduler.picoc]
 ```
 
-Dieselben Metadaten beschriften SRAM-Zeilen anhand des aktiven Funktionsframes:
+Dieselben Metadaten beschriften SRAM-Zeilen anhand des aktiven Stackframes.
+Die Tabelle zeigt beispielhafte Beschriftungen für globale und lokale
+Variablen, eine Rücksprungadresse und ein Argument:
 
 | SRAM-Adresse | Wert | Symbolische Beschriftung |
 | ---: | ---: | --- |
@@ -449,19 +568,38 @@ Dieselben Metadaten beschriften SRAM-Zeilen anhand des aktiven Funktionsframes:
 | `8182` | `9001` | `return addr.` |
 | `8183` | `7` | `arg next_pid@0` |
 
-Damit lassen sich globale Variablen, lokale Variablen, Argumente, gespeicherte Framepointer und Rücksprungadressen direkt neben dem tatsächlichen Speicherzustand verfolgen.
+Auch gespeicherte Framepointer werden so direkt am Speicherwert erkennbar.
+
+Mit `O` öffnet sich zusätzlich die [`PicoOS-Übersicht`](source/debug/picoos_overview.py).
+Sie zeigt Prozesse, Speicherbereiche, Interrupts und Kernelaktivität anhand
+der `.overview`-Metadaten neben der Debuginfo-Datei. Bei angehaltener Ausführung
+öffnet ein Doppelklick auf einen Speichereintrag dessen Adresse im zuvor
+ausgewählten SRAM-Fenster. Auch diese Ansicht benötigt Python 3 mit Tkinter.
 
 ### Fenster, Watchobjects und Live-Bearbeitung
 
-Sogenannte **Watchobjects** zentrieren die EPROM-, Code-, Daten- und Stackfenster auf einer beobachteten Speicheradresse. Diese Adresse stammt entweder aus einem zugewiesenen Register oder wird direkt angegeben; die Fenstergröße bestimmt den sichtbaren Bereich darum. Mit `Tab` und `Shift-Tab` wird ein Fenster ausgewählt, `j` und `k` scrollen unabhängig vom Watchobject und `C` zentriert die Ansicht wieder darauf. `J` und `K` ändern die beobachtete Adresse beziehungsweise den Wert des zugewiesenen Registers. Mit `a` (`assign`) wird dem ausgewählten Fenster ein anderes Register oder eine direkte Adresse zugewiesen.
+Ein **Watchobject** legt fest, welche Adresse ein Speicherfenster beobachtet.
+Sie stammt aus einem Register oder wird direkt angegeben. In
+[`WatchBox`](include/core_debug.h#L34) stehen [`box`](include/core_debug.h#L30)
+für das Fenster, [`watchobject`](include/core_debug.h#L31) für das Register,
+[`watchobject_addr`](include/core_debug.h#L32) für eine feste Adresse und
+[`scroll_offset`](include/core_debug.h#L33) für den Scrollversatz.
+Die beobachtete Zelle wird über die gesamte Fensterbreite hervorgehoben.
 
-Die beobachtete Zelle wird über die gesamte Fensterbreite hervorgehoben. Mit `A` kann ein Wert im ausgewählten Fenster geändert werden, ohne den Emulator neu zu starten:
+`Tab` und `Shift-Tab` wählen das Fenster aus. `j` und `k` scrollen,
+`C` zentriert wieder auf die beobachtete Adresse. `a` weist ein anderes Register
+oder eine feste Adresse zu. `J` und `K` ändern diese Adresse beziehungsweise
+den Wert des zugewiesenen Registers.
 
-- Im Registerfenster wird zuerst mit `↑` / `↓` oder `j` / `k` ein Register ausgewählt und mit `Enter` bestätigt. Danach wird der neue Wert eingegeben und mit `Enter` übernommen.
-- Im Peripheriefenster wird zuerst der Index `0` bis `16` des [Memory-mapped Registers](#speicherabgebildete-peripherie) eingegeben und mit `Enter` bestätigt. Danach folgt die Werteingabe. Das funktioniert in jeder Peripherieansicht. Es gelten die normalen Schreibregeln: Register `11` ist schreibgeschützt; die DMA-Register `13` bis `16` sind erst nach Aktivierung über Register `12` verfügbar.
+Mit `A` wird ein Wert im ausgewählten Fenster geändert:
+
+- Im Registerfenster wird ein Register mit `↑` / `↓` oder `j` / `k` ausgewählt. `Enter` bestätigt erst die Auswahl und dann den neuen Wert.
+- Im Peripheriefenster wird zuerst der Registerindex und dann der Wert eingegeben. Die Indizes stehen unter [`Speicherabgebildete Peripherie`](#speicherabgebildete-peripherie). Zelle `11` ist schreibgeschützt, die DMA-Zellen `13..16` benötigen eine aktive Zelle `12`.
 - In einem Adressfenster wird der Wert der beobachteten Speicherzelle geändert.
 
-Auswahl, Werteingabe und Fehlermeldungen lassen sich jederzeit mit `q` oder `Esc` abbrechen, ohne den Wert zu ändern. Die Menüs zeigen dafür `(abort: 'q' or 'esc')` an. Gültig sind Werte von `-2147483648` bis `4294967295` sowie eindeutige Zeicheneingaben:
+`q` oder `Esc` brechen das Menü ab. Als Werte sind `-2147483648` bis `4294967295`
+und einzelne Zeichen erlaubt. Anführungszeichen unterscheiden Zeichen von
+Zahlen, wie diese Beispiele zeigen:
 
 | Eingabe | Geschriebener Wert |
 | --- | ---: |
@@ -471,11 +609,15 @@ Auswahl, Werteingabe und Fehlermeldungen lassen sich jederzeit mit `q` oder `Esc
 | `'\t'` | `9` |
 | `'\\'` | `92` |
 
-Ein einzelnes druckbares Nicht-Ziffer-Zeichen kann ebenfalls direkt eingegeben werden; für das Zeichen `q` wird wegen der Abbruchtaste `'q'` verwendet. Schreibzugriffe auf EPROM und SRAM bleiben auf gültige geladene Zellen beschränkt.
+Druckbare Zeichen ohne Ziffern können auch ohne Anführungszeichen eingegeben
+werden. Für `q` ist wegen der Abbruchtaste `'q'` nötig. EPROM und SRAM lassen
+sich nur innerhalb der geladenen Bereiche bearbeiten.
 
 ### Wiederverwendbare Snapshots
 
-`S` speichert den vollständigen Emulatorzustand; `R` stellt denselben Snapshot beliebig oft wieder her. So kann beispielsweise eine Schedulerentscheidung aus demselben Zustand mit mehreren Prozessen wiederholt werden:
+`S` speichert Register, SRAM und den internen Ausführungszustand.
+`R` stellt diesen Snapshot beliebig oft wieder her. Damit lassen sich etwa
+zwei Schedulerentscheidungen aus demselben Ausgangszustand vergleichen:
 
 ```mermaid
 flowchart LR
@@ -486,17 +628,11 @@ flowchart LR
     processB -->|R| snapshot
 ```
 
-<!-- Damit die Studenten sich immer darauf verlassen können, dass die Kernfunktionalitäten des RETI-Intepreters mit jedem Release während des Semesters gleich bleiben, müssen **neue Features**, welche diese zuerst etablierten Kernfunktionalitäten brechen erst mit `-E` (extended features) **aktiviert** werden. -->
-
-<!-- Momentan wird mit `-E` nur aktiviert, dass eine beliebige Interrupt Service Routine `INT i`, wenn der `PC` auf diese zeigt bei `n` direkt komplett ausgeführt wird. Wenn allerdings der `PC` auf `INT i` zeigt und das Kommando `s` (step into) ausgeführt wird, dann wird in die Interrupt Service Routine gesprungen und diese Schritt für Schritt ausgeführt. `s` funktioniert also so, wie man es bei üblichen Debuggern von Funktionsaufrufen kennt, nur hier für Interrupt Service Routinen. -->
-
-> *Tipp:* Mit der Kommandozeilenoption `-b` (binary) werden alle Registerinhalte, Speicherinhalte und Immediates im Binärsystem angezeigt, damit lässt sich beim debuggen z.B. leichter Shiften nachvollziehen.
-
-> *Tipp:* Um beim Debugging direkt zur Startadresse Ihres in den SRAM geladenen Programmes zu springen setzen man am besten einen Breakpoint `INT 3` an den Anfang des Programmes und führen dann direkt am Anfang nach Ausführen von `$ reti_emulator -d prgrm.reti` das Kommando `c` aus.
-
 ## UART
 
-*Die Kommunikation mit der UART ist wie folgt umgesetzt:*
+Die UART verbindet das RETI-Programm mit Terminal und Host-Diensten.
+Sie überträgt 8-Bit-Bytes über drei Register. Zahlen und Strings bestehen dabei
+aus mehreren Bytes, nicht aus einem eigenen UART-Datentyp:
 
 | Zelle | Register | Wichtiger Zustand |
 | ---: | --- | --- |
@@ -504,15 +640,26 @@ flowchart LR
 | `1` | R1, Empfangsbyte | Lesen, nachdem `b1` in R2 gesetzt wurde |
 | `2` | R2, Status | `b0` = sendebereit, `b1` = empfangsbereit |
 
-- Die UART überträgt nur einzelne 8-Bit-Bytes. Es gibt kein Datentyp-Byte und keine Sonderbehandlung für Zahlen oder Strings. ASCII-Zeichen werden als ihr 8-Bit-ASCII-Code übertragen.
-- Zum Senden schreibt das RETI-Programm ein Byte nach R0 und setzt danach `b0` in R2 auf `0`. Nach der simulierten UART-Wartezeit setzt der Emulator `b0` wieder auf `1`; dann wurde dieses Byte vom simulierten Ausgabegerät übernommen und als ASCII-Zeichen ausgegeben.
-- Zum Empfangen setzt das RETI-Programm `b1` in R2 auf `0`, sobald es bereit für das nächste Byte ist. Nach der simulierten UART-Wartezeit schreibt der Emulator das nächste ASCII-Byte nach R1 und setzt `b1` wieder auf `1`; das Programm sollte R1 lesen, bevor es das nächste Byte anfordert.
-- Ohne `-d` ist das aufrufende Terminal immer als UART-Terminal aktiv. Jeder Tastendruck wird als einzelnes 8-Bit-Byte nach R1 geschrieben, setzt `b1` und löst die Hardware-Signalleitung `UART` aus. Solange der vorherige UART-Interrupt noch aussteht, werden weitere Tasten gepuffert. Normale UART-Ausgaben erscheinen direkt auf `stdout`.
-- Mit `-d` bietet `(v)iew terminal` dieselbe UART-Ein- und -Ausgabe mit der normalen Signalbehandlung des aufrufenden Terminals; `Escape` kehrt zur Debug-TUI zurück. `(V)iew raw terminal` deaktiviert diese Signalbehandlung und kehrt mit `Ctrl+]` zurück. Die jeweilige Rückkehrtaste wird nicht nach R1 übertragen.
-- Wenn kein gepufferter Input mehr vorhanden ist, fragt der Emulator in einer Input-Box nach UART-Eingabe. Mehrere eingegebene Zeichen werden als Buffer gespeichert und danach byteweise verbraucht. Eine leere Eingabe entspricht `\n`; alternativ können `\n` und `\t` als Escape-Sequenzen eingegeben werden.
-- Mit `-m` können Eingaben aus dem Kommentar `# input: ...` gelesen werden. Ein einzelnes Trennleerzeichen oder Tab nach `input:` wird übersprungen; der restliche Text wird als Zeichenbuffer übernommen, inklusive weiterer Leerzeichen, und danach Zeichen für Zeichen über die UART ausgeliefert.
+Für die Übertragung verwendet das Programm die Statusbits als Handshake:
 
-Bei interaktiver Eingabe puffert der Emulator weitere Tasten, solange der vorherige UART-Interrupt noch aussteht:
+- **Senden:** Ein Byte nach R0 schreiben und `b0` in R2 löschen. Nach der UART-Wartezeit wurde das Byte übertragen und `b0` wird wieder gesetzt.
+- **Empfangen:** `b1` in R2 löschen, um ein Byte anzufordern. Sobald der Emulator R1 gefüllt und `b1` gesetzt hat, kann das Programm R1 lesen.
+
+Ohne `-d` ist das aufrufende Terminal direkt mit der UART verbunden.
+Ausgaben erscheinen auf `stdout`, Tastendrücke lösen UART-Hardwareinterrupts
+aus. Im Debugger übernehmen `v` und `V` diese Verbindung, wie unter
+[`UART-Terminal im Debugger`](#uart-terminal-im-debugger) beschrieben.
+
+Für Polling-Eingaben außerhalb einer Terminalansicht fragt der Emulator nach
+neuem Text, sobald der Eingabepuffer leer ist. Eine leere Eingabe liefert `\n`,
+Escape-Sequenzen wie `\n` und `\t` werden ausgewertet.
+Mit `-m` stammt der Puffer stattdessen aus `# input: ...` am Dateianfang.
+Der gesamte Text nach `input:` bleibt erhalten, einschließlich des ersten
+Leerzeichens. Escape-Sequenzen werden ausgewertet und ein Zeilenumbruch
+angehängt. Das übernimmt [`extract_input_from_comment()`](source/special_opts.c#L22).
+
+Bei Terminaleingaben wartet das nächste gepufferte Byte, bis der vorherige
+UART-Interrupt abgeschlossen ist. Das Diagramm zeigt diesen Weg:
 
 ```mermaid
 flowchart LR
@@ -524,55 +671,55 @@ flowchart LR
 
 ### Host-Dienste über UART
 
-Spezielle Aktionen werden mit dem ASCII-Escape-Byte `27` eingerahmt: `<esc>Aktion<esc>/`. Der Rahmen und die Aktion selbst erscheinen nicht im Terminal. Ein nicht eingerahmtes `load <path>` bleibt normale Textausgabe.
+PicoOS kann über die UART Dateien auf dem Host lesen und schreiben.
+Dazu wird ein Befehl mit dem Escape-Byte `27` eingerahmt:
+`<esc>Aktion<esc>/`. Der Emulator verarbeitet den Rahmen, statt ihn anzuzeigen.
+Ohne diesen Rahmen bleibt etwa `load <path>` normale Textausgabe.
+Das Beispiel fragt die Größe von [`config/environment.txt`](../Pico-OS/config/environment.txt) ab:
 
 ```mermaid
 sequenceDiagram
     participant PicoOS
     participant Emulator
-    PicoOS->>Emulator: ESC file-size opts/environment.txt ESC /
+    PicoOS->>Emulator: ESC file-size config/environment.txt ESC /
     Emulator-->>PicoOS: 00 00 00 78
 ```
 
-Die Antwort im Beispiel ist die Big-Endian-Darstellung der Dateigröße `120`.
-Das Startverzeichnis des Emulators ist die Dateisystemwurzel `/` für alle
-UART-Dateianfragen. PicoOS startet den Emulator im Laufzeitverzeichnis mit
-`kernel`, `boot`, `system`, `user`, `config` und `device`. Das Host-Verzeichnis
-`/tmp` wird nicht eingebunden. Es gibt keinen künstlichen `tmp`-Eintrag in
-Verzeichnislisten. Ein Gastpfad `/tmp` bezeichnet ausschließlich ein echtes
-Unterverzeichnis `tmp` im Laufzeitverzeichnis, falls es angelegt wurde.
+Bei einer beispielhaften Dateigröße von `120` lautet die Antwort
+`00 00 00 78`, also Big Endian. Alle 32-Bit-Antwortwerte verwenden diese
+Byte-Reihenfolge.
 
-Relative und absolute Gastpfade beginnen an dieser Wurzel. `..` bleibt an `/`
-stehen. Alle Dateidienste verwenden
-[`guest_filesystem.c`](source/guest_filesystem.c): Sie folgen keinen symbolischen
-Links oder Windows-Junctions und öffnen keine mehrfach hart verlinkten oder
-speziellen Hostdateien. Die Gastwurzel kann über ihre Gastpfade nicht
-entfernt oder umbenannt werden. Unter Linux verhindert `openat2` außerdem das
-Durchqueren weiterer Mounts; ältere Kernel und andere POSIX-Systeme verwenden
+Das Startverzeichnis des Emulators wird zur Gastwurzel `/`. Bei PicoOS ist das
+das Laufzeitverzeichnis mit `kernel`, `boot`, `system`, `user`, `config` und
+`device`. Gastpfade werden von dieser Wurzel aus aufgelöst. `..` führt nicht
+darüber hinaus. Ein Gastpfad `/tmp` ist ein Unterverzeichnis dieser Wurzel,
+keine Verbindung zum `/tmp` des Hosts.
+
+[`guest_filesystem.c`](source/guest_filesystem.c) begrenzt die Dateizugriffe auf
+diesen Baum. Symbolische Links, Windows-Junctions, mehrfach hart verlinkte und
+spezielle Dateien werden nicht geöffnet. Die Gastwurzel selbst lässt sich
+nicht entfernen oder umbenennen. Unter Linux verhindert `openat2` auch das
+Durchqueren weiterer Mounts. Ältere Kernel und andere POSIX-Systeme verwenden
 verzeichnisrelative `openat`-Aufrufe mit `O_NOFOLLOW`.
 
-Die bestehenden UART-Tests in
-[`terminal_view_test.c`](unit_test/terminal_view_test.c),
-[`test_mode_test.c`](unit_test/test_mode_test.c) und
-[`uart_load_failure_test.c`](unit_test/uart_load_failure_test.c) verwenden noch
-Hostpfade unter `/tmp` als Gastpfade. Diese Testpfade müssen angepasst werden.
-[`guest_filesystem_test.c`](unit_test/guest_filesystem_test.c) prüft dagegen,
-dass kein künstlicher `tmp`-Eintrag erscheint und ein echtes Gastverzeichnis
-`tmp` keine Hostdateien unter `/tmp` verändert.
+Unter Windows übernimmt [`guest_filesystem_windows.inc`](source/guest_filesystem_windows.inc)
+die Zugriffe über relative Verzeichnishandles und `NtCreateFile` mit
+`OBJ_DONT_REPARSE`. Auch Listen, Zeitstempel, Umbenennen und Entfernen arbeiten
+mit Handles und benötigen keine `dirent`-Kompatibilität.
 
-Explizite Emulatorargumente für Programme, Debug-Metadaten und Peripheriedateien
-bleiben Hostpfade. Die Dateisystemgrenze gilt für Anfragen des RETI-Programms,
-auch wenn es UART-Kommandos direkt ohne PicoOS sendet.
+Diese Grenze gilt für UART-Anfragen des RETI-Programms. Kommandozeilenargumente
+für Programme und Metadaten bleiben Hostpfade. Der Emulator führt nur die
+folgenden **14 Host-Befehle** aus, keine allgemeinen Shellbefehle:
 
 | Aktion | Antwort oder Wirkung |
 | --- | --- |
-| `load <path>` | 32-Bit-Wortanzahl in Big Endian, danach Inhalt eines assemblierten Binärprogramms; `UINT32_MAX` bei einem fehlenden oder nicht lesbaren Pfad, einer nicht regulären Datei oder einer nicht darstellbaren Wortanzahl |
+| `load <path>` | 32-Bit-Wortanzahl, danach Inhalt eines assemblierten Binärprogramms |
 | `read-range <offset> <count> <path>` | Tatsächliche 32-Bit-Byteanzahl, danach höchstens `count` Bytes ab `offset` |
-| `file-size <path>` | 32-Bit-Dateigröße; geeignet für `file_exists()` und `SEEK_END` |
+| `file-size <path>` | 32-Bit-Dateigröße, verwendet von [`file_exists()`](../Pico-OS/kernel/filesystem/filesystem.picoc#L18) und bei [`SEEK_END`](../Pico-OS/common/file.header#L19) |
 | `pwd` | Liefert die Byteanzahl `1` und `/` |
 | `is-directory <path>` | Prüft innerhalb der Gastwurzel, ob der Pfad ein Verzeichnis bezeichnet, und liefert `0` oder `UINT32_MAX` |
 | `mkdir <path>` | Erstellt ein Verzeichnis innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
-| `ls` / `ls <path>` | Liefert eine Textliste mit 32-Bit-Byteanzahl; jede Zeile enthält `d ` oder `- ` und den Namen, auch für versteckte Einträge |
+| `ls` / `ls <path>` | Textliste mit 32-Bit-Byteanzahl. Jede Zeile enthält `d ` oder `- ` und den Namen, auch für versteckte Einträge |
 | `unlink <path>` | Entfernt einen Dateieintrag innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
 | `rmdir <path>` | Entfernt ein leeres Verzeichnis innerhalb der Gastwurzel und liefert `0` oder `UINT32_MAX` |
 | `move <old path>\n<new path>` | Verschiebt oder benennt eine Datei oder ein Verzeichnis um und liefert `0` oder `UINT32_MAX` |
@@ -580,26 +727,25 @@ auch wenn es UART-Kommandos direkt ohne PicoOS sendet.
 | `write <path>` | Erstellt oder leert eine Datei und leitet folgende UART-Ausgaben dorthin um |
 | `write-at <offset> <path>` | Legt eine Datei bei Bedarf an, positioniert folgende UART-Ausgaben am Byte-Offset und behält die übrigen vorhandenen Daten bei |
 | `write stdout` / `write stderr` | Schaltet die Ausgabe auf den gewählten Standardstream zurück |
+| `literal-output <count>` | Gibt die nächsten `count` Bytes unverändert aus, ohne Escape-Bytes als Host-Befehle auszuwerten |
 
-Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler. Eine
-vorhandene leere Datei liefert bei `load` dagegen die Wortanzahl `0`.
-`pwd` und `ls` melden Stringantworten mit einer 32-Bit-Byteanzahl. PicoOS initialisiert sein erstes Arbeitsverzeichnis direkt mit `/`.
-Spätere Verzeichniswechsel ändern ausschließlich das im jeweiligen PicoOS-PCB
-gespeicherte Verzeichnis; `is-directory` prüft das neue Ziel, ohne das
-Arbeitsverzeichnis des Emulators zu ändern. `ls` sortiert die Einträge nach Namen und liefert keine Größen oder weiteren Metadaten.
-Es gibt keinen allgemeinen Host-Befehl: jede unterstützte Aktion ruft direkt
-die passende Funktion für den begrenzten Gastdateibaum auf.
+Bei `load`, `read-range` und `file-size` meldet `UINT32_MAX` einen Fehler,
+etwa einen nicht lesbaren Pfad, einen ungeeigneten Dateityp oder eine zu große
+Antwort. Eine leere Datei liefert bei `load` die
+Wortanzahl `0`. `pwd` und `ls` senden erst eine 32-Bit-Byteanzahl, dann den
+Text. `ls` sortiert nach Namen und liefert keine weiteren Metadaten.
 
-PicoOS setzt normale Dateischreibvorgänge mit `write-at` an der im Deskriptor
-gespeicherten Position um. Für `O_APPEND` fragt es unmittelbar davor mit
-`file-size` das Dateiende ab. Gleichzeitige Änderungen derselben Hostdatei durch
-mehrere PicoOS-Prozesse oder Hostprogramme werden nicht unterstützt, weil sich
-die Größe zwischen beiden Anfragen ändern kann.
+Das Arbeitsverzeichnis eines PicoOS-Prozesses steht in
+[`ProcessControlBlock.working_directory`](../Pico-OS/kernel/process/process.header#L39).
+Es beginnt für den ersten Prozess bei `/`. Ein Verzeichniswechsel prüft das
+Ziel mit `is-directory` und ändert dieses Attribut, nicht das Host-Verzeichnis.
+PicoOS löst relative Prozesspfade auf, bevor es sie an den Emulator sendet.
 
-Unter Windows verwendet [`guest_filesystem_windows.inc`](source/guest_filesystem_windows.inc)
-relative Verzeichnishandles und `NtCreateFile` mit `OBJ_DONT_REPARSE`.
-Verzeichnislisten, Zeitstempel, Umbenennen und Entfernen verwenden ebenfalls
-Handles. Die Dienste benötigen dadurch keine `dirent`-Kompatibilität.
+Beim Schreiben gibt [`FileDescriptor.offset`](../Pico-OS/kernel/filesystem/file_descriptor.header#L18)
+die Position für `write-at` vor. Mit [`O_APPEND`](../Pico-OS/common/file.header#L15)
+fragt PicoOS zuvor über `file-size` das Dateiende ab. Das ist keine atomare
+Append-Operation. Gleichzeitige Änderungen durch andere Prozesse oder
+Hostprogramme werden daher nicht unterstützt.
 
 Fehlgeschlagene `write`- oder `write-at`-Anfragen verwerfen nachfolgende
 Nutzdaten bis zur nächsten Ausgabeauswahl. Sie schreiben dadurch nicht
@@ -607,36 +753,42 @@ versehentlich in die zuvor ausgewählte Datei.
 
 ### UART-Terminal im Debugger
 
+`v` und `V` öffnen die aufgezeichnete UART-Ausgabe im aufrufenden Terminal.
+Für PicoOS-Steuerzeichen und Pfeiltasten eignet sich die rohe Ansicht,
+weil die normale Ansicht Escape- und Signalzeichen selbst behandelt:
+
 | Aktion | Terminalbehandlung | Rückkehr zum TUI |
 | --- | --- | --- |
 | `(v)iew terminal` | Signalzeichen wie `Ctrl+C` und `Ctrl+Z` bleiben aktiv | `Escape` |
 | `(V)iew raw terminal` | Signalzeichen und Escape-Sequenzen werden an PicoOS übertragen | `Ctrl+]` |
 
-Im angehaltenen Debugger zeigen beide Ansichten nur die bisher aufgezeichnete UART-Ausgabe und übertragen keine Eingabe. Während der kontinuierlichen Ausführung mit `c` zeigen sie zusätzlich neue Live-Ausgabe und übertragen Tastendrücke. `E` beendet die kontinuierliche Ausführung an der aktuellen Programmadresse.
+Im angehaltenen Debugger wird nur die bisherige Ausgabe gezeigt.
+Während einer mit `c` gestarteten Ausführung kommen neue Ausgabe und
+Tastatureingaben hinzu. Die Rückkehrtaste wird nicht an die UART übertragen.
+Zurück in der TUI hält `E` die Ausführung an.
 
-Für die UART zeigt das TUI fürs Debuggen neben offensichtlich den Registern R0, R1 und R2 (Senderegister, Empfangsregister und Statusregister) in Form der ersten 3 Adressen noch Informationen an, wie
-- `Waiting time sending: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART an das vom RETI-Emulator simulierte Anzeigegerät zu versenden. Die Wartezeit wird zufällig generiert und ihr Maximalwert wird über `-w i` festgelegt (default für `i` ist 10). Die Wartezeit fängt an sobald durch setzen des Bit b0 im Statusregister auf 0 signalisiert wurde, dass das Byte im Senderegister R0 final feststeht und versandt werden kann. Sobald die Wartezeit abgelaufen ist, wird b0 wieder auf 1 gesetzt. Ohne `-d` wird das Byte über `stdout` ausgegeben. Mit `-d` wird es unabhängig davon, ob eine Terminalansicht gerade geöffnet ist, fortlaufend in `.reti_emulaor/terminal_output.bin` aufgezeichnet. `(v)iew terminal` und `(V)iew raw terminal` löschen die sichtbare Terminalfläche, geben die vollständige Aufzeichnung wieder und zeigen neue Bytes danach direkt an. Das Byte wird außerdem unter `Current send data: ...` sowie `All send data: ...` angezeigt.
-- `Current send data: ...`, was das zuletzt gesendete ASCII-Zeichen zeigt.
-- `All send data: ...`, was die bisher gesendeten ASCII-Zeichen zeigt.
-- `Waiting time receiving: ...`, was die Wartezeit ist, die es braucht ein 8-Bit Packet über die UART von dem vom RETI-Emulator simulierte Eingaberät zu empfangen. Für das Setzen der Wartezeit, die für das Empfangen notwendig ist gilt das selbe wie für die Wartezeit, die für das Senden notwendig ist. Die Wartezeit fängt an sobald durch setzen des Bit b1 im Statusregister auf 0 signalisiert wurde, dass man für den Empfang eines weiteren 8-Bit Packets vom Eingabegerät bereit ist, also u.a. das zuletzt empfangene 8-Bit Packet aus dem Empfangsregister R1 gesichert hat und das Empfangsregister R1 somit mit neuen Daten überschreiben kann. Sobald die Wartezeit abgelaufen ist, wird b1 wieder auf 1 gesetzt und unter `Current input: ...` verschwindet das gerade empfangende 8-Bit Packet und wird dafür ins Empfangsregister R1 geladen und dort angezeigt.
-- `Current input: ...`, was das aktuell in Übertragung befindliche ASCII-Zeichen zeigt.
-- `Remaining input: ...`, was die noch gepufferten ASCII-Zeichen zeigt.
+Normale UART-Ausgabe wird im Debugger fortlaufend in
+`.reti_emulaor/terminal_output.bin` aufgezeichnet, auch bei geschlossener
+Terminalansicht. Beim Öffnen wird diese Aufzeichnung wiedergegeben.
+Das Peripheriefenster zeigt dazu den aktuellen Übertragungszustand:
 
-> *Tipp:* Sie können dieser Wartezeit mittels der Kommandozeilenoption `-w 0` (waiting time) auf 0 setzen, um beim Debuggen nicht unnötig warten zu müssen. Allgemein steht `i` in `-w i` für die Anzahl Befehle, die maximal gewartet werden muss. Man sollten hierbei allerdings nicht vergessen, dass ein geschriebenes Programm mit beliebig langen Wartezeit umgehen können sollte.
+- `Waiting time sending` und `Waiting time receiving`: verbleibende Wartezeit in Befehlen
+- `Current send data` und `All send data`: zuletzt gesendetes Byte und bisher gesendete Bytes
+- `Current input` und `Remaining input`: aktuelles Empfangsbyte und restlicher Eingabepuffer
 
-> *Tipp:* Um beim Debuggen nicht immer selbst einen Input eingeben zu müssen können sie mittels der Kommandozeilenoption `-m` (metadata) leerzeichenseparierte Inputs aus dem Kommentar `# input: 16909060 a hallo` am Anfang des Programms `prgrm.reti` rauslesen.
+Die Wartezeit wird pro Übertragung zufällig zwischen `1` und dem mit `-w`
+gesetzten Maximum gewählt, standardmäßig `10`. `-w 0` überspringt sie.
+Das Programm muss trotzdem auf die Statusbits warten, um auch mit Wartezeit
+korrekt zu arbeiten. Das Protokoll ist zusätzlich in
+[`uart_protocol.md`](documentation/uart_protocol.md) beschrieben.
 
-Eine kurze Kontext-Zusammenfassung steht in [documentation/uart_protocol.md](documentation/uart_protocol.md).
+# Atomare Sperren mit `TSL`
 
-# TSL Extension
-
-Die atomare `TSL`-Instruktion (`test and set lock`) hat die Syntax `TSL S D i`.
-`S` enthält die Basisadresse, `i` ist ein vorzeichenbehafteter 22-Bit-Offset in
-32-Bit-Speicherzellen und `D` das Zielregister. Der
-[`Interpreter`](source/interpr.c#L398) berechnet zuerst die Adresse `S + i`,
-liest den alten Speicherwert, schreibt ihn nach `D` und setzt danach die
-Speicherzelle an der zuvor berechneten Adresse auf `1`. Zwischen diesen
-Teilschritten wird kein Interrupt ausgeführt.
+`TSL` (`test and set lock`) liest eine Speicherzelle und setzt sie auf `1`,
+ohne dass dazwischen ein Interrupt ausgeführt wird. So kann ein Programm eine
+Sperre prüfen und belegen. Bei `TSL S D i` enthält `S` die Basisadresse und `i`
+einen vorzeichenbehafteten 22-Bit-Offset in Speicherwörtern. `D` erhält den
+alten Wert. War er `0`, wurde die freie Sperre belegt.
 
 Ein Offset ungleich null macht den Unterschied zwischen Basis und Ziel sichtbar:
 
@@ -646,39 +798,38 @@ TSL DS ACC 2
 # Nachher: ACC = 0 und M[DS + 2] = 1
 ```
 
+Nur die Zielzelle wird verändert. Die Nachbarzellen bleiben unberührt:
+
 | SRAM-Zelle | Bedeutung | Änderung durch `TSL DS ACC 2` |
 | --- | --- | --- |
 | `DS + 0` | Basisadresse | Keine |
 | `DS + 1` | Nächste Zelle | Keine |
-| `DS + 2` | Ziel nach zwei Wortschritten | Alter Wert nach `ACC`, dann Speicherwert `1` |
+| `DS + 2` | Ziel nach zwei Wortschritten | Alter Wert nach [`ACC`](include/assemble.h#L22), dann Speicherwert `1` |
 
-`D` erhält immer den tatsächlichen alten Wert, nicht nur einen booleschen
-Lock-Zustand. Bei einem alten Wert `7` erhält `ACC` also `7`, während die Zelle
-auf `1` gesetzt wird. Bei einem alten Wert `1` bleibt die Zelle `1`. Auch wenn
-`S` und `D` dasselbe Register sind, wird die zuvor berechnete Adresse verwendet.
-Als Zielregister unterliegt `SP` der normalen Stackgrenzenprüfung. Schlägt die
-Registeränderung fehl, wird eine Stackoverflow-Ausnahme ausgelöst und die
-Speicherzelle nicht gesetzt. Bei `D = PC` entfällt die normale Inkrementierung
-des Befehlszählers, sodass der alte Speicherwert die nächste Programmadresse
-bestimmt.
+`D` bekommt den vollständigen alten Wert, etwa `7` bei einer Zelle mit Inhalt
+`7`. Sind `S` und `D` dasselbe Register, verwendet der Interpreter trotzdem die
+zuvor berechnete Adresse. Ein Ziel [`SP`](include/assemble.h#L23) unterliegt der Stackgrenzenprüfung.
+Bei einem Überlauf bleibt die Speicherzelle unverändert. Ein Ziel [`PC`](include/assemble.h#L19) setzt
+die nächste Programmadresse auf den alten Speicherwert. Diese Fälle behandelt
+[`interpr_instr()`](source/interpr.c#L53).
 
-Die [`Opcode-Definition`](include/assemble.h) und der
-[`Assembler`](source/assemble.c#L141) ordnen `TSL` der Kategorie **Store, Move**
-zu. Mit Bitnummerierung ab `0` besteht die Instruktion aus diesen Feldern:
+Der [`Assembler`](source/assemble.c#L85) ordnet `TSL` der Kategorie
+**Store, Move** zu. Die Grafik zeigt die Felder für das Beispiel:
 
 ![Instruktionsfelder für TSL DS ACC 2](documentation/images/tsl-instruction-format.svg)
 
 Das vollständige Maschinenwort ist `0xAEC00002`. Das Feld `i` enthält hier
 den vorzeichenbehafteten 22-Bit-Offset `+2`.
 
-`S` ist bei `TSL` das Adressregister und `D` das Ergebnisregister. In derselben
-Kategorie verwenden die anderen Modi diese Felder wie folgt:
+In derselben Kategorie werden die Registerfelder je nach Modus anders
+verwendet. Die Tabelle stellt die vier Varianten gegenüber:
 
 | Typ | Modus `M` | Syntax | Wirkung |
 | --- | --- | --- | --- |
-| `10` | `00` | `STORE S i` | Register `S` an die direkte, durch `DS` vervollständigte Adresse schreiben |
+| `10` | `00` | `STORE S i` | Register `S` an die direkte, durch [`DS`](include/assemble.h#L26) vervollständigte Adresse schreiben |
 | `10` | `01` | `STOREIN D S i` | Register `S` an Adresse `D + i` schreiben |
 | `10` | `10` | `TSL S D i` | `M[S + i]` nach `D` lesen, dann diese Zelle auf `1` setzen |
 | `10` | `11` | `MOVE S D` | Register `S` nach `D` kopieren |
 
-Eine nach Commit-Zeitpunkt geordnete Übersicht der PicoOS-relevanten Erweiterungen steht in [documentation/new_features_for_pico_os.md](documentation/new_features_for_pico_os.md).
+Weitere PicoOS-Erweiterungen sind chronologisch in
+[`new_features_for_pico_os.md`](documentation/new_features_for_pico_os.md) beschrieben.
