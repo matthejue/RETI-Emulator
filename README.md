@@ -1,21 +1,49 @@
 # Was ist der RETI-Emulator?
 
-Der RETI-Emulator führt RETI-Programme aus und zeigt dabei Register, Speicher
-und Peripherie an. Er unterstützt sowohl RETI-Übungen als auch das in PicoC
-geschriebene Betriebssystem [`PicoOS`](../Pico-OS/README.md).
+Eigentlich ist der RETI-Emulator ein **RETI-Emulator**, **RETI-Assembler**,
+**RETI-Debugger** und **Visualizer** für die Speicherinhalte der
+Peripheriegeräte der RETI während der Ausführung.
+
+- **Interpreter:** Ein Interpreter führt Anweisungen einer Programmiersprache
+  direkt aus, ohne sie vorher in Maschinencode zu übersetzen. Die Ausführung
+  erfolgt zeilenweise oder schrittweise.
+  - *Beispiel:* Python-Interpreter.
+- **Assembler:** Ein Assembler übersetzt Code in Assemblersprache in ausführbaren
+  Maschinencode, der von einer dafür spezifischen CPU verstanden wird.
+  - *Beispiel:* Übersetzung von `MOV AX, BX` in Maschinencode für eine spezifische
+    Architektur.
+- **Emulator:** Ein Emulator ahmt die Funktionalität eines Systems (z. B. Hardware
+  oder Software) nach, sodass Programme für das originale System unverändert
+  darauf laufen können.
+  - *Beispiele:* QEMU, der die Funktionalität verschiedener CPU-Architekturen
+    nachahmt, oder SNES-Emulatoren, welche alte Konsolenspiele auf einem PC
+    ausführen.
+- **Debugger:** Ein Debugger ist ein Tool, das die Ausführung eines Programms
+  erlaubt, mit dem Ziel, Fehler (Bugs) zu finden, zu analysieren und zu beheben.
+  Es bietet Funktionen wie Breakpoints, Schritt-für-Schritt-Ausführung und
+  Inspektion von Variablen, Registerwerten und Speicherbereichen. Das Programm
+  kann in verschiedenen Formen spezifiziert sein, einschließlich Quellcode,
+  Bytecode oder ausführbarem Maschinencode.
+  - *Beispiel:* GDB (GNU Debugger) für C/C++-Programme.
+- **Visualizer:** Ein Visualizer stellt Daten, Abläufe oder Systeme visuell dar,
+  um deren Struktur, Verhalten oder Ergebnisse leichter verständlich zu machen.
+  - *Beispiel:* Ein Graph-Visualizer, der Knoten und Verbindungen eines Netzwerks
+    grafisch darstellt.
+- **Simulator:** Ein Simulator modelliert ein System oder dessen Verhalten auf
+  höherer Abstraktionsebene, um Analysen, Tests oder Training durchzuführen,
+  ohne jede Funktionalität notwendigerweise exakt nachzubilden.
+  - *Beispiel:* Flugsimulator für Pilotentraining.
+
+Der RETI-Emulator hat zum einen das Ziel, dass darauf das minimale, in PicoC
+geschriebene Betriebssystem [`PicoOS`](../Pico-OS/README.md) läuft. Ein
+weiteres Ziel des RETI-Emulators ist es, im Übungsbetrieb die Studenten beim
+Schreiben von RETI-Programmen zu unterstützen. Daher zeigt der RETI-Emulator
+auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und
+Features, welche die Verwendung für Studenten angenehmer gestalten.
 
 Die Aufzeichnung zeigt die Debug-TUI während der Ausführung eines RETI-Programms:
 
 [![asciicast](https://asciinema.org/a/693086.svg)](https://asciinema.org/a/693086)
-
-Dabei kommen mehrere Werkzeuge zusammen. Die Begriffe unterscheiden sich so:
-
-- **Interpreter:** Führt einzelne Anweisungen aus, etwa der Python-Interpreter. Hier führt er die geladenen RETI-Maschinenbefehle aus.
-- **Assembler:** Übersetzt RETI-Assembly in 32-Bit-Maschinenwörter.
-- **Emulator:** Bildet CPU und Peripherie nach, damit deren Programme auf dem Host laufen können. Andere Beispiele sind QEMU und Konsolenemulatoren.
-- **Debugger:** Hilft bei der Fehlersuche durch Breakpoints, Einzelschritte und Speicheransichten, ähnlich wie GDB.
-- **Visualizer:** Macht den aktuellen Zustand von Registern, Speicher und Peripherie sichtbar.
-- **Simulator:** Modelliert das Verhalten eines Systems, beispielsweise für Tests oder Training.
 
 Das Diagramm zeigt, wie Assembly und Maschinenwörter in die Ausführung gelangen
 und welche Teile der Emulator dabei nachbildet:
@@ -24,7 +52,7 @@ und welche Teile der Emulator dabei nachbildet:
 flowchart LR
     source[RETI-Assembly] --> assembler[Assembler]
     assembler --> machine[32-Bit-Maschinenwörter]
-    source --> emulator[Emulator und Interpreter]
+    source --> emulator[Emulator]
     machine --> emulator
     emulator --> cpu[RETI-CPU und SRAM]
     emulator --> periphery[UART, Interrupt-Controller und Timer]
@@ -833,3 +861,22 @@ verwendet. Die Tabelle stellt die vier Varianten gegenüber:
 
 Weitere PicoOS-Erweiterungen sind chronologisch in
 [`new_features_for_pico_os.md`](documentation/new_features_for_pico_os.md) beschrieben.
+
+# AI Usage
+
+Der RETI-Emulator wurde ursprünglich vollständig von Hand geschrieben. Auch
+die meisten wichtigen Änderungen, die nötig waren, damit PicoOS auf ihm laufen
+konnte, habe ich 2025 noch ohne KI umgesetzt. Zu dieser Zeit hatte ich mich
+noch nicht viel mit KI beschäftigt. Außerdem erzeugten KI-Modelle damals noch
+keinen ausreichend guten Code. Die eigene Implementierung war daher die
+bessere Option, wenn ich spätere größere Probleme vermeiden wollte.
+
+Im Laufe des Jahres 2026 wurden KI-Modelle zunehmend leistungsfähig und
+lieferten Ergebnisse, durch die sich ihr Einsatz für diese Arbeit lohnte.
+Deshalb verwendete ich ab Juni 2026 zunehmend KI, um bei weiteren Erweiterungen
+zu helfen. PicoOS war das eigentliche Thema meines Masterprojekts. Der
+RETI-Emulator war eine lästige Unannehmlichkeit, die erweitert werden musste
+und die die ohnehin sehr zeitaufwendige Entwicklung von PicoOS weiter
+verlangsamte, zu einer Zeit, als ich dachte, mich endlich auf PicoOS
+konzentrieren zu können, weil ich im April 2026 dachte, alle nötigen Funktionen
+zum Ausführen von PicoOS implementiert zu haben.
