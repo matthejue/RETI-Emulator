@@ -35,7 +35,7 @@ Peripheriegeräte der RETI während der Ausführung.
   - *Beispiel:* Flugsimulator für Pilotentraining.
 
 Der RETI-Emulator hat zum einen das Ziel, dass darauf das minimale, in PicoC
-geschriebene Betriebssystem [`PicoOS`](../Pico-OS/README.md) läuft. Ein
+geschriebene Betriebssystem [`PicoOS`](https://github.com/matthejue/Pico-OS) läuft. Ein
 weiteres Ziel des RETI-Emulators ist es, im Übungsbetrieb die Studenten beim
 Schreiben von RETI-Programmen zu unterstützen. Daher zeigt der RETI-Emulator
 auch Fehlermeldungen an und hat einen stärkeren Fokus auf Bugtesting und
@@ -370,10 +370,28 @@ Bei Compiler-Ausgaben mit `.sections` gibt es zwei Möglichkeiten:
 - Ohne `-i` werden die Adresstabelle und ISRs aus diesem Abschnitt geladen.
 
 Die ISR-Adresstabelle steht am Anfang des SRAM. Ein Eintrag enthält die
-Startadresse seiner Routine. Beim Aufruf ergänzt der Emulator die
-SRAM-Adressbits, sofern sie nicht schon enthalten sind. `INT 0` verwendet den
-ersten Eintrag, `INT 1` den zweiten. ISR-Nummern reichen von `0` bis `254`,
+Startadresse seiner Routine als SRAM-relativen Wortoffset oder als vollständige
+SRAM-Adresse. [`setup_interrupt()`](source/interpr.c#L35) setzt beim Aufruf das
+SRAM-Adressbit mit `PC = Tabelleneintrag | 0x80000000`. Daher führen sowohl `5`
+als auch `2147483653` (`2^31 + 5`) zur Routine an SRAM-Wortposition `5`.
+`INT 0` verwendet den ersten Eintrag, `INT 1` den zweiten. ISR-Nummern reichen von `0` bis `254`,
 `255` bedeutet intern „keine ISR zugeordnet“.
+
+`IVTE` ist eine Pseudoanweisung des
+[`PicoC-Compilers`](https://github.com/matthejue/PicoC-Compiler), die in
+`.reti_blocks` beispielsweise `IVTE 5` zur vollständigen SRAM-Adresse
+`2147483653` auflöst. Eine direkt vom Emulator geladene `.reti`-Datei enthält
+die Zahlenwerte; der Emulator unterstützt `IVTE` nicht als Anweisung.
+
+[`PicoOS`](https://github.com/matthejue/Pico-OS) verwendet symbolische Einträge
+wie `IVTE syscall_interrupt`. Der Compiler ersetzt sie durch `2^31` plus den
+Wortoffset der jeweiligen Routine im Kernel-Abbild. Die fertige `.reti`- bzw.
+`.bin`-Datei enthält somit bereits vollständige SRAM-Adressen. Der Bootloader
+lädt das Kernel-Abbild einschließlich Vektortabelle ab der SRAM-Basis.
+Beim Interrupt-Aufruf bleibt das bereits gesetzte SRAM-Adressbit durch das
+bitweise ODER erhalten; die SRAM-Basis wird nicht nochmals addiert. Deshalb
+funktionieren sowohl die vollständigen Adressen von PicoOS als auch die
+SRAM-relativen Offsets in der unten gezeigten `isrs.reti`-Skizze.
 
 Der Parser zählt die Tabelleneinträge beim Laden. Lädt erst der Bootloader die
 Tabelle, muss die Anzahl mit `-n` angegeben werden. Diese Option überschreibt
@@ -497,12 +515,13 @@ flowchart LR
 ```
 
 Die folgende Skizze zeigt den Aufbau einer eigenen `isrs.reti`: zuerst die
-Startadressen, danach die Routinen. `...` steht für ausgelassenen ISR-Code,
+SRAM-relativen Startadressen, danach die Routinen. Das SRAM-Adressbit ergänzt
+der Emulator beim Interrupt-Aufruf. `...` steht für ausgelassenen ISR-Code,
 die Adressen müssen zu den tatsächlichen Wortpositionen passen. Die Skizze
 ist daher keine direkt ausführbare Datei:
 
 ```reti
-# Startadressen der Interrupt-Service-Routinen
+# SRAM-relative Startadressen der Interrupt-Service-Routinen
 5
 19
 33
